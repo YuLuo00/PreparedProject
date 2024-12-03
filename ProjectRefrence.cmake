@@ -60,6 +60,16 @@ macro(Add3rd_ ProjectName)
     Add_Interface_Imported_Location()
 endmacro()
 
+macro(Add3rd_vulkan ProjectName)
+    set(vulkan_DIR "${ProjectRootDir}/ThirdParty/vulkan/installed/x64-windows/share/VulkanLoader/")
+    message("vulkan_DIR == ${vulkan_DIR}")
+    # https://cmake.org/cmake/help/latest/module/FindVulkan.html
+    find_package(Vulkan REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE Vulkan::Vulkan)
+
+    Add_Interface_Imported_Location(Vulkan::Vulkan)
+endmacro()
+
 macro(Add3rd_stb_image ProjectName)
     target_include_directories(${ProjectName} PRIVATE
         "${ProjectRootDir}/ThirdParty/stb_image/"
