@@ -1,0 +1,15 @@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib/manual-link
+includedir=${prefix}/../include
+
+Name: libraw
+Description: Raw image decoder library (non-thread-safe)
+URL: http://www.libraw.org
+Requires:
+Version: 0.21.3
+Libs: "-L${libdir}" -lraw
+Cflags: "-I${includedir}" "-I${includedir}/libraw"
+Libs.private: 
+Requires.private:  lcms2 zlib jasper
+
