@@ -29,5 +29,8 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 install(FILES
-    ${ALL_IMPORTED_LOCATION} DESTINATION bin
+        ${ALL_IMPORTED_LOCATION}
+        $<$<CONFIG:Debug>:${ALL_IMPORTED_LOCATION_Debug}>
+        $<$<CONFIG:Release>:${ALL_IMPORTED_LOCATION_Release}>
+    DESTINATION bin
 )

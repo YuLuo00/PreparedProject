@@ -28,11 +28,22 @@ endmacro()
 # 添加运行时依赖文件
 macro(Add_Interface_Imported_Location ProjectName)
     get_target_property(_locs ${ProjectName} INTERFACE_IMPORTED_LOCATION)
-    list(APPEND ALL_IMPORTED_LOCATION ${_locs})
+    if(NOT _locs STREQUAL "_locs-NOTFOUND")
+        message(STATUS "MY_VAR is _locs-NOTFOUND")
+        list(APPEND ALL_IMPORTED_LOCATION ${_locs})
+    endif()
+    
     get_target_property(_locs ${ProjectName} INTERFACE_IMPORTED_LOCATION_DEBUG)
-    list(APPEND ALL_IMPORTED_LOCATION_Debug ${_locs})
+    if(NOT _locs STREQUAL "_locs-NOTFOUND")
+        message(STATUS "MY_VAR is _locs-NOTFOUND")
+        list(APPEND ALL_IMPORTED_LOCATION_Debug ${_locs})
+    endif()
+
     get_target_property(_locs ${ProjectName} INTERFACE_IMPORTED_LOCATION_RELEASE)
-    list(APPEND ALL_IMPORTED_LOCATION_Release ${_locs})
+    if(NOT _locs STREQUAL "_locs-NOTFOUND")
+        message(STATUS "MY_VAR is _locs-NOTFOUND")
+        list(APPEND ALL_IMPORTED_LOCATION_Release ${_locs})
+    endif()
 endmacro()
 
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
