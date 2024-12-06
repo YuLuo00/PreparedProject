@@ -1,5 +1,5 @@
 namespace ArchiveToolUI;
-
+using NS_ArchiveToolCLR;
 static class Program
 {
     /// <summary>
@@ -8,6 +8,7 @@ static class Program
     [STAThread]
     static void Main()
     {
+        ArchiveToolCLR.ArchiveExtraTestCLR("test", "test");
         // To customize application configuration such as set high DPI settings or default font,
         // see https://aka.ms/applicationconfiguration.
         ApplicationConfiguration.Initialize();

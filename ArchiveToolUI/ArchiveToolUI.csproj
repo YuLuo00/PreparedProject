@@ -15,5 +15,9 @@
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="xcopy &quot;$(TargetDir)$(TargetName).exe&quot; &quot;$(ProjectDir)..\bin\&quot; /Y&#xD;&#xA;xcopy &quot;$(TargetDir)*.pdb&quot; &quot;$(ProjectDir)..\bin\&quot; /Y&#xD;&#xA;xcopy &quot;$(TargetDir)*.dll&quot; &quot;$(ProjectDir)..\bin\&quot; /Y&#xD;&#xA;xcopy &quot;$(TargetDir)$(TargetName).runtimeconfig.json&quot; &quot;$(ProjectDir)..\bin\&quot; /Y&#xD;&#xA;" />
   </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\build_t\ArchiveToolCLR\ArchiveToolCLR.vcxproj" />
+  </ItemGroup>
 </Project>
 

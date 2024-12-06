@@ -32,9 +32,10 @@ partial class Form1
         // 
         // Form1
         // 
-        AutoScaleDimensions = new SizeF(9F, 20F);
+        AutoScaleDimensions = new SizeF(7F, 17F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(550, 231);
+        ClientSize = new Size(428, 196);
+        Margin = new Padding(2, 3, 2, 3);
         Name = "Form1";
         Text = "Form1";
         ResumeLayout(false);
