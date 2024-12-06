@@ -1,0 +1,154 @@
+{
+  "$schema": "https://raw.githubusercontent.com/spdx/spdx-spec/v2.2.1/schemas/spdx-schema.json",
+  "spdxVersion": "SPDX-2.2",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "documentNamespace": "https://spdx.org/spdxdocs/7zip-x64-windows-24.08-612abdf0-3a07-4c49-a172-9f5f054d0d4b",
+  "name": "7zip:x64-windows@24.08 473ade88b937ea4edeac40569606e96fe88e1c7183c10c4e6d6d15fb980d0fc7",
+  "creationInfo": {
+    "creators": [
+      "Tool: vcpkg-2024-08-01-fd884a0d390d12783076341bd43d77c3a6a15658"
+    ],
+    "created": "2024-08-25T07:41:18Z"
+  },
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "GENERATES",
+      "relatedSpdxElement": "SPDXRef-binary"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-0"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-1"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-2"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-3"
+    },
+    {
+      "spdxElementId": "SPDXRef-binary",
+      "relationshipType": "GENERATED_FROM",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-0",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-1",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-2",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-3",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    }
+  ],
+  "packages": [
+    {
+      "name": "7zip",
+      "SPDXID": "SPDXRef-port",
+      "versionInfo": "24.08",
+      "downloadLocation": "git+https://github.com/Microsoft/vcpkg#ports/7zip",
+      "homepage": "https://www.7-zip.org",
+      "licenseConcluded": "LGPL-2.1-or-later",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "description": "Library for archiving file with a high compression ratio.",
+      "comment": "This is the port (recipe) consumed by vcpkg."
+    },
+    {
+      "name": "7zip:x64-windows",
+      "SPDXID": "SPDXRef-binary",
+      "versionInfo": "473ade88b937ea4edeac40569606e96fe88e1c7183c10c4e6d6d15fb980d0fc7",
+      "downloadLocation": "NONE",
+      "licenseConcluded": "LGPL-2.1-or-later",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "comment": "This is a binary package built by vcpkg."
+    },
+    {
+      "SPDXID": "SPDXRef-resource-1",
+      "name": "ip7z/7zip",
+      "downloadLocation": "git+https://github.com/ip7z/7zip@24.08",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "5aa2a32a1d2ea81b0ee487e07efc444fda69967a67fb3a7d6e8fd06d32ebf9be76948ea23d258feade89877be698d09e1ef2ba79bbeda83752fdbb50a007af6c"
+        }
+      ]
+    }
+  ],
+  "files": [
+    {
+      "fileName": "./D:/vcpkg/ports/7zip/7zip-config.cmake.in",
+      "SPDXID": "SPDXRef-file-0",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8e0e8689873acd75fafb0fc2f4624ae4f983e7c513fdcd9c4e43ceca71a95bf3"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./D:/vcpkg/ports/7zip/CMakeLists.txt",
+      "SPDXID": "SPDXRef-file-1",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f4fec653d5a468fb567b28b317ebd8450c83590b732c51182dde0e6e16c95621"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./D:/vcpkg/ports/7zip/portfile.cmake",
+      "SPDXID": "SPDXRef-file-2",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "324ed3ec3069e29abd4bfeba400a6321f19a743bd413e4b1be1255dd70afcbc4"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./D:/vcpkg/ports/7zip/vcpkg.json",
+      "SPDXID": "SPDXRef-file-3",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "4c3d339c81cab7b1fedac5c218faefe4e9d413dbc568b7923e550c7301f09594"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    }
+  ]
+}
