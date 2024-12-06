@@ -1,0 +1,16 @@
+{
+  "profiles": {
+    "ArchiveToolUI": {
+      "commandName": "Project",
+      "commandLineArgs": " ",
+      "workingDirectory": "$(ProjectDir)\\..\\bin",
+      "nativeDebugging": true
+    },
+    "ArchiveToolUI_bin": {
+      "commandName": "Executable",
+      "executablePath": "$(ProjectDir)/../bin/$(TargetName).exe",
+      "workingDirectory": "$(ProjectDir)/../bin/",
+      "nativeDebugging": true
+    }
+  }
+}

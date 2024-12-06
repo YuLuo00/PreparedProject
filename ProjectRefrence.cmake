@@ -21,7 +21,7 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Limited build config
 
 # 添加分组
 macro(target_sources_group TargetName GroupName PERMISSION)
-    target_sources_group(${TargetName} ${PERMISSION} ${ARGN})
+    target_sources(${TargetName} ${PERMISSION} ${ARGN})
     source_group(${GroupName} FILES ${ARGN})
 endmacro()
 
