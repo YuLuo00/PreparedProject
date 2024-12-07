@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>ArchiveToolUI</name>
+    </assembly>
+    <members>
+        <member name="P:ArchiveToolUI.MainUI.FilePath">
+            <summary>
+            待处理文件路径
+            </summary>
+        </member>
+        <member name="M:ArchiveToolUI.MainUI.ub_tryGetPwd_Click(System.Object,System.EventArgs)">
+            <summary>
+            后台遍历密码本
+                不可重入
+            </summary>
+            <param name="sender"></param>
+            <param name="e"></param>
+        </member>
+        <member name="F:ArchiveToolUI.MainUI.components">
+            <summary>
+             Required designer variable.
+            </summary>
+        </member>
+        <member name="M:ArchiveToolUI.MainUI.Dispose(System.Boolean)">
+            <summary>
+             Clean up any resources being used.
+            </summary>
+            <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        </member>
+        <member name="M:ArchiveToolUI.MainUI.InitializeComponent">
+            <summary>
+             Required method for Designer support - do not modify
+             the contents of this method with the code editor.
+            </summary>
+        </member>
+        <member name="M:ArchiveToolUI.Program.Main(System.String[])">
+            <summary>
+             The main entry point for the application.
+            </summary>
+        </member>
+        <member name="T:ApplicationConfiguration">
+            <summary>
+             Bootstrap the application configuration.
+            </summary>
+        </member>
+        <member name="M:ApplicationConfiguration.Initialize">
+            <summary>
+             Bootstrap the application as follows:
+             <code>
+             global::System.Windows.Forms.Application.EnableVisualStyles();
+             global::System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
+             global::System.Windows.Forms.Application.SetHighDpiMode(HighDpiMode.DpiUnawareGdiScaled);
+            </code>
+            </summary>
+        </member>
+    </members>
+</doc>

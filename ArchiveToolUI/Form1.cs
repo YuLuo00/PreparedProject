@@ -1,15 +1,21 @@
 namespace ArchiveToolUI;
+using System;
+using System.Runtime.InteropServices;
 
 //using ClassLibrary2;
 using NS_ArchiveToolCLR;
 
 using System.Text;
+using System.Runtime.CompilerServices;
+using System.Reflection;
 
 public partial class MainUI : Form
 {
     public MainUI()
     {
         InitializeComponent();
+        this.AllowDrop = true;
+        this.DoubleBuffered = true;
     }
 
     /// <summary>
@@ -33,6 +39,9 @@ public partial class MainUI : Form
 
     private bool m_isCheckingPwd = false;
 
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
     /// <summary>
     /// 后台遍历密码本
     ///     不可重入
@@ -41,9 +50,14 @@ public partial class MainUI : Form
     /// <param name="e"></param>
     private void ub_tryGetPwd_Click(object sender, EventArgs e)
     {
+        if(!File.Exists(this.FilePath)) {
+            this.AddMsgLine("文件不存在");
+            return;
+        }
+
         //int ii = Class1.test();
         string format = ArchiveToolCLR.CheckFormatCLR(this.FilePath);
-        this.utb_archiveHeader.Text = format;
+        this.utb_format.Text = format;
         if(this.m_isCheckingPwd) {
             return;
         }
@@ -52,33 +66,28 @@ public partial class MainUI : Form
         // 启动异步任务
         Task task = Task.Run(async () =>
         {
+            uint threadId = GetCurrentThreadId();
+            this.AddMsgLine("开始任务，线程id == " + threadId.ToString());
             string format = ArchiveToolCLR.CheckFormatCLR(this.FilePath);
             List<String> pwds = PwdManagerCLR.GetAllPasswords();
             int size = pwds.Count;
             for(int i = 0; i < size; i++) {
                 String pwd = pwds[i];
-                this.InvokeCall(() =>
-                {
-                    this.utb_curPwd.Text = pwd;
-                    this.utb_msg.Text += i.ToString() + "/" + size.ToString() + Environment.NewLine;
-                });
+                this.AddMsgLine((i + 1).ToString() + "/" + size.ToString() + "::" + pwd);
                 if(string.IsNullOrEmpty(pwd)) {
                     continue;
                 }
                 if(!ArchiveToolCLR.ArchiveExtraTestCLR(this.FilePath, pwd)) {
                     continue;
                 }
-                this.InvokeCall(() =>
-                {
-                    this.utb_msg.Text += "成功" + Environment.NewLine;
-                });
+                this.AddMsgLine("成功");
                 break;
             }
 
             this.InvokeCall(() =>
             {
                 this.m_isCheckingPwd = false;
-                this.ub_tryGetPwd.Enabled = false;
+                this.ub_tryGetPwd.Enabled = true;
             });
         });
     }
@@ -103,5 +112,95 @@ public partial class MainUI : Form
         }
 
         callable.DynamicInvoke(args); // 动态调用
+    }
+
+    private void MainUI_DragEnter(object sender, DragEventArgs e)
+    {
+        // 检查拖入的数据是否是文件
+        if(e.Data.GetDataPresent(DataFormats.FileDrop)) {
+            e.Effect = DragDropEffects.Copy; // 设置拖放效果
+        }
+        else {
+            e.Effect = DragDropEffects.None; // 禁止拖放
+        }
+    }
+
+    /// <summary>
+    /// 拖拽进来时，按第一个文件初始化
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    private void MainUI_DragDrop(object sender, DragEventArgs e)
+    {
+        string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+
+        string file = files[0];
+        this.toolStripStatusLabel1.Text = file;
+
+        this.InitialByFile(file);
+    }
+
+    private void utb_archiveHeader_TextChanged(object sender, EventArgs e)
+    {
+
+    }
+    /// <summary>
+    /// 添加信息-msgBox，tooltrip
+    /// </summary>
+    /// <param name="msg"></param>
+    /// <param name="byInvoke"></param>
+    private void AddMsgLine(string msg, bool byInvoke = false)
+    {
+        if(this.InvokeRequired) {
+            lock(this.MsgLinesBuffer) {
+                this.MsgLinesBuffer.AppendLine(msg);
+                this.MsgLineBuffer = msg;
+                this.BeginInvoke(this.AddMsgLine, new object[] { msg, true });
+                return;
+            }
+        }
+
+        if(byInvoke) {
+            if(this.MsgLinesBuffer.Length > 0) {
+                this.utb_msg.Text += this.MsgLinesBuffer.ToString();
+                this.MsgLinesBuffer.Clear();
+            }
+            if(this.MsgLineBuffer.Length > 0) {
+                this.toolStripStatusLabel1.Text = this.MsgLineBuffer;
+                this.MsgLineBuffer = "";
+            }
+            return;
+        } else {
+            this.toolStripStatusLabel1.Text = msg;
+            this.utb_msg.Text += msg + Environment.NewLine;
+            return;
+        }
+
+    }
+    private string MsgLineBuffer { get; set; }
+    private StringBuilder MsgLinesBuffer { get; set; } = new();
+
+
+    /// <summary>
+    /// 按文件初始化
+    /// </summary>
+    /// <param name="filePath"></param>
+    private void InitialByFile(string filePath)
+    {
+        if(string.IsNullOrEmpty(filePath)) {
+            return;
+        }
+        if(Directory.Exists(filePath)) {
+            this.AddMsgLine("input file is a dir path :: " + filePath);
+            return;
+        }
+        if(!File.Exists(filePath)) {
+            this.AddMsgLine("file Not Exist :: " + filePath);
+            return;
+        }
+
+        this.FilePath = filePath;
+        string format = ArchiveToolCLR.CheckFormatCLR(this.FilePath);
+        this.utb_format.Text = format;
     }
 }

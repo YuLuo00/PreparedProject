@@ -36,7 +36,7 @@ partial class MainUI
         u_statusStrip = new StatusStrip();
         toolStripStatusLabel1 = new ToolStripStatusLabel();
         ucb_archiveType = new ComboBox();
-        utb_archiveHeader = new TextBox();
+        utb_format = new TextBox();
         u_statusStrip.SuspendLayout();
         SuspendLayout();
         // 
@@ -105,25 +105,29 @@ partial class MainUI
         // 
         // ucb_archiveType
         // 
+        ucb_archiveType.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         ucb_archiveType.FormattingEnabled = true;
         ucb_archiveType.Location = new Point(319, 109);
         ucb_archiveType.Name = "ucb_archiveType";
         ucb_archiveType.Size = new Size(91, 25);
         ucb_archiveType.TabIndex = 6;
         // 
-        // utb_archiveHeader
+        // utb_format
         // 
-        utb_archiveHeader.Location = new Point(319, 77);
-        utb_archiveHeader.Name = "utb_archiveHeader";
-        utb_archiveHeader.Size = new Size(91, 23);
-        utb_archiveHeader.TabIndex = 7;
+        utb_format.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        utb_format.Location = new Point(319, 77);
+        utb_format.Name = "utb_format";
+        utb_format.PlaceholderText = "文件格式";
+        utb_format.Size = new Size(91, 23);
+        utb_format.TabIndex = 7;
+        utb_format.TextChanged += utb_archiveHeader_TextChanged;
         // 
         // MainUI
         // 
         AutoScaleDimensions = new SizeF(7F, 17F);
         AutoScaleMode = AutoScaleMode.Font;
         ClientSize = new Size(422, 224);
-        Controls.Add(utb_archiveHeader);
+        Controls.Add(utb_format);
         Controls.Add(ucb_archiveType);
         Controls.Add(u_statusStrip);
         Controls.Add(utb_msg);
@@ -135,6 +139,8 @@ partial class MainUI
         Name = "MainUI";
         Text = "Form1";
         Load += MainUI_Load;
+        DragDrop += MainUI_DragDrop;
+        DragEnter += MainUI_DragEnter;
         u_statusStrip.ResumeLayout(false);
         u_statusStrip.PerformLayout();
         ResumeLayout(false);
@@ -151,5 +157,5 @@ partial class MainUI
     private StatusStrip u_statusStrip;
     private ToolStripStatusLabel toolStripStatusLabel1;
     private ComboBox ucb_archiveType;
-    private TextBox utb_archiveHeader;
+    private TextBox utb_format;
 }
