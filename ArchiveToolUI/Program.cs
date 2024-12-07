@@ -1,5 +1,6 @@
 namespace ArchiveToolUI;
 using NS_ArchiveToolCLR;
+
 //using ClassLibrary2;
 static class Program
 {
@@ -20,5 +21,5 @@ static class Program
             ui.FilePath = args[0];
         }
         Application.Run(ui);
-    }    
+    }
 }
