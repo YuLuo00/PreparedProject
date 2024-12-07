@@ -89,7 +89,7 @@ public partial class MainUI : Form
                 this.AddMsgLine("成功");
                 break;
             }
-
+            this.AddMsgLine("完成");
             this.InvokeCall(() =>
             {
                 this.m_isCheckingPwd = false;
@@ -233,5 +233,11 @@ public partial class MainUI : Form
     {
         string pwd = this.utb_curPwd.Text;
         Clipboard.SetText(pwd);
+    }
+
+    private void button1_Click(object sender, EventArgs e)
+    {
+        this.ub_tryGetPwd.Enabled = true;
+        this.m_isCheckingPwd = false;
     }
 }

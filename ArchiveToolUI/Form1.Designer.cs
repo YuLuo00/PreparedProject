@@ -38,6 +38,7 @@ partial class MainUI
         ucb_archiveType = new ComboBox();
         utb_format = new TextBox();
         ub_cpPwd = new Button();
+        button1 = new Button();
         u_statusStrip.SuspendLayout();
         SuspendLayout();
         // 
@@ -137,11 +138,22 @@ partial class MainUI
         ub_cpPwd.UseVisualStyleBackColor = true;
         ub_cpPwd.Click += ub_cpPwd_Click;
         // 
+        // button1
+        // 
+        button1.Location = new Point(353, 140);
+        button1.Name = "button1";
+        button1.Size = new Size(75, 23);
+        button1.TabIndex = 9;
+        button1.Text = "button1";
+        button1.UseVisualStyleBackColor = true;
+        button1.Click += button1_Click;
+        // 
         // MainUI
         // 
         AutoScaleDimensions = new SizeF(7F, 17F);
         AutoScaleMode = AutoScaleMode.Font;
         ClientSize = new Size(456, 220);
+        Controls.Add(button1);
         Controls.Add(ub_cpPwd);
         Controls.Add(utb_format);
         Controls.Add(ucb_archiveType);
@@ -175,4 +187,5 @@ partial class MainUI
     private ComboBox ucb_archiveType;
     private TextBox utb_format;
     private Button ub_cpPwd;
+    private Button button1;
 }

@@ -26,11 +26,20 @@ ZYB_ARCHIVE_TOOL_API bool ArchiveExtraTest(const std::string &file, const std::s
         if (!passwd.empty()) {
             extractor.setPassword(passwd);
         }
-        extractor.test(file);
+        std::string fileUtf8 = CommonTool::Local2Utf8(file);
+        extractor.test(fileUtf8);
     }
     catch (const bit7z::BitException &ex) {
         std::string exMsg = ex.what();
         std::cout << exMsg << std::endl;
+        return false;
+    }
+    catch (std::exception &ex) {
+        std::string exMsg = ex.what();
+        std::cout << exMsg << std::endl;
+        return false;
+    }
+    catch (...) {
         return false;
     }
 
