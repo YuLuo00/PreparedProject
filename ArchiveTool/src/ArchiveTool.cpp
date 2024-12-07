@@ -17,6 +17,9 @@
 ZYB_ARCHIVE_TOOL_API bool ArchiveExtraTest(const std::string &file, const std::string &passwd, const std::string &type)
 {
     const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(type);
+    if (passwd == "reduwallpaper") {
+        int i = 0;
+    }
     try { // bit7z classes can throw BitException objects
         using namespace bit7z;
 
@@ -24,13 +27,16 @@ ZYB_ARCHIVE_TOOL_API bool ArchiveExtraTest(const std::string &file, const std::s
         //BitFileExtractor extractor{ lib, BitFormat::Auto };
         BitFileExtractor extractor{::Get7zLibrary(), *format};
         if (!passwd.empty()) {
-            extractor.setPassword(passwd);
+            std::string pwdUtf8 = CommonTool::Local2Utf8(passwd);
+            extractor.setPassword(pwdUtf8);
         }
         std::string fileUtf8 = CommonTool::Local2Utf8(file);
         extractor.test(fileUtf8);
     }
     catch (const bit7z::BitException &ex) {
         std::string exMsg = ex.what();
+        std::error_code code = ex.code();
+        int cd = code.value();
         std::cout << exMsg << std::endl;
         return false;
     }

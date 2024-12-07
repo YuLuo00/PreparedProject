@@ -76,6 +76,7 @@ public partial class MainUI : Form
             this.AddMsgLine("开始任务，线程id == " + threadId.ToString());
             List<String> pwds = PwdManagerCLR.GetAllPasswords();
             int size = pwds.Count;
+            bool success = false;
             for(int i = 0; i < size; i++) {
                 String pwd = pwds[i];
                 this.utb_curPwd.Invoke(() => { this.utb_curPwd.Text = pwd; });
@@ -86,10 +87,13 @@ public partial class MainUI : Form
                 if(!ArchiveToolCLR.ArchiveExtraTestCLR(this.FilePath, pwd, type)) {
                     continue;
                 }
-                this.AddMsgLine("成功");
+                success = true;
+                this.AddMsgLine("成功" + (i + 1).ToString() + "/" + size.ToString());
                 break;
             }
-            this.AddMsgLine("完成");
+            if(!success) {
+                this.AddMsgLine("失败");
+            }
             this.InvokeCall(() =>
             {
                 this.m_isCheckingPwd = false;
