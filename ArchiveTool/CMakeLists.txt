@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.18)
 
 include("${CMAKE_CURRENT_LIST_DIR}/../ProjectRefrence.cmake")
 
@@ -14,6 +14,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 # 三方库
 Add3rd_bit7z(${PROJECT_NAME})
+Add3rd_LibArchive(${PROJECT_NAME})
 
 # 包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -23,13 +24,17 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 # 源文件
-target_sources(${PROJECT_NAME} PRIVATE
+target_sources_group(${PROJECT_NAME} "src" PRIVATE
+    "${ProjectRootDir}/ArchiveTool/src/CommonTool.cpp"
+    "${ProjectRootDir}/ArchiveTool/src/CommonTool.h"
     "${ProjectRootDir}/ArchiveTool/src/Global.h"
     "${ProjectRootDir}/ArchiveTool/src/Global.cpp"
+    "${ProjectRootDir}/ArchiveTool/src/PwdManager.cpp"
     "${ProjectRootDir}/ArchiveTool/src/ArchiveToolMain.cpp"
+    "${ProjectRootDir}/ArchiveTool/src/ArchiveTool.cpp"
 )
 target_sources_group(${PROJECT_NAME} "interface" PRIVATE
-    "${ProjectRootDir}/ArchiveTool/interface/ArchiveTool.cpp"
+    "${ProjectRootDir}/ArchiveTool/interface/PwdManager.h"
     "${ProjectRootDir}/ArchiveTool/interface/ArchiveTool.h"
     
 )
@@ -51,7 +56,7 @@ install(DIRECTORY
     FILES_MATCHING PATTERN "*.h"
 )
 install(FILES
-        ${ALL_IMPORTED_LOCATION}
+        # ${ALL_IMPORTED_LOCATION}
         $<$<CONFIG:Debug>:${ALL_IMPORTED_LOCATION_Debug}>
         $<$<CONFIG:Release>:${ALL_IMPORTED_LOCATION_Release}>
     DESTINATION bin

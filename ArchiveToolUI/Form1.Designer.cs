@@ -1,6 +1,6 @@
 ﻿namespace ArchiveToolUI;
 
-partial class Form1
+partial class MainUI
 {
     /// <summary>
     ///  Required designer variable.
@@ -28,18 +28,128 @@ partial class Form1
     /// </summary>
     private void InitializeComponent()
     {
+        utb_newPwd = new TextBox();
+        ub_addNewPwd = new Button();
+        utb_curPwd = new TextBox();
+        ub_tryGetPwd = new Button();
+        utb_msg = new TextBox();
+        u_statusStrip = new StatusStrip();
+        toolStripStatusLabel1 = new ToolStripStatusLabel();
+        ucb_archiveType = new ComboBox();
+        utb_archiveHeader = new TextBox();
+        u_statusStrip.SuspendLayout();
         SuspendLayout();
         // 
-        // Form1
+        // utb_newPwd
+        // 
+        utb_newPwd.Location = new Point(17, 13);
+        utb_newPwd.Name = "utb_newPwd";
+        utb_newPwd.PlaceholderText = "添加新密码到密码本";
+        utb_newPwd.Size = new Size(283, 23);
+        utb_newPwd.TabIndex = 0;
+        // 
+        // ub_addNewPwd
+        // 
+        ub_addNewPwd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        ub_addNewPwd.Location = new Point(319, 13);
+        ub_addNewPwd.Name = "ub_addNewPwd";
+        ub_addNewPwd.Size = new Size(91, 23);
+        ub_addNewPwd.TabIndex = 1;
+        ub_addNewPwd.Text = "添加新密码";
+        ub_addNewPwd.UseVisualStyleBackColor = true;
+        ub_addNewPwd.Click += ub_addNewPwd_Click;
+        // 
+        // utb_curPwd
+        // 
+        utb_curPwd.Location = new Point(17, 42);
+        utb_curPwd.Name = "utb_curPwd";
+        utb_curPwd.PlaceholderText = "当前在检查的密码";
+        utb_curPwd.Size = new Size(282, 23);
+        utb_curPwd.TabIndex = 2;
+        // 
+        // ub_tryGetPwd
+        // 
+        ub_tryGetPwd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        ub_tryGetPwd.Location = new Point(319, 42);
+        ub_tryGetPwd.Name = "ub_tryGetPwd";
+        ub_tryGetPwd.Size = new Size(91, 23);
+        ub_tryGetPwd.TabIndex = 3;
+        ub_tryGetPwd.Text = "检查密码";
+        ub_tryGetPwd.UseVisualStyleBackColor = true;
+        ub_tryGetPwd.Click += ub_tryGetPwd_Click;
+        // 
+        // utb_msg
+        // 
+        utb_msg.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        utb_msg.Location = new Point(18, 71);
+        utb_msg.Multiline = true;
+        utb_msg.Name = "utb_msg";
+        utb_msg.ScrollBars = ScrollBars.Both;
+        utb_msg.Size = new Size(282, 119);
+        utb_msg.TabIndex = 4;
+        // 
+        // u_statusStrip
+        // 
+        u_statusStrip.Items.AddRange(new ToolStripItem[] { toolStripStatusLabel1 });
+        u_statusStrip.Location = new Point(0, 202);
+        u_statusStrip.Name = "u_statusStrip";
+        u_statusStrip.Size = new Size(422, 22);
+        u_statusStrip.TabIndex = 5;
+        u_statusStrip.Text = "statusStrip1";
+        // 
+        // toolStripStatusLabel1
+        // 
+        toolStripStatusLabel1.Name = "toolStripStatusLabel1";
+        toolStripStatusLabel1.Size = new Size(131, 17);
+        toolStripStatusLabel1.Text = "toolStripStatusLabel1";
+        // 
+        // ucb_archiveType
+        // 
+        ucb_archiveType.FormattingEnabled = true;
+        ucb_archiveType.Location = new Point(319, 109);
+        ucb_archiveType.Name = "ucb_archiveType";
+        ucb_archiveType.Size = new Size(91, 25);
+        ucb_archiveType.TabIndex = 6;
+        // 
+        // utb_archiveHeader
+        // 
+        utb_archiveHeader.Location = new Point(319, 77);
+        utb_archiveHeader.Name = "utb_archiveHeader";
+        utb_archiveHeader.Size = new Size(91, 23);
+        utb_archiveHeader.TabIndex = 7;
+        // 
+        // MainUI
         // 
         AutoScaleDimensions = new SizeF(7F, 17F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(428, 196);
+        ClientSize = new Size(422, 224);
+        Controls.Add(utb_archiveHeader);
+        Controls.Add(ucb_archiveType);
+        Controls.Add(u_statusStrip);
+        Controls.Add(utb_msg);
+        Controls.Add(ub_tryGetPwd);
+        Controls.Add(utb_curPwd);
+        Controls.Add(ub_addNewPwd);
+        Controls.Add(utb_newPwd);
         Margin = new Padding(2, 3, 2, 3);
-        Name = "Form1";
+        Name = "MainUI";
         Text = "Form1";
+        Load += MainUI_Load;
+        u_statusStrip.ResumeLayout(false);
+        u_statusStrip.PerformLayout();
         ResumeLayout(false);
+        PerformLayout();
     }
 
     #endregion
+
+    private TextBox utb_newPwd;
+    private Button ub_addNewPwd;
+    private TextBox utb_curPwd;
+    private Button ub_tryGetPwd;
+    private TextBox utb_msg;
+    private StatusStrip u_statusStrip;
+    private ToolStripStatusLabel toolStripStatusLabel1;
+    private ComboBox ucb_archiveType;
+    private TextBox utb_archiveHeader;
 }

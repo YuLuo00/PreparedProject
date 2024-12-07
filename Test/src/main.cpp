@@ -4,10 +4,9 @@
 
 #include "ArchiveTool.h"
 
-
 void main()
 {
-    if (ArchiveExtraTest("bin.rar", "test")) {
+    if (ArchiveExtraTest("bin.rar", "test", "")) {
         exit(0);
     }
 

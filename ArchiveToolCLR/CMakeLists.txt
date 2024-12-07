@@ -8,7 +8,9 @@ project(ArchiveToolCLR)
 add_library(${PROJECT_NAME} SHARED)
 # 设置 C++/CLI 目标属性
 set_target_properties(${PROJECT_NAME} PROPERTIES
+    # CMAKE_CXX_FLAGS ""
     COMMON_LANGUAGE_RUNTIME ""
+    # DOTNET_TARGET_FRAMEWORK "net8.0"
 )
 
 # vs调试
