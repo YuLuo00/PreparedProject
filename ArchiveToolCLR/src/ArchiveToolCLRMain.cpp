@@ -18,14 +18,31 @@ public ref class ArchiveToolCLR
 {
 public:
     // 定义一个托管方法来调用 C++ 非托管函数
-    static bool ArchiveExtraTestCLR( String ^ file, String ^ passwd ) {
+    static bool ArchiveExtraTestCLR( String ^ file, String ^ passwd , String^ type) {
         std::string fileStr   = msclr::interop::marshal_as< std::string >( file );
-        std::string passwdStr = msclr::interop::marshal_as< std::string >( passwd );
+        std::string passwdStr = msclr::interop::marshal_as<std::string>(passwd);
+        std::string typeStr = msclr::interop::marshal_as<std::string>(type);
 
-        return ArchiveExtraTest( fileStr, passwdStr, "" );
+        return ArchiveExtraTest( fileStr, passwdStr, typeStr );
     }
-    static bool ArchiveExtraTestCLR( String ^ file ) {
-        return ArchiveExtraTestCLR( file, "" );
+
+    static void UpdateTableCLR(String ^ key, String ^ type)
+    {
+        std::string keyStr = msclr::interop::marshal_as<std::string>(key);
+        std::string typeStr = msclr::interop::marshal_as<std::string>(type);
+        return UpdateTable(keyStr, typeStr);
+    }
+
+    static List<String ^> ^ GetKeysCLR()
+    {
+        List<String ^> ^ ret = gcnew List<String ^>();
+
+        std::vector<std::string> keys = GetKeys();
+        for (size_t i = 0; i < keys.size(); i++) {
+            ret->Add(GetManagedString(keys[i]));
+        }
+
+        return ret;
     }
 
     static String ^CheckFormatCLR(String ^ filepath) {

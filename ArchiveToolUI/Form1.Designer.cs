@@ -37,21 +37,23 @@ partial class MainUI
         toolStripStatusLabel1 = new ToolStripStatusLabel();
         ucb_archiveType = new ComboBox();
         utb_format = new TextBox();
+        ub_cpPwd = new Button();
         u_statusStrip.SuspendLayout();
         SuspendLayout();
         // 
         // utb_newPwd
         // 
+        utb_newPwd.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         utb_newPwd.Location = new Point(17, 13);
         utb_newPwd.Name = "utb_newPwd";
         utb_newPwd.PlaceholderText = "添加新密码到密码本";
-        utb_newPwd.Size = new Size(283, 23);
+        utb_newPwd.Size = new Size(314, 23);
         utb_newPwd.TabIndex = 0;
         // 
         // ub_addNewPwd
         // 
         ub_addNewPwd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        ub_addNewPwd.Location = new Point(319, 13);
+        ub_addNewPwd.Location = new Point(353, 13);
         ub_addNewPwd.Name = "ub_addNewPwd";
         ub_addNewPwd.Size = new Size(91, 23);
         ub_addNewPwd.TabIndex = 1;
@@ -61,16 +63,17 @@ partial class MainUI
         // 
         // utb_curPwd
         // 
+        utb_curPwd.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         utb_curPwd.Location = new Point(17, 42);
         utb_curPwd.Name = "utb_curPwd";
         utb_curPwd.PlaceholderText = "当前在检查的密码";
-        utb_curPwd.Size = new Size(282, 23);
+        utb_curPwd.Size = new Size(281, 23);
         utb_curPwd.TabIndex = 2;
         // 
         // ub_tryGetPwd
         // 
         ub_tryGetPwd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        ub_tryGetPwd.Location = new Point(319, 42);
+        ub_tryGetPwd.Location = new Point(353, 42);
         ub_tryGetPwd.Name = "ub_tryGetPwd";
         ub_tryGetPwd.Size = new Size(91, 23);
         ub_tryGetPwd.TabIndex = 3;
@@ -80,20 +83,20 @@ partial class MainUI
         // 
         // utb_msg
         // 
-        utb_msg.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-        utb_msg.Location = new Point(18, 71);
+        utb_msg.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        utb_msg.Location = new Point(18, 70);
         utb_msg.Multiline = true;
         utb_msg.Name = "utb_msg";
         utb_msg.ScrollBars = ScrollBars.Both;
-        utb_msg.Size = new Size(282, 119);
+        utb_msg.Size = new Size(316, 116);
         utb_msg.TabIndex = 4;
         // 
         // u_statusStrip
         // 
         u_statusStrip.Items.AddRange(new ToolStripItem[] { toolStripStatusLabel1 });
-        u_statusStrip.Location = new Point(0, 202);
+        u_statusStrip.Location = new Point(0, 198);
         u_statusStrip.Name = "u_statusStrip";
-        u_statusStrip.Size = new Size(422, 22);
+        u_statusStrip.Size = new Size(456, 22);
         u_statusStrip.TabIndex = 5;
         u_statusStrip.Text = "statusStrip1";
         // 
@@ -107,26 +110,39 @@ partial class MainUI
         // 
         ucb_archiveType.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         ucb_archiveType.FormattingEnabled = true;
-        ucb_archiveType.Location = new Point(319, 109);
+        ucb_archiveType.Location = new Point(353, 109);
         ucb_archiveType.Name = "ucb_archiveType";
         ucb_archiveType.Size = new Size(91, 25);
         ucb_archiveType.TabIndex = 6;
+        ucb_archiveType.SelectedIndexChanged += ucb_archiveType_SelectedIndexChanged;
         // 
         // utb_format
         // 
         utb_format.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        utb_format.Location = new Point(319, 77);
+        utb_format.Location = new Point(353, 77);
         utb_format.Name = "utb_format";
         utb_format.PlaceholderText = "文件格式";
         utb_format.Size = new Size(91, 23);
         utb_format.TabIndex = 7;
         utb_format.TextChanged += utb_archiveHeader_TextChanged;
         // 
+        // ub_cpPwd
+        // 
+        ub_cpPwd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        ub_cpPwd.Location = new Point(298, 42);
+        ub_cpPwd.Name = "ub_cpPwd";
+        ub_cpPwd.Size = new Size(36, 23);
+        ub_cpPwd.TabIndex = 8;
+        ub_cpPwd.Text = "cp";
+        ub_cpPwd.UseVisualStyleBackColor = true;
+        ub_cpPwd.Click += ub_cpPwd_Click;
+        // 
         // MainUI
         // 
         AutoScaleDimensions = new SizeF(7F, 17F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(422, 224);
+        ClientSize = new Size(456, 220);
+        Controls.Add(ub_cpPwd);
         Controls.Add(utb_format);
         Controls.Add(ucb_archiveType);
         Controls.Add(u_statusStrip);
@@ -158,4 +174,5 @@ partial class MainUI
     private ToolStripStatusLabel toolStripStatusLabel1;
     private ComboBox ucb_archiveType;
     private TextBox utb_format;
+    private Button ub_cpPwd;
 }

@@ -8,6 +8,7 @@ using NS_ArchiveToolCLR;
 using System.Text;
 using System.Runtime.CompilerServices;
 using System.Reflection;
+using System.Windows.Forms;
 
 public partial class MainUI : Form
 {
@@ -35,6 +36,11 @@ public partial class MainUI : Form
     private void MainUI_Load(object sender, EventArgs e)
     {
         this.toolStripStatusLabel1.Text = "";
+        ArchiveToolCLR.GetKeysCLR().ForEach(x =>
+        {
+            this.ucb_archiveType.Items.Add(x);
+            this.ucb_archiveType.Text = x;
+        });
     }
 
     private bool m_isCheckingPwd = false;
@@ -55,29 +61,29 @@ public partial class MainUI : Form
             return;
         }
 
-        //int ii = Class1.test();
-        string format = ArchiveToolCLR.CheckFormatCLR(this.FilePath);
-        this.utb_format.Text = format;
         if(this.m_isCheckingPwd) {
             return;
         }
         this.m_isCheckingPwd = true;
         this.ub_tryGetPwd.Enabled = false;
+        string type = this.ucb_archiveType.Text;
+        string format = this.utb_format.Text;
+        //ArchiveToolCLR.
         // 启动异步任务
         Task task = Task.Run(async () =>
         {
             uint threadId = GetCurrentThreadId();
             this.AddMsgLine("开始任务，线程id == " + threadId.ToString());
-            string format = ArchiveToolCLR.CheckFormatCLR(this.FilePath);
             List<String> pwds = PwdManagerCLR.GetAllPasswords();
             int size = pwds.Count;
             for(int i = 0; i < size; i++) {
                 String pwd = pwds[i];
+                this.utb_curPwd.Invoke(() => { this.utb_curPwd.Text = pwd; });
                 this.AddMsgLine((i + 1).ToString() + "/" + size.ToString() + "::" + pwd);
                 if(string.IsNullOrEmpty(pwd)) {
                     continue;
                 }
-                if(!ArchiveToolCLR.ArchiveExtraTestCLR(this.FilePath, pwd)) {
+                if(!ArchiveToolCLR.ArchiveExtraTestCLR(this.FilePath, pwd, type)) {
                     continue;
                 }
                 this.AddMsgLine("成功");
@@ -170,7 +176,8 @@ public partial class MainUI : Form
                 this.MsgLineBuffer = "";
             }
             return;
-        } else {
+        }
+        else {
             this.toolStripStatusLabel1.Text = msg;
             this.utb_msg.Text += msg + Environment.NewLine;
             return;
@@ -202,5 +209,29 @@ public partial class MainUI : Form
         this.FilePath = filePath;
         string format = ArchiveToolCLR.CheckFormatCLR(this.FilePath);
         this.utb_format.Text = format;
+        this.ucb_archiveType.Text = "Auto";
+        for(int i = 0; i < this.ucb_archiveType.Items.Count; i++) {
+            string itemStr = this.ucb_archiveType.Items[i]?.ToString() ?? "";
+            if(itemStr.Equals(format, StringComparison.OrdinalIgnoreCase)) {
+                this.ucb_archiveType.Text = itemStr;
+                break;
+            }
+        }
+    }
+
+    private void ucb_archiveType_SelectedIndexChanged(object sender, EventArgs e)
+    {
+
+    }
+
+    /// <summary>
+    /// 拷贝密码栏的文本到剪切板
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    private void ub_cpPwd_Click(object sender, EventArgs e)
+    {
+        string pwd = this.utb_curPwd.Text;
+        Clipboard.SetText(pwd);
     }
 }
