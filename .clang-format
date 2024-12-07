@@ -118,7 +118,7 @@ BinPackParameters: false
 # 大括号换行
 BraceWrapping:
   # 在case后的大括号是否换行
-  AfterCaseLabel:  true
+  AfterCaseLabel:  false
   # class后
   AfterClass:      true
   # 控制语句(if/for/while/switch/...)后是否换行
@@ -242,9 +242,9 @@ IncludeIsMainSourceRegex: ''
 # 缩进访问控制
 IndentAccessModifiers: false
 # 缩进case语句, 建议false
-IndentCaseLabels: false
+IndentCaseLabels: true
 # 缩进case body, 建议true
-IndentCaseBlocks: true
+IndentCaseBlocks: false
 # 缩进goto标签
 IndentGotoLabels: true
 # 预处理指示(PPD-PreProcessor Directive)缩进, 建议None

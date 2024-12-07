@@ -30,7 +30,7 @@ public partial class MainUI : Form
         if(string.IsNullOrEmpty(newPwd)) {
             return;
         }
-        //PwdManagerCLR.AddPws(newPwd);
+        PwdManagerCLR.AddPws(newPwd);
     }
 
     private void MainUI_Load(object sender, EventArgs e)
@@ -244,4 +244,30 @@ public partial class MainUI : Form
         this.ub_tryGetPwd.Enabled = true;
         this.m_isCheckingPwd = false;
     }
+
+    private void utb_format_DoubleClick(object sender, EventArgs e)
+    {
+        if(this.IsAutoDerminingType) {
+            return;
+        }
+        if(!File.Exists(this.FilePath)) {
+            return;
+        }
+        this.IsAutoDerminingType = true;
+        this.AddMsgLine("双击类型框，开始尝试自动判定");
+
+        Task task = Task.Run(async () =>
+        {
+            string type = ArchiveToolCLR.TryDetermineTypeCLR(this.FilePath);
+            if(string.IsNullOrEmpty(type)) {
+                this.AddMsgLine("判定失败");
+                return;
+            }
+
+            this.AddMsgLine("自动判定完成，结果::" +  type);
+            this.Invoke(() => { this.ucb_archiveType.Text = type; });
+            this.IsAutoDerminingType = false;
+        });
+    }
+    private bool IsAutoDerminingType { get; set; } = false;
 }

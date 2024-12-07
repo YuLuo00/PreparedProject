@@ -126,6 +126,7 @@ partial class MainUI
         utb_format.Size = new Size(91, 23);
         utb_format.TabIndex = 7;
         utb_format.TextChanged += utb_archiveHeader_TextChanged;
+        utb_format.DoubleClick += utb_format_DoubleClick;
         // 
         // ub_cpPwd
         // 
@@ -140,7 +141,7 @@ partial class MainUI
         // 
         // button1
         // 
-        button1.Location = new Point(353, 140);
+        button1.Location = new Point(353, 163);
         button1.Name = "button1";
         button1.Size = new Size(75, 23);
         button1.TabIndex = 9;

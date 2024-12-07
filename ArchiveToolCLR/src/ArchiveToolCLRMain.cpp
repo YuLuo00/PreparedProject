@@ -60,6 +60,13 @@ public:
         String ^ managedString = Encoding::Default->GetString(byteArray); // 将字节数组转换为托管字符串
         return managedString;
     }
+
+    static String^ TryDetermineTypeCLR(String^ filePath)
+    {
+        std::string filePathStr = msclr::interop::marshal_as<std::string>(filePath);
+        std::string type = TryDetermineType(filePathStr);
+        return GetManagedString(type);
+    }
 };
 
 public ref class PwdManagerCLR

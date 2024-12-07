@@ -13,7 +13,6 @@
 #include "PwdManager.h"
 #include "ArchiveType.h"
 
-
 ZYB_ARCHIVE_TOOL_API bool ArchiveExtraTest(const std::string &file, const std::string &passwd, const std::string &type)
 {
     const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(type);
@@ -50,7 +49,6 @@ ZYB_ARCHIVE_TOOL_API bool ArchiveExtraTest(const std::string &file, const std::s
     }
 
     return true;
-
 }
 
 ZYB_ARCHIVE_TOOL_API bool AddNewPwd(const std::string &pwd)
@@ -77,7 +75,7 @@ ZYB_ARCHIVE_TOOL_API std::string check_format(const std::string &filePath)
 
     const char *format = NULL;
 
-    r = archive_read_open_filename(a, filePath.c_str(), 500 * 1240); //            test.zip        
+    r = archive_read_open_filename(a, filePath.c_str(), 500 * 1240); //            test.zip
     if (r != ARCHIVE_OK) {
         auto errInfo = archive_error_string(a);
         std::cout << "Error opening compressed file." << std::endl;
@@ -106,7 +104,6 @@ ZYB_ARCHIVE_TOOL_API std::string check_format(const std::string &filePath)
     return "";
 }
 
-
 ZYB_ARCHIVE_TOOL_API std::vector<std::string> GetKeys()
 {
     return ArchiveType::Ins().GetKeys();
@@ -115,4 +112,42 @@ ZYB_ARCHIVE_TOOL_API std::vector<std::string> GetKeys()
 ZYB_ARCHIVE_TOOL_API void UpdateTable(const std::string &key, const std::string &type)
 {
     return ArchiveType::Ins().UpdateTable(key, type);
+}
+
+ZYB_ARCHIVE_TOOL_API std::string TryDetermineType(const std::string &filePath)
+{
+    std::vector<std::string> keys = ArchiveType::Ins().GetKeys();
+    for (size_t i = 0; i < keys.size(); i++) {
+        const std::string &type = keys[i];
+        const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(type);
+        bit7z::BitFileExtractor extractor{::Get7zLibrary(), *format};
+        std::string fileUtf8 = CommonTool::Local2Utf8(filePath);
+        try {
+            extractor.test(fileUtf8);
+        }
+        catch (const bit7z::BitException &ex) {
+            std::string exMsg = ex.what();
+            std::cout << exMsg << std::endl;
+            std::error_code code = ex.code();
+            int cd = code.value();
+            if (exMsg.find("A password is required but none was provided") != std::string::npos) {
+                return type;
+            }
+            switch (cd) {
+                case 5: { // 未提供密码
+                    return type;
+                }
+                case 9: { // 密码错误
+                    return type;
+                }
+                case 1: { // 类型不正确
+                    continue;
+                }
+                default: {
+                    continue;
+                }
+            }
+        }
+    }
+    return "Auto";
 }
