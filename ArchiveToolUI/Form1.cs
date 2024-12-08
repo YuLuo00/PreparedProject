@@ -264,6 +264,8 @@ public partial class MainUI : Form
                 return;
             }
 
+            string archiveToolMsg = ArchiveToolCLR.Msg();
+            this.AddMsgLine(archiveToolMsg);
             this.AddMsgLine("自动判定完成，结果::" +  type);
             this.Invoke(() => { this.ucb_archiveType.Text = type; });
             this.IsAutoDerminingType = false;

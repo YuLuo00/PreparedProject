@@ -7,3 +7,4 @@ ZYB_ARCHIVE_TOOL_API std::string check_format(const std::string &filePath);
 ZYB_ARCHIVE_TOOL_API std::vector<std::string> GetKeys();
 ZYB_ARCHIVE_TOOL_API void UpdateTable(const std::string &key, const std::string &type);
 ZYB_ARCHIVE_TOOL_API std::string TryDetermineType(const std::string &filePath);
+ZYB_ARCHIVE_TOOL_API const std::vector<std::string> &ArchiveToolMsg();

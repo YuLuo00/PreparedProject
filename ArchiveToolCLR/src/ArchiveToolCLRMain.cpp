@@ -12,6 +12,7 @@ using namespace System::Text;
 #include "ArchiveTool.h"
 #include "PwdManager.h"
 
+
 namespace NS_ArchiveToolCLR
 {
 public ref class ArchiveToolCLR
@@ -24,6 +25,17 @@ public:
         std::string typeStr = msclr::interop::marshal_as<std::string>(type);
 
         return ArchiveExtraTest( fileStr, passwdStr, typeStr );
+    }
+
+    static String ^Msg()
+    {
+        std::vector<std::string> msgs = ArchiveToolMsg();
+        String ^ ret = gcnew String("");
+        for (size_t i = 0; i < msgs.size(); i++) {
+            ret += GetManagedString(msgs[i]) + Environment::NewLine;
+        }
+
+        return ret;
     }
 
     static void UpdateTableCLR(String ^ key, String ^ type)

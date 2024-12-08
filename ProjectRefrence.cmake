@@ -60,6 +60,16 @@ macro(Add3rd_ ProjectName)
     Add_Interface_Imported_Location()
 endmacro()
 
+macro(Add3rd_fmt ProjectName)
+    set(fmt_DIR "${ProjectRootDir}/ThirdParty/fmt/installed/x64-windows/share/fmt/")
+    message("fmt_DIR == ${fmt_DIR}")
+    # this is heuristically generated, and may not be correct
+    find_package(fmt CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE fmt::fmt-header-only)
+
+    Add_Interface_Imported_Location(fmt::fmt-header-only)
+endmacro()
+
 macro(Add3rd_nlohmann_json ProjectName)
     set(nlohmann_json_DIR "${ProjectRootDir}/ThirdParty/nlohmann/installed/x64-windows/share/nlohmann_json/")
     message("nlohmann_json_DIR == ${nlohmann_json_DIR}")

@@ -16,6 +16,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 Add3rd_bit7z(${PROJECT_NAME})
 Add3rd_LibArchive(${PROJECT_NAME})
 Add3rd_nlohmann_json(${PROJECT_NAME})
+Add3rd_fmt(${PROJECT_NAME})
 
 # 包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -32,6 +33,8 @@ target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/ArchiveTool/src/Global.cpp"
     "${ProjectRootDir}/ArchiveTool/src/ArchiveType.h"
     "${ProjectRootDir}/ArchiveTool/src/ArchiveType.cpp"
+    "${ProjectRootDir}/ArchiveTool/src/ArchiveMsg.h"
+    "${ProjectRootDir}/ArchiveTool/src/ArchiveMsg.cpp"
     "${ProjectRootDir}/ArchiveTool/src/PwdManager.cpp"
     "${ProjectRootDir}/ArchiveTool/src/ArchiveToolMain.cpp"
     "${ProjectRootDir}/ArchiveTool/src/ArchiveTool.cpp"

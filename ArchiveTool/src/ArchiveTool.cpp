@@ -7,11 +7,13 @@
 #include <bit7z/bitfileextractor.hpp>
 #include <archive.h>
 #include <archive_entry.h>
+#include <fmt/format.h>
 
 #include "Global.h"
 #include "CommonTool.h"
 #include "PwdManager.h"
 #include "ArchiveType.h"
+#include "ArchiveMsg.h"
 
 ZYB_ARCHIVE_TOOL_API bool ArchiveExtraTest(const std::string &file, const std::string &passwd, const std::string &type)
 {
@@ -116,19 +118,28 @@ ZYB_ARCHIVE_TOOL_API void UpdateTable(const std::string &key, const std::string 
 
 ZYB_ARCHIVE_TOOL_API std::string TryDetermineType(const std::string &filePath)
 {
+    ArchiveMsg::Ins().Clear();
+
     std::vector<std::string> keys = ArchiveType::Ins().GetKeys();
+    std::partition(keys.begin(), keys.end(), [](const std::string &s) {
+        return s != "Auto"; // 保留所有非"Auto"的元素
+    });
+    int i = 0;
     for (size_t i = 0; i < keys.size(); i++) {
         const std::string &type = keys[i];
         const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(type);
         bit7z::BitFileExtractor extractor{::Get7zLibrary(), *format};
         std::string fileUtf8 = CommonTool::Local2Utf8(filePath);
+        bool testRet = false;
         try {
             extractor.test(fileUtf8);
+            testRet = true;
         }
         catch (const bit7z::BitException &ex) {
             std::string exMsg = ex.what();
             std::cout << exMsg << std::endl;
             std::error_code code = ex.code();
+            ArchiveMsg::Ins().AddLine(fmt::format("[{}]::[{}]{}", type, code.value(), exMsg));
             int cd = code.value();
             if (exMsg.find("A password is required but none was provided") != std::string::npos) {
                 return type;
@@ -148,6 +159,15 @@ ZYB_ARCHIVE_TOOL_API std::string TryDetermineType(const std::string &filePath)
                 }
             }
         }
+        if (testRet) {
+            return type;
+        }
     }
     return "Auto";
+}
+
+
+ZYB_ARCHIVE_TOOL_API const std::vector<std::string> &ArchiveToolMsg()
+{
+    return ArchiveMsg::Ins().MsgLines();
 }
