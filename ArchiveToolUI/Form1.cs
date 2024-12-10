@@ -9,6 +9,7 @@ using System.Text;
 using System.Runtime.CompilerServices;
 using System.Reflection;
 using System.Windows.Forms;
+using static System.Windows.Forms.DataFormats;
 
 public partial class MainUI : Form
 {
@@ -213,15 +214,31 @@ public partial class MainUI : Form
         this.FilePath = filePath;
         string format = ArchiveToolCLR.CheckFormatCLR(this.FilePath);
         this.utb_format.Text = format;
+        this.SetArchiveTypeUcbByHeader(format);
+    }
+
+    private void SetArchiveTypeUcbByHeader(string header)
+    {
+        if(this.Header2Type.ContainsKey(header)) {
+            this.ucb_archiveType.Text = this.Header2Type[header];
+            return;
+        }
+
         this.ucb_archiveType.Text = "Auto";
         for(int i = 0; i < this.ucb_archiveType.Items.Count; i++) {
             string itemStr = this.ucb_archiveType.Items[i]?.ToString() ?? "";
-            if(itemStr.Equals(format, StringComparison.OrdinalIgnoreCase)) {
+            if(itemStr.Equals(header, StringComparison.OrdinalIgnoreCase)) {
                 this.ucb_archiveType.Text = itemStr;
                 break;
             }
         }
     }
+
+    private Dictionary<string, string> Header2Type { get; set; } = new(StringComparer.OrdinalIgnoreCase)
+    {
+        {"7zip","sevenzip" },
+        {"7-zip","sevenzip" },
+    };
 
     private void ucb_archiveType_SelectedIndexChanged(object sender, EventArgs e)
     {
@@ -267,7 +284,7 @@ public partial class MainUI : Form
             string archiveToolMsg = ArchiveToolCLR.Msg();
             this.AddMsgLine(archiveToolMsg);
             this.AddMsgLine("自动判定完成，结果::" +  type);
-            this.Invoke(() => { this.ucb_archiveType.Text = type; });
+            this.Invoke(() => { this.SetArchiveTypeUcbByHeader(type); });
             this.IsAutoDerminingType = false;
         });
     }

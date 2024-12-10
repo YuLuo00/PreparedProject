@@ -18,7 +18,7 @@ Add3rd_glfw3(${PROJECT_NAME})
 Add3rd_GLEW(${PROJECT_NAME})
 Add3rd_glm(${PROJECT_NAME})
 Add3rd_stb_image(${PROJECT_NAME})
-Add3rd_vulkan(${PROJECT_NAME})
+# Add3rd_vulkan(${PROJECT_NAME})
 Add3rd_bit7z(${PROJECT_NAME})
 
 # 源文件
