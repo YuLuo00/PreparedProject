@@ -22,6 +22,7 @@ Add3rd_GLEW(${PROJECT_NAME})
 Add3rd_glm(${PROJECT_NAME})
 Add3rd_stb_image(${PROJECT_NAME})
 Add3rd_OpenCV(${PROJECT_NAME})
+Add3rd_tinygltf(${PROJECT_NAME})
 
 # 包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE

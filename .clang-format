@@ -222,7 +222,7 @@ IncludeBlocks:   Preserve
 # - Never: 永远不, 建议
 # - CaseSensitive: 大小写敏感排序
 # - CaseInsensitive: 大小写不敏感排序
-SortIncludes:    Never
+SortIncludes: CaseInsensitive
 # Include种类, 默认即可
 IncludeCategories:
   - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'

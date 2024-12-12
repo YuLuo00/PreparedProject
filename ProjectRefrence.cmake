@@ -80,6 +80,12 @@ macro(Add3rd_ ProjectName)
     Add_Interface_Imported_Location()
 endmacro()
 
+macro(Add3rd_tinygltf ProjectName)
+    target_include_directories(${ProjectName} PRIVATE
+        "${ProjectRootDir}/ThirdParty/tinygltf/installed/x64-windows/include/"
+    )
+endmacro()
+
 macro(Add3rd_OpenCV ProjectName)
     set(Protobuf_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/protobuf/")
     set(quirc_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/quirc/")

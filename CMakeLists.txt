@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 17)
 message("${PROJECT_NAME} --------------------- ffffffff")
 
 add_subdirectory("${ProjectRootDir}/GltfViewerCore/")
-# add_subdirectory("${ProjectRootDir}/GltfViewerCLR/")
+add_subdirectory("${ProjectRootDir}/GltfViewerCLR/")
 # # 添加C#项目
 # add_custom_target(ZERO_CHECK_with_cSharp ALL
 #     COMMAND dotnet sln "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.sln"
@@ -19,7 +19,7 @@ add_subdirectory("${ProjectRootDir}/GltfViewerCore/")
 # )
 # set_property(TARGET ZERO_CHECK_with_cSharp PROPERTY FOLDER "CMakePredefinedTargets")
 
-# target_link_libraries(MAIN_PROJECT PRIVATE ArchiveTool)
+# target_link_libraries(GltfViewerCLR PRIVATE GltfViewerCore)
 # target_link_libraries(ArchiveToolCLR PRIVATE ArchiveTool)
 
 # add_dependencies(MAIN_PROJECT ZERO_CHECK_with_cSharp)
