@@ -4,3 +4,8 @@
 
 /bin
 /build_t
+/ArchiveToolUI/obj
+/ArchiveToolUI/bin/Debug/net8.0-windows
+/lib
+/include
+/Output/Debug
