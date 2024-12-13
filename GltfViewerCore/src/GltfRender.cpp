@@ -142,9 +142,7 @@ bool GltfRender::Init()
 }
 
 // 处理鼠标移动事件的回调函数
-void mouse_callback(GLFWwindow *window, double xpos, double ypos)
-{
-}
+void mouse_callback(GLFWwindow *window, double xpos, double ypos) { }
 
 static std::map<GLFWwindow *, GltfRender *> g_window2render;
 // 按键回调函数
@@ -199,25 +197,28 @@ int GltfRender::Run()
     glGenVertexArrays(1, &VAO); // 生成一个 VAO，保存到 VAO 变量中
     glGenBuffers(1, &VBO);      // 生成一个 VBO，保存到 VBO 变量中
 
-    glBindVertexArray(VAO); // 绑定 VAO，后续操作会与此 VAO 相关联
+    glBindVertexArray(VAO);             // 绑定 VAO，后续操作会与此 VAO 相关联
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // 绑定 VBO，用于顶点数据存储
     {
-        //glBufferStorage(
-        //    GL_ARRAY_BUFFER, bufferSize, NULL, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+        glBufferStorage(
+            GL_ARRAY_BUFFER, sizeof(vertices[0]) * vertices.size(), NULL, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
 
-        //// 持久化映射
-        //void *mappedPtr = glMapBufferRange(
-        //    GL_ARRAY_BUFFER, 0, bufferSize, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
-        //if (!mappedPtr) {
-        //    std::cerr << "Failed to map buffer!" << std::endl;
-        //    return -1;
-        //}
+        // 持久化映射
+        void *mappedPtr = glMapBufferRange(
+            GL_ARRAY_BUFFER, 0, sizeof(vertices[0]) * vertices.size(), GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+        if (!mappedPtr) {
+            std::cerr << "Failed to map buffer!" << std::endl;
+            return -1;
+        }
+        // 修改数据（直接操作 mappedData）
+        memcpy(mappedPtr, vertices.data(), sizeof(vertices[0]) * vertices.size());
+        // 刷新缓冲区的数据，确保写入的数据会正确传递到 GPU
+        glFlushMappedBufferRange(GL_ARRAY_BUFFER, 0, sizeof(vertices[0]) * vertices.size());
     }
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices[0]) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(0,
                           sizeof(VertexInfo::Position) / sizeof(float),
-                          GL_FLOAT, GL_FALSE,
+                          GL_FLOAT,
+                          GL_FALSE,
                           sizeof(vertices[0]),
                           (void *)offsetof(VertexInfo, position));
 
@@ -227,7 +228,6 @@ int GltfRender::Run()
     // 解绑 VBO 和 VAO，恢复到默认状态
     glBindBuffer(GL_ARRAY_BUFFER, 0); // 解除绑定当前的 VBO
     glBindVertexArray(0);             // 解除绑定当前的 VAO，表示不再使用此 VAO
-
 
     // 编译顶点着色器
     this->m_data->InitShaderProgram();
@@ -285,9 +285,8 @@ void GltfRenderGLCore::FrameEvent()
 
         GLint projectionLoc = glGetUniformLocation(this->shaderProgram, "projection");
         // 将单位矩阵传递给着色器中的 uniform 变量
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->cameraMtx)); // 设置 view 矩阵
-        glUniformMatrix4fv(
-            projectionLoc, 1, GL_FALSE, glm::value_ptr(this->projection)); // 设置 projection 矩阵
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->cameraMtx));        // 设置 view 矩阵
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(this->projection)); // 设置 projection 矩阵
     }
 
     // 检查按键事件
