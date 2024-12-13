@@ -17,8 +17,6 @@ public:
 
 protected:
 
-private:
-    bool Init();
 };
 
 #endif // !GLTFRENDER_H
