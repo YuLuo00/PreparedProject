@@ -125,7 +125,7 @@ BraceWrapping:
   # - Never: 永远不, 即永远将语句体的大括号放置于控制语句同一行
   # - MultiLine: 多行控制语句才进行换行
   # - Always: 永远换行
-  AfterControlStatement: false
+  AfterControlStatement: Never
   # 下面比较容易理解, 不再作无意义的解释
   AfterEnum:       true
   AfterFunction:   true
@@ -154,7 +154,7 @@ BreakBeforeInheritanceComma: false
 BreakInheritanceList: BeforeColon
 BreakBeforeTernaryOperators: true
 # 是否在构造函数初始化列表的,前换行
-BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializersBeforeComma: true
 # 继承列表换行风格, 使用BeforeComma适合
 BreakConstructorInitializers: BeforeComma
 # Java注解相关, 跳过
@@ -195,7 +195,7 @@ ExperimentalAutoDetectBinPacking: false
 # - BinPack: 两个参数一行
 # - CurrentLine: 所有参数放置于一行, 如果放不下, 就一个参数一行
 # - NextLine: 同CurrentLine有点像, 唯一不同就是如果放不行, 将剩余参数放置于下一行(即不自动一参一行)
-PackConstructorInitializers: Never
+PackConstructorInitializers: NextLine
 BasedOnStyle:    ''
 # 废弃配置
 ConstructorInitializerAllOnOneLineOrOnePerLine: false

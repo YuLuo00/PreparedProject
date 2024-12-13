@@ -37,6 +37,7 @@ target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/GltfViewerCore/src/CommonTool.h"
     "${ProjectRootDir}/GltfViewerCore/src/main.cpp"
     "${ProjectRootDir}/GltfViewerCore/src/GltfRender.cpp"
+    "${ProjectRootDir}/GltfViewerCore/src/GLGeometry.h"
 )
 target_sources_group(${PROJECT_NAME} "interface" PRIVATE
     "${ProjectRootDir}/GltfViewerCore/interface/GltfRender.h"
