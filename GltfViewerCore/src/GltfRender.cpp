@@ -68,10 +68,18 @@ public:
     GltfRenderGLCore()
     {
         //cameraMtx = glm::scale(cameraMtx, glm::vec3(1/5.0f, 1/5.0f, 1.0f));
+        // 相机的设置
     }
     GLFWwindow *window = nullptr;
+    float fov = 45.0f;                      // 初始 FOV
+    float aspectRatio = 800.0f / 600.0f;    // 假设窗口大小是800x600
+    float m_near = 0.1f;                    // 近裁剪面
+    float m_far = 100.0f;                   // 远裁剪面
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f); // 相机位置
+    glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f);    // 目标位置（看向原点）
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);        // 上方向为 Y 轴正方向
 
-    glm::mat4 cameraMtx = glm::mat4(1.0f);  // 视图矩阵为单位矩阵
+    glm::mat4 view = glm::mat4(1.0f);  // 视图矩阵为单位矩阵
     glm::mat4 projection = glm::mat4(1.0f); // 投影矩阵为单位矩阵
     glm::vec4 backgroundColor = glm::vec4(1, 1, 1, 0);
     std::atomic_bool statusNeedRefresh = false;
@@ -160,11 +168,19 @@ void GltfRenderGLCore::KeyCallbackForGlfw(GLFWwindow *window, int key, int scanc
 #define KEY_ACTION(KEY, ACTION) (KEY * 10000 + ACTION)
     switch (KEY_ACTION(key, action)) {
         case KEY_ACTION(GLFW_KEY_D, GLFW_PRESS):
-            this->cameraMtx = glm::translate(this->cameraMtx, glm::vec3(0.1f, 0.0f, 0.0f));
+            this->view = glm::translate(this->view, glm::vec3(0.1f, 0.0f, 0.0f));
             this->statusNeedRefresh.exchange(true);
             break;
         case KEY_ACTION(GLFW_KEY_A, GLFW_PRESS):
-            this->cameraMtx = glm::translate(this->cameraMtx, glm::vec3(-0.1f, 0.0f, 0.0f));
+            this->view = glm::translate(this->view, glm::vec3(-0.1f, 0.0f, 0.0f));
+            this->statusNeedRefresh.exchange(true);
+            break;
+        case KEY_ACTION(GLFW_KEY_W, GLFW_PRESS):
+            this->fov += 10;
+            this->statusNeedRefresh.exchange(true);
+            break;
+        case KEY_ACTION(GLFW_KEY_S, GLFW_PRESS):
+            this->fov -= 10;
             this->statusNeedRefresh.exchange(true);
             break;
         default:
@@ -275,24 +291,30 @@ int GltfRender::Run()
 void GltfRenderGLCore::FrameEvent()
 {
     static GLint viewLoc = -1;
+    static GLint projectionLoc = -1;
     static bool initFlag = false;
-    if (!initFlag) {
+    if (initFlag == false) {
+        initFlag = true;
         // 获取 view 和 projection uniform 变量的位置
         viewLoc = glGetUniformLocation(this->shaderProgram, "view");
-        if (viewLoc == -1) {
-            return;
-        }
+        projectionLoc = glGetUniformLocation(this->shaderProgram, "projection");
 
-        GLint projectionLoc = glGetUniformLocation(this->shaderProgram, "projection");
+        this->projection = glm::perspective(glm::radians(fov), aspectRatio, m_near, m_far);
+        this->view = glm::lookAt(cameraPos, target, up);
+
         // 将单位矩阵传递给着色器中的 uniform 变量
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->cameraMtx));        // 设置 view 矩阵
+                                                                                          // 相机的设置
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->view));        // 设置 view 矩阵
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(this->projection)); // 设置 projection 矩阵
     }
 
     // 检查按键事件
     if (this->statusNeedRefresh.load() == true) {
         this->statusNeedRefresh.store(false);
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->cameraMtx));
+        this->projection = glm::perspective(glm::radians(fov), aspectRatio, m_near, m_far);
+
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(this->projection)); // 设置 projection 矩阵
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->view));
     }
 }
 
