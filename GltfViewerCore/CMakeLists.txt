@@ -6,7 +6,9 @@ project(GltfViewerCore)
 
 # 定义库
 # add_library(${PROJECT_NAME} SHARED)
+# set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
 add_executable(${PROJECT_NAME})
+
 # add_executable(${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY "${ProjectRootDir}/bin"
@@ -23,6 +25,7 @@ Add3rd_glm(${PROJECT_NAME})
 Add3rd_stb_image(${PROJECT_NAME})
 Add3rd_OpenCV(${PROJECT_NAME})
 Add3rd_tinygltf(${PROJECT_NAME})
+Add3rd_vulkan(${PROJECT_NAME})
 
 # 包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -40,10 +43,17 @@ target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/GltfViewerCore/src/GLGeometry.h"
     "${ProjectRootDir}/GltfViewerCore/src/GltfRenderGLCore.cpp"
     "${ProjectRootDir}/GltfViewerCore/src/GltfRenderGLCore.h"
+    "${ProjectRootDir}/GltfViewerCore/src/TinyGltfInstance.cpp"
 )
 target_sources_group(${PROJECT_NAME} "interface" PRIVATE
     "${ProjectRootDir}/GltfViewerCore/interface/GltfRender.h"
 )
+target_sources_group(${PROJECT_NAME} "shader" PRIVATE
+    "${ProjectRootDir}/GltfViewerCore/shader/shader.vert"
+    "${ProjectRootDir}/GltfViewerCore/shader/shader.frag"
+)
+
+
 
 # dll导出宏
 target_compile_definitions(${PROJECT_NAME} PRIVATE ZYB_GLTFVIEWER_API=__declspec\(dllexport\))
@@ -52,6 +62,18 @@ target_compile_definitions(${PROJECT_NAME} INTERFACE ZYB_GLTFVIEWER_API=__declsp
 # 导出属性
 target_include_directories(${PROJECT_NAME} INTERFACE "${ProjectRootDir}/GltfViewerCore/interface/")
 
+# 安装着色器
+# install(FILES
+#         "${ProjectRootDir}/GltfViewerCore/shader/shader.vert.spv"
+#         "${ProjectRootDir}/GltfViewerCore/shader/shader.frag.spv"
+#     DESTINATION bin
+#     # FILES_MATCHING PATTERN "*.spv"
+# )
+install(DIRECTORY
+        "${ProjectRootDir}/GltfViewerCore/shader/"
+    DESTINATION bin
+    FILES_MATCHING PATTERN "*.spv"
+)
 # 安装
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin

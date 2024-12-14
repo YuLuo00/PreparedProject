@@ -16,6 +16,9 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${ProjectRootDir}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${ProjectRootDir}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${ProjectRootDir}/bin)
 
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi /Od")  # 生成PDB文件
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG")  # 链接时生成PDB文件
+
 # 设置仅生成 Debug 和 Release 配置
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Limited build configurations" FORCE)
 
@@ -94,7 +97,7 @@ macro(Add3rd_OpenCV ProjectName)
     set(TIFF_INCLUDE_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/include/")
     set(TIFF_LIBRARY "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/bin/")
     list(APPEND ALL_IMPORTED_LOCATION_Debug "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/debug/bin/tiffd.dll")
-    list(APPEND ALL_IMPORTED_LOCATION_Release "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/bin/tiffd.dll")
+    list(APPEND ALL_IMPORTED_LOCATION_Release "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/bin/tiff.dll")
     message("OpenCV_DIR == ${OpenCV_DIR}")
 
     set(libjpeg-turbo_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/libjpeg-turbo/")
@@ -182,6 +185,15 @@ macro(Add3rd_vulkan ProjectName)
     target_link_libraries(${ProjectName} PRIVATE Vulkan::Vulkan)
 
     Add_Interface_Imported_Location(Vulkan::Vulkan)
+    # target_include_directories(${ProjectName} PRIVATE
+    #     "D:/_software_setup/VulkanSDK/1.3.290.0/Include/"
+    # )
+    # target_link_directories(${ProjectName} PRIVATE
+    #     "D:/_software_setup/VulkanSDK/1.3.290.0/Lib/"
+    # )
+    # target_link_libraries(${ProjectName} PRIVATE
+    #     vulkan-1.lib
+    # )
 endmacro()
 
 macro(Add3rd_stb_image ProjectName)
