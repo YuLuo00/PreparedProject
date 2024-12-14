@@ -23,13 +23,12 @@ layout(location = 1) in vec3 color;    // 输入顶点颜色
 
 uniform mat4 view; // 声明视图矩阵uniform变量
 uniform mat4 projection;
-uniform mat4 worldMtx;
 
 out vec3 fragColor; // 输出到片段着色器
 
 void main() {
     gl_Position = vec4(position, 1.0); // 设置顶点位置
-    gl_Position = projection * view * worldMtx * vec4(position, 1.0);
+    gl_Position = projection * view * vec4(position, 1.0);
     fragColor = color; // 将颜色传递给片段着色器
 }
 )";
@@ -79,25 +78,21 @@ void GltfRenderGLCore::FrameEvent()
         projectionLoc = glGetUniformLocation(this->shaderProgram, "projection");
         worldLoc = glGetUniformLocation(this->shaderProgram, "worldMtx");
 
-        this->projection = glm::perspective(glm::radians(fov), aspectRatio, m_near, m_far);
-        this->view = glm::lookAt(cameraPos, target, up);
-
         // 将单位矩阵传递给着色器中的 uniform 变量
         // 相机的设置
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->view));             // 设置 view 矩阵
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(this->projection)); // 设置 projection 矩阵
-        glUniformMatrix4fv(worldLoc, 1, GL_FALSE, glm::value_ptr(this->worldMtx));        // 世界坐标变换矩阵
     }
+
     
     // 检查按键事件
     if (this->statusNeedRefresh.load() == true) {
         this->statusNeedRefresh.store(false);
-        this->projection = glm::perspective(glm::radians(fov), aspectRatio, m_near, m_far);
 
+        view = glm::lookAt(cameraPos, target, up);                                        // 视图矩阵为单位矩阵
+        projection = glm::perspective(glm::radians(fov), aspectRatio, m_near, m_far);     // 投影矩阵为单位矩阵
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(this->projection)); // 设置 projection 矩阵
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->view));
-        glUniformMatrix4fv(worldLoc, 1, GL_FALSE, glm::value_ptr(this->worldMtx)); // 世界坐标变换矩阵
-        
     }
 }
 

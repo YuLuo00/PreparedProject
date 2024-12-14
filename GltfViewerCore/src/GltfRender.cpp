@@ -18,7 +18,10 @@
 static std::map<GLFWwindow *, GltfRender *> g_window2render;
 
 // 处理鼠标移动事件的回调函数
-void mouse_pos_callback(GLFWwindow *window, double xpos, double ypos) { }
+void mouse_pos_callback(GLFWwindow *window, double xpos, double ypos)
+{
+    return g_window2render.at(window)->m_data->mouse_pos_callback(xpos, ypos);
+}
 
 void mouse_enter_callback(GLFWwindow *window, int entered)
 {
@@ -85,9 +88,10 @@ int GltfRender::Run()
 
     // 注册鼠标回调函数
     g_window2render[window] = this;
+    glfwSetKeyCallback(window, glfw_key_callback);
+
     glfwSetCursorPosCallback(window, mouse_pos_callback);
     glfwSetCursorEnterCallback(window, mouse_enter_callback);
-    glfwSetKeyCallback(window, glfw_key_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetScrollCallback(window, scroll_callback);
 
