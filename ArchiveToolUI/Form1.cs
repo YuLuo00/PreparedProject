@@ -283,10 +283,16 @@ public partial class MainUI : Form
 
             string archiveToolMsg = ArchiveToolCLR.Msg();
             this.AddMsgLine(archiveToolMsg);
-            this.AddMsgLine("自动判定完成，结果::" +  type);
+            this.AddMsgLine("自动判定完成，结果::" + type);
             this.Invoke(() => { this.SetArchiveTypeUcbByHeader(type); });
             this.IsAutoDerminingType = false;
         });
     }
+
+    private void utb_msg_MouseDown(object sender, MouseEventArgs e)
+    {
+        bool left = e.Button == MouseButtons.Left;
+    }
+
     private bool IsAutoDerminingType { get; set; } = false;
 }

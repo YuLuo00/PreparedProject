@@ -8,17 +8,19 @@
     ".NETCoreApp,Version=v8.0": {
       "ArchiveToolUI/1.0.0": {
         "dependencies": {
-          "ArchiveToolCLR": "0.0.0.0"
+          "ArchiveToolCLR": "1.0.0"
         },
         "runtime": {
           "ArchiveToolUI.dll": {}
         }
       },
-      "ArchiveToolCLR/0.0.0.0": {
+      "ArchiveToolCLR/1.0.0": {
+        "dependencies": {
+          "ArchiveTool": "1.0.0"
+        },
         "runtime": {
           "ArchiveToolCLR.dll": {
-            "assemblyVersion": "0.0.0.0",
-            "fileVersion": "0.0.0.0"
+            "assemblyVersion": "1.0.0"
           }
         }
       }
@@ -30,8 +32,8 @@
       "serviceable": false,
       "sha512": ""
     },
-    "ArchiveToolCLR/0.0.0.0": {
-      "type": "reference",
+    "ArchiveToolCLR/1.0.0": {
+      "type": "project",
       "serviceable": false,
       "sha512": ""
     }

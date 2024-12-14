@@ -91,6 +91,7 @@ partial class MainUI
         utb_msg.ScrollBars = ScrollBars.Both;
         utb_msg.Size = new Size(329, 116);
         utb_msg.TabIndex = 4;
+        utb_msg.MouseDown += utb_msg_MouseDown;
         // 
         // u_statusStrip
         // 

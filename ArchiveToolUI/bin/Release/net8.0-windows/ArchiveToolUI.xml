@@ -17,6 +17,33 @@
             <param name="sender"></param>
             <param name="e"></param>
         </member>
+        <member name="M:ArchiveToolUI.MainUI.MainUI_DragDrop(System.Object,System.Windows.Forms.DragEventArgs)">
+            <summary>
+            拖拽进来时，按第一个文件初始化
+            </summary>
+            <param name="sender"></param>
+            <param name="e"></param>
+        </member>
+        <member name="M:ArchiveToolUI.MainUI.AddMsgLine(System.String,System.Boolean)">
+            <summary>
+            添加信息-msgBox，tooltrip
+            </summary>
+            <param name="msg"></param>
+            <param name="byInvoke"></param>
+        </member>
+        <member name="M:ArchiveToolUI.MainUI.InitialByFile(System.String)">
+            <summary>
+            按文件初始化
+            </summary>
+            <param name="filePath"></param>
+        </member>
+        <member name="M:ArchiveToolUI.MainUI.ub_cpPwd_Click(System.Object,System.EventArgs)">
+            <summary>
+            拷贝密码栏的文本到剪切板
+            </summary>
+            <param name="sender"></param>
+            <param name="e"></param>
+        </member>
         <member name="F:ArchiveToolUI.MainUI.components">
             <summary>
              Required designer variable.
