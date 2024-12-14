@@ -15,24 +15,27 @@ public:
         float y = 0;
         float z = 0;
     } position;
-    //struct Color
-    //{
-    //    Color() = default;
-    //    Color(float _r, float _g, float _b, float _a): r(_r), g(_g), b(_b), a(_a) { }
-    //    float r = 0;
-    //    float g = 0;
-    //    float b = 0;
-    //    float a = 0;
-    //} color;
-    //struct UV
-    //{
-    //    UV() = default;
-    //    UV(float _u, float _v): u(_u), v(_v) { }
-    //    float u = 0;
-    //    float v = 0;
-    //} uv;
+    struct Color
+    {
+        Color() = default;
+        Color(float _r, float _g, float _b, float _a): r(_r), g(_g), b(_b), a(_a) { }
+        float r = 0;
+        float g = 0;
+        float b = 0;
+        float a = 0;
+    } color;
+    struct UV
+    {
+        UV() = default;
+        UV(float _u, float _v): u(_u), v(_v) { }
+        float u = 0;
+        float v = 0;
+    } uv;
+    static const int LengthByFloat;
 };
 #pragma pack(pop)
+
+inline const int VertexInfo::LengthByFloat = sizeof(VertexInfo) / sizeof(float);
 
 const int GlVertexSize = sizeof(VertexInfo);
 const int GlVertexLength = sizeof(VertexInfo) / sizeof(float);
