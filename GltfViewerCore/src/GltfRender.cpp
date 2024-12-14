@@ -69,12 +69,14 @@ GLFWwindow *InitWindowForGlfw()
         return false;
     }
     glfwMakeContextCurrent(window);
+    glfwSwapInterval(0);            // 禁用 V-Sync
 
     // 初始化 GLEW
     if (glewInit() != GLEW_OK) {
         std::cerr << "Failed to initialize GLEW!" << std::endl;
         return nullptr;
     }
+
 
     return window;
 }

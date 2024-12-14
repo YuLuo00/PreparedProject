@@ -94,6 +94,28 @@ void GltfRenderGLCore::FrameEvent()
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(this->projection)); // 设置 projection 矩阵
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->view));
     }
+
+    // 打印帧率
+    {
+        // 静态变量保存状态
+        static int frameCount = 0;                                        // 累计帧数
+        static auto lastTime = std::chrono::high_resolution_clock::now(); // 上次计时的时间点
+        // 增加帧计数
+        frameCount++;
+        // 获取当前时间
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        long long elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastTime).count();
+        // 每秒打印一次帧率
+        if (elapsed >= 1) {
+            // 计算帧率
+            float fps = frameCount / static_cast<float>(elapsed);
+            std::cout << "FPS: " << fps << std::endl;
+
+            // 重置计时器和帧计数
+            lastTime = currentTime;
+            frameCount = 0;
+        }
+    }
 }
 
 
