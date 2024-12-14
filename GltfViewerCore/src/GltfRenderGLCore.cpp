@@ -12,8 +12,8 @@
 #include <opencv2/opencv.hpp>
 #include <tiny_gltf.h>
 
-#include "GltfRender.h"
 #include "GLGeometry.h"
+#include "GltfRender.h"
 
 // 顶点着色器源码
 static const char *vertexShaderSource = R"(
@@ -64,7 +64,6 @@ void checkCompileErrors1(GLuint shader, std::string type)
     }
 }
 
-
 void GltfRenderGLCore::FrameEvent()
 {
     static GLint viewLoc = -1;
@@ -84,7 +83,6 @@ void GltfRenderGLCore::FrameEvent()
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(this->projection)); // 设置 projection 矩阵
     }
 
-    
     // 检查按键事件
     if (this->statusNeedRefresh.load() == true) {
         this->statusNeedRefresh.store(false);
@@ -118,7 +116,6 @@ void GltfRenderGLCore::FrameEvent()
     }
 }
 
-
 void GltfRenderGLCore::KeyCallbackForGlfw(int key, int scancode, int action, int mods)
 {
 #define KEY_ACTION(KEY, ACTION) (KEY * 10000 + ACTION)
@@ -142,6 +139,102 @@ void GltfRenderGLCore::KeyCallbackForGlfw(int key, int scancode, int action, int
         default:
             break;
     }
+}
+
+void GltfRenderGLCore::mouse_pos_callback(double xpos, double ypos)
+{
+    glm::vec2 pos(xpos, ypos);
+    glm::vec2 posMove = pos - this->m_mousePostionLast;
+    this->m_mousePostionLast = pos;
+
+    if (this->m_mouseLeftRepeat == true) {
+        // 将偏移量转换为旋转角度（调整敏感度）
+        float sensitivityX = 0.5; // 灵敏度
+        float sensitivityY = 1;   // 灵敏度
+
+        float angleX = static_cast<float>(posMove.y) * sensitivityX * -1; // y 偏移控制绕 x 轴旋转
+        float angleY = static_cast<float>(posMove.x) * sensitivityY;      // x 偏移控制绕 y 轴旋转
+
+        this->m_cameraPitch += angleX;
+        this->m_cameraYaw += angleY;
+        if (this->m_cameraPitch > 89.0)
+            this->m_cameraPitch = 89.0;
+        if (this->m_cameraPitch < -89.0)
+            this->m_cameraPitch = -89.0;
+
+        // 通过俯仰角和偏航角计算新的相机方向
+        glm::vec3 direction;
+        direction.x = cos(glm::radians(this->m_cameraPitch)) * cos(glm::radians(this->m_cameraYaw));
+        direction.y = sin(glm::radians(this->m_cameraPitch));
+        direction.z = cos(glm::radians(this->m_cameraPitch)) * sin(glm::radians(this->m_cameraYaw));
+        direction = glm::normalize(direction);
+
+        // 更新相机位置
+        cameraPos = target - direction * glm::length(cameraPos - target); // 保持相机与目标的距离不变
+
+        this->statusNeedRefresh.store(true);
+    }
+}
+
+void GltfRenderGLCore::mouse_enter_callback(int entered)
+{
+    if (entered == GLFW_TRUE) {
+        std::cout << "mouse enter." << std::endl;
+    }
+    else if (entered == GLFW_FALSE) {
+        std::cout << "mouse leave" << std::endl;
+    }
+}
+
+void GltfRenderGLCore::mouse_button_callback(int button, int action, int mods)
+{
+#define BUTTON_ACTION(BUTTON, ACTION) (BUTTON * 100 + ACTION)
+
+    switch (BUTTON_ACTION(button, action)) {
+        case BUTTON_ACTION(GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS):
+            this->m_mouseLeftRepeat = true;
+            std::cout << "Left mouse button pressed." << std::endl;
+            break;
+        case BUTTON_ACTION(GLFW_MOUSE_BUTTON_LEFT, GLFW_REPEAT):
+            break;
+        case BUTTON_ACTION(GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE):
+            this->m_mouseLeftRepeat = false;
+            std::cout << "Left mouse button release." << std::endl;
+            break;
+        case BUTTON_ACTION(GLFW_MOUSE_BUTTON_RIGHT, GLFW_PRESS):
+            std::cout << "Right mouse button pressed." << std::endl;
+            break;
+        case BUTTON_ACTION(GLFW_MOUSE_BUTTON_RIGHT, GLFW_RELEASE):
+            std::cout << "RIGHT mouse button RELEASE." << std::endl;
+            break;
+        case BUTTON_ACTION(GLFW_MOUSE_BUTTON_4, GLFW_PRESS):
+            std::cout << "BUTTON_4 mouse button PRESS." << std::endl;
+            break;
+        case BUTTON_ACTION(GLFW_MOUSE_BUTTON_4, GLFW_RELEASE):
+            std::cout << "BUTTON_4 mouse button RELEASE." << std::endl;
+            break;
+        case BUTTON_ACTION(GLFW_MOUSE_BUTTON_5, GLFW_PRESS):
+            std::cout << "BUTTON_5 mouse button PRESS." << std::endl;
+            break;
+        case BUTTON_ACTION(GLFW_MOUSE_BUTTON_5, GLFW_RELEASE):
+            std::cout << "BUTTON_5 mouse button RELEASE." << std::endl;
+            break;
+        default:
+            break;
+    }
+}
+
+void GltfRenderGLCore::scroll_callback(double xoffset, double yoffset)
+{
+    double distanceMoveRaio = yoffset > 0 ? yoffset * (0.5 / 7) : yoffset * (1.0 / 7);
+    double scaleRatio = 1.0 - distanceMoveRaio;
+    //std::cout << fmt::format(" Scroll : ({},{}); {}", xoffset, yoffset, scaleRatio) << std::endl;
+
+    glm::vec3 ToCamera = this->cameraPos - this->target;
+    ToCamera = ToCamera * glm::vec3(scaleRatio, scaleRatio, scaleRatio);
+    this->cameraPos = this->target + ToCamera;
+
+    this->statusNeedRefresh.store(true);
 }
 
 void GltfRenderGLCore::InitShaderProgram()
@@ -168,6 +261,3 @@ void GltfRenderGLCore::InitShaderProgram()
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 }
-
-
-
