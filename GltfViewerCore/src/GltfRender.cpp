@@ -15,18 +15,30 @@
 #include "GLGeometry.h"
 #include "GltfRenderGLCore.h"
 
-// 处理鼠标移动事件的回调函数
-void mouse_callback(GLFWwindow *window, double xpos, double ypos) { }
-
 static std::map<GLFWwindow *, GltfRender *> g_window2render;
+
+// 处理鼠标移动事件的回调函数
+void mouse_pos_callback(GLFWwindow *window, double xpos, double ypos) { }
+
+void mouse_enter_callback(GLFWwindow *window, int entered)
+{
+    return g_window2render.at(window)->m_data->mouse_enter_callback(entered);
+}
+
+void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
+{
+    return g_window2render.at(window)->m_data->mouse_button_callback(button, action, mods);
+}
+
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
+{
+    return g_window2render.at(window)->m_data->scroll_callback(xoffset, yoffset);
+}
+
 // 按键回调函数
 void glfw_key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-    if (g_window2render.count(window) < 0) {
-        return;
-    }
-
-    g_window2render.at(window)->m_data->KeyCallbackForGlfw(window, key, scancode, action, mods);
+    g_window2render.at(window)->m_data->KeyCallbackForGlfw(key, scancode, action, mods);
 }
 
 GltfRender::GltfRender()
@@ -73,8 +85,11 @@ int GltfRender::Run()
 
     // 注册鼠标回调函数
     g_window2render[window] = this;
-    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetCursorPosCallback(window, mouse_pos_callback);
+    glfwSetCursorEnterCallback(window, mouse_enter_callback);
     glfwSetKeyCallback(window, glfw_key_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
     // 顶点数据，两个三角形
     int numVertex = 2;

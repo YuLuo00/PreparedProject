@@ -23,12 +23,13 @@ layout(location = 1) in vec3 color;    // 输入顶点颜色
 
 uniform mat4 view; // 声明视图矩阵uniform变量
 uniform mat4 projection;
+uniform mat4 worldMtx;
 
 out vec3 fragColor; // 输出到片段着色器
 
 void main() {
     gl_Position = vec4(position, 1.0); // 设置顶点位置
-    gl_Position = projection * view * vec4(position, 1.0);
+    gl_Position = projection * view * worldMtx * vec4(position, 1.0);
     fragColor = color; // 将颜色传递给片段着色器
 }
 )";
@@ -69,12 +70,14 @@ void GltfRenderGLCore::FrameEvent()
 {
     static GLint viewLoc = -1;
     static GLint projectionLoc = -1;
+    static GLint worldLoc = -1;
     static bool initFlag = false;
     if (initFlag == false) {
         initFlag = true;
         // 获取 view 和 projection uniform 变量的位置
         viewLoc = glGetUniformLocation(this->shaderProgram, "view");
         projectionLoc = glGetUniformLocation(this->shaderProgram, "projection");
+        worldLoc = glGetUniformLocation(this->shaderProgram, "worldMtx");
 
         this->projection = glm::perspective(glm::radians(fov), aspectRatio, m_near, m_far);
         this->view = glm::lookAt(cameraPos, target, up);
@@ -83,8 +86,9 @@ void GltfRenderGLCore::FrameEvent()
         // 相机的设置
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->view));             // 设置 view 矩阵
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(this->projection)); // 设置 projection 矩阵
+        glUniformMatrix4fv(worldLoc, 1, GL_FALSE, glm::value_ptr(this->worldMtx));        // 世界坐标变换矩阵
     }
-
+    
     // 检查按键事件
     if (this->statusNeedRefresh.load() == true) {
         this->statusNeedRefresh.store(false);
@@ -92,11 +96,13 @@ void GltfRenderGLCore::FrameEvent()
 
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(this->projection)); // 设置 projection 矩阵
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->view));
+        glUniformMatrix4fv(worldLoc, 1, GL_FALSE, glm::value_ptr(this->worldMtx)); // 世界坐标变换矩阵
+        
     }
 }
 
 
-void GltfRenderGLCore::KeyCallbackForGlfw(GLFWwindow *window, int key, int scancode, int action, int mods)
+void GltfRenderGLCore::KeyCallbackForGlfw(int key, int scancode, int action, int mods)
 {
 #define KEY_ACTION(KEY, ACTION) (KEY * 10000 + ACTION)
     switch (KEY_ACTION(key, action)) {
