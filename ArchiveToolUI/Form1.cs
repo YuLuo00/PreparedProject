@@ -238,6 +238,7 @@ public partial class MainUI : Form
     {
         {"7zip","sevenzip" },
         {"7-zip","sevenzip" },
+        {"ZIP 2.0 (deflation)","zip" },
     };
 
     private void ucb_archiveType_SelectedIndexChanged(object sender, EventArgs e)
