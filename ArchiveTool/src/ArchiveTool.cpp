@@ -122,8 +122,6 @@ ZYB_ARCHIVE_TOOL_API void UpdateTable(const std::string &key, const std::string 
 
 ZYB_ARCHIVE_TOOL_API std::string TryDetermineType(const std::wstring &filePath)
 {
-    std::string strTest =
-        fs::path(R"(C:\Users\Administrator\Desktop\Sweet devil ❤拿什么抵抗魅惑小恶魔？)").generic_string();
     ArchiveMsg::Ins().Clear();
 
     std::vector<std::string> keys = ArchiveType::Ins().GetKeys();

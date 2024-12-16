@@ -265,6 +265,7 @@ public partial class MainUI : Form
     private void utb_format_DoubleClick(object sender, EventArgs e)
     {
         if(this.IsAutoDerminingType) {
+            this.AddMsgLine("有后台判定任务正在执行，此次判定无法执行");
             return;
         }
         if(!File.Exists(this.FilePath)) {
@@ -273,9 +274,15 @@ public partial class MainUI : Form
         this.IsAutoDerminingType = true;
         this.AddMsgLine("双击类型框，开始尝试自动判定");
 
-        Task task = Task.Run(async () =>
+        Task task = new Task(async () =>
         {
-            string type = ArchiveToolCLR.TryDetermineTypeCLR(this.FilePath);
+            string type = "";
+            try {
+                type = ArchiveToolCLR.TryDetermineTypeCLR(this.FilePath);
+            }
+            catch(Exception ex) {
+                this.AddMsgLine($"{ex.Message}");
+            }
             if(string.IsNullOrEmpty(type)) {
                 this.AddMsgLine("判定失败");
                 return;
@@ -287,6 +294,11 @@ public partial class MainUI : Form
             this.Invoke(() => { this.SetArchiveTypeUcbByHeader(type); });
             this.IsAutoDerminingType = false;
         });
+        task.ContinueWith(t => {
+            this.IsAutoDerminingType = false;
+        });
+
+        task.Start();
     }
 
     private void utb_msg_MouseDown(object sender, MouseEventArgs e)
