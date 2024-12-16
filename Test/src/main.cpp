@@ -6,7 +6,7 @@
 
 void main()
 {
-    if (ArchiveExtraTest("bin.rar", "test", "")) {
+    if (ArchiveExtraTest(L"bin.rar", L"test", L"")) {
         exit(0);
     }
 

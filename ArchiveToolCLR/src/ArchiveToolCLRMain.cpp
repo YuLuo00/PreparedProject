@@ -20,11 +20,11 @@ public ref class ArchiveToolCLR
 public:
     // 定义一个托管方法来调用 C++ 非托管函数
     static bool ArchiveExtraTestCLR( String ^ file, String ^ passwd , String^ type) {
-        std::string fileStr   = msclr::interop::marshal_as< std::string >( file );
-        std::string passwdStr = msclr::interop::marshal_as<std::string>(passwd);
-        std::string typeStr = msclr::interop::marshal_as<std::string>(type);
+        std::wstring fileWstr = GetStdWString(file);
+        std::wstring passwdWstr = GetStdWString(passwd);
+        std::wstring typeWstr = GetStdWString(type);
 
-        return ArchiveExtraTest( fileStr, passwdStr, typeStr );
+        return ArchiveExtraTest( fileWstr, passwdWstr, typeWstr );
     }
 
     static String ^Msg()
@@ -75,10 +75,33 @@ public:
 
     static String^ TryDetermineTypeCLR(String^ filePath)
     {
-        std::string filePathStr = msclr::interop::marshal_as<std::string>(filePath);
+        // 使用本地字符集进行转换
+        std::wstring filePathStr = GetStdWString(filePath);
+
+        // 调用原生函数处理
         std::string type = TryDetermineType(filePathStr);
+
+        // 返回管理字符串
         return GetManagedString(type);
     }
+
+    static std::wstring GetStdWString(String ^ cSharString) {
+        // 将 String^ 转为本地编码的 std::string
+        using namespace System::Runtime::InteropServices;
+
+        // 获取 UTF-16 的 wchar_t* 指针
+        const wchar_t *wcharStr =
+            reinterpret_cast<const wchar_t *>(Marshal::StringToHGlobalUni(cSharString).ToPointer());
+
+        // 转换为本地编码
+        std::wstring wideStr(wcharStr);
+        Marshal::FreeHGlobal(IntPtr((void *)wcharStr));
+
+        return wideStr;
+    }
+
+
+
 };
 
 public ref class PwdManagerCLR
