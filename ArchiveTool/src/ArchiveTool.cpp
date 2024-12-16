@@ -99,15 +99,12 @@ ZYB_ARCHIVE_TOOL_API std::string check_format(const std::string &filePath)
         //return err;
     }
     format = archive_format_name(a);
+    std::string ret = format;
 
     archive_read_close(a);
     archive_read_free(a);
 
-    if (format) {
-        return format;
-    }
-
-    return "";
+    return ret;
 }
 
 ZYB_ARCHIVE_TOOL_API std::vector<std::string> GetKeys()
