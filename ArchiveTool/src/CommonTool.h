@@ -10,6 +10,9 @@ namespace CommonTool {
     std::string Wstr2Utf8(const std::wstring &wstr);
     std::string Wstr2Local(const std::wstring &wstr);
 
+    std::wstring Utf82Wstr(const std::string &str);
+    std::wstring Local2Wstr(const std::string &str);
+
     bool StrIsUtf8Bom(const std::string &str);
     bool FileIsUtf8Bom(const std::string &filePath);
 

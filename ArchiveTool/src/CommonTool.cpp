@@ -36,6 +36,18 @@ std::string CommonTool::Wstr2Utf8(const std::wstring &wstr)
     return ret;
 }
 
+std::wstring CommonTool::Utf82Wstr(const std::string &str)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> cvt;
+    return cvt.from_bytes(str);
+}
+
+std::wstring CommonTool::Local2Wstr(const std::string &str)
+{
+    std::string strU8 = Local2Utf8(str);
+    return Utf82Wstr(strU8);
+}
+
 std::string CommonTool::Wstr2Local(const std::wstring &wstr)
 {
     int size = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), wstr.size(), NULL, 0, NULL, NULL);
