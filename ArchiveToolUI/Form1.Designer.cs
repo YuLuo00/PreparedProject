@@ -30,7 +30,6 @@ partial class MainUI
     {
         utb_newPwd = new TextBox();
         ub_addNewPwd = new Button();
-        utb_curPwd = new TextBox();
         ub_tryGetPwd = new Button();
         utb_msg = new TextBox();
         u_statusStrip = new StatusStrip();
@@ -39,6 +38,8 @@ partial class MainUI
         utb_format = new TextBox();
         ub_cpPwd = new Button();
         button1 = new Button();
+        ucb_pwdRet = new ComboBox();
+        ucb_tryAll = new CheckBox();
         u_statusStrip.SuspendLayout();
         SuspendLayout();
         // 
@@ -61,15 +62,6 @@ partial class MainUI
         ub_addNewPwd.Text = "添加新密码";
         ub_addNewPwd.UseVisualStyleBackColor = true;
         ub_addNewPwd.Click += ub_addNewPwd_Click;
-        // 
-        // utb_curPwd
-        // 
-        utb_curPwd.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-        utb_curPwd.Location = new Point(17, 42);
-        utb_curPwd.Name = "utb_curPwd";
-        utb_curPwd.PlaceholderText = "当前在检查的密码";
-        utb_curPwd.Size = new Size(294, 23);
-        utb_curPwd.TabIndex = 2;
         // 
         // ub_tryGetPwd
         // 
@@ -132,9 +124,9 @@ partial class MainUI
         // ub_cpPwd
         // 
         ub_cpPwd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        ub_cpPwd.Location = new Point(311, 42);
+        ub_cpPwd.Location = new Point(311, 39);
         ub_cpPwd.Name = "ub_cpPwd";
-        ub_cpPwd.Size = new Size(36, 23);
+        ub_cpPwd.Size = new Size(36, 26);
         ub_cpPwd.TabIndex = 8;
         ub_cpPwd.Text = "cp";
         ub_cpPwd.UseVisualStyleBackColor = true;
@@ -151,11 +143,30 @@ partial class MainUI
         button1.UseVisualStyleBackColor = true;
         button1.Click += button1_Click;
         // 
+        // ucb_pwdRet
+        // 
+        ucb_pwdRet.FormattingEnabled = true;
+        ucb_pwdRet.Location = new Point(18, 39);
+        ucb_pwdRet.Name = "ucb_pwdRet";
+        ucb_pwdRet.Size = new Size(267, 25);
+        ucb_pwdRet.TabIndex = 10;
+        // 
+        // ucb_tryAll
+        // 
+        ucb_tryAll.AutoSize = true;
+        ucb_tryAll.Location = new Point(291, 47);
+        ucb_tryAll.Name = "ucb_tryAll";
+        ucb_tryAll.Size = new Size(15, 14);
+        ucb_tryAll.TabIndex = 11;
+        ucb_tryAll.UseVisualStyleBackColor = true;
+        // 
         // MainUI
         // 
         AutoScaleDimensions = new SizeF(7F, 17F);
         AutoScaleMode = AutoScaleMode.Font;
         ClientSize = new Size(469, 220);
+        Controls.Add(ucb_tryAll);
+        Controls.Add(ucb_pwdRet);
         Controls.Add(button1);
         Controls.Add(ub_cpPwd);
         Controls.Add(utb_format);
@@ -163,7 +174,6 @@ partial class MainUI
         Controls.Add(u_statusStrip);
         Controls.Add(utb_msg);
         Controls.Add(ub_tryGetPwd);
-        Controls.Add(utb_curPwd);
         Controls.Add(ub_addNewPwd);
         Controls.Add(utb_newPwd);
         Margin = new Padding(2, 3, 2, 3);
@@ -182,7 +192,6 @@ partial class MainUI
 
     private TextBox utb_newPwd;
     private Button ub_addNewPwd;
-    private TextBox utb_curPwd;
     private Button ub_tryGetPwd;
     private TextBox utb_msg;
     private StatusStrip u_statusStrip;
@@ -191,4 +200,6 @@ partial class MainUI
     private TextBox utb_format;
     private Button ub_cpPwd;
     private Button button1;
+    private ComboBox ucb_pwdRet;
+    private CheckBox ucb_tryAll;
 }

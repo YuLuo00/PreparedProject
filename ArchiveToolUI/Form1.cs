@@ -71,16 +71,17 @@ public partial class MainUI : Form
         string format = this.utb_format.Text;
         //ArchiveToolCLR.
         // 启动异步任务
-        Task task = Task.Run(async () =>
+        Task task = new Task(async () =>
         {
             uint threadId = GetCurrentThreadId();
             this.AddMsgLine("开始任务，线程id == " + threadId.ToString());
             List<String> pwds = PwdManagerCLR.GetAllPasswords();
             int size = pwds.Count;
             bool success = false;
+            List<string> correctPwd = new();
             for(int i = 0; i < size; i++) {
                 String pwd = pwds[i];
-                this.utb_curPwd.Invoke(() => { this.utb_curPwd.Text = pwd; });
+                this.Invoke(() => { this.ucb_pwdRet.Text = pwd; });
                 this.AddMsgLine((i + 1).ToString() + "/" + size.ToString() + "::" + pwd);
                 if(string.IsNullOrEmpty(pwd)) {
                     continue;
@@ -90,6 +91,10 @@ public partial class MainUI : Form
                 }
                 success = true;
                 this.AddMsgLine("成功" + (i + 1).ToString() + "/" + size.ToString());
+                correctPwd.Add(pwd);
+                if(ucb_tryAll.Checked) {
+                    continue;
+                }
                 break;
             }
             if(!success) {
@@ -99,8 +104,18 @@ public partial class MainUI : Form
             {
                 this.m_isCheckingPwd = false;
                 this.ub_tryGetPwd.Enabled = true;
+                this.ucb_pwdRet.Items.Clear();
+                foreach(String pwd in correctPwd) {
+                    this.ucb_pwdRet.Text = pwd;
+                    this.ucb_pwdRet.Items.Add(pwd);
+                }
+                this.AddMsgLine($"检索完成，有{correctPwd.Count}个匹配密码");
             });
         });
+        task.ContinueWith(t => {
+
+        });
+        task.Start();
     }
 
     private void InvokeCall(Action callable)
@@ -253,7 +268,7 @@ public partial class MainUI : Form
     /// <param name="e"></param>
     private void ub_cpPwd_Click(object sender, EventArgs e)
     {
-        string pwd = this.utb_curPwd.Text;
+        string pwd = this.ucb_pwdRet.Text;
         Clipboard.SetText(pwd);
     }
 
