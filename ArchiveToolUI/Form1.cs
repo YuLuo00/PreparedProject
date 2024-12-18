@@ -19,7 +19,6 @@ public partial class MainUI : Form
         this.AllowDrop = true;
         this.DoubleBuffered = true;
     }
-
     /// <summary>
     /// 待处理文件路径
     /// </summary>
@@ -112,7 +111,8 @@ public partial class MainUI : Form
                 this.AddMsgLine($"检索完成，有{correctPwd.Count}个匹配密码");
             });
         });
-        task.ContinueWith(t => {
+        task.ContinueWith(t =>
+        {
 
         });
         task.Start();
@@ -200,6 +200,7 @@ public partial class MainUI : Form
         else {
             this.toolStripStatusLabel1.Text = msg;
             this.utb_msg.Text += msg + Environment.NewLine;
+            //this.utb_msg.ScrollBars.
             return;
         }
 
@@ -315,7 +316,8 @@ public partial class MainUI : Form
             this.Invoke(() => { this.SetArchiveTypeUcbByHeader(type); });
             this.IsAutoDerminingType = false;
         });
-        task.ContinueWith(t => {
+        task.ContinueWith(t =>
+        {
             this.IsAutoDerminingType = false;
         });
 
@@ -325,6 +327,11 @@ public partial class MainUI : Form
     private void utb_msg_MouseDown(object sender, MouseEventArgs e)
     {
         bool left = e.Button == MouseButtons.Left;
+    }
+
+    private void ucb_tryAll_CheckedChanged(object sender, EventArgs e)
+    {
+
     }
 
     private bool IsAutoDerminingType { get; set; } = false;

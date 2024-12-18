@@ -28,6 +28,7 @@ partial class MainUI
     /// </summary>
     private void InitializeComponent()
     {
+        components = new System.ComponentModel.Container();
         utb_newPwd = new TextBox();
         ub_addNewPwd = new Button();
         ub_tryGetPwd = new Button();
@@ -37,9 +38,10 @@ partial class MainUI
         ucb_archiveType = new ComboBox();
         utb_format = new TextBox();
         ub_cpPwd = new Button();
-        button1 = new Button();
+        ub_test = new Button();
         ucb_pwdRet = new ComboBox();
         ucb_tryAll = new CheckBox();
+        utp_tryAll = new ToolTip(components);
         u_statusStrip.SuspendLayout();
         SuspendLayout();
         // 
@@ -108,6 +110,7 @@ partial class MainUI
         ucb_archiveType.Name = "ucb_archiveType";
         ucb_archiveType.Size = new Size(91, 25);
         ucb_archiveType.TabIndex = 6;
+        utp_tryAll.SetToolTip(ucb_archiveType, "按此格式尝试判定密码");
         ucb_archiveType.SelectedIndexChanged += ucb_archiveType_SelectedIndexChanged;
         // 
         // utb_format
@@ -115,9 +118,10 @@ partial class MainUI
         utb_format.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         utb_format.Location = new Point(366, 77);
         utb_format.Name = "utb_format";
-        utb_format.PlaceholderText = "文件格式";
+        utb_format.PlaceholderText = "文件格式,双击开始自动推定";
         utb_format.Size = new Size(91, 23);
         utb_format.TabIndex = 7;
+        utp_tryAll.SetToolTip(utb_format, "文件格式,双击开始自动推定");
         utb_format.TextChanged += utb_archiveHeader_TextChanged;
         utb_format.DoubleClick += utb_format_DoubleClick;
         // 
@@ -129,19 +133,20 @@ partial class MainUI
         ub_cpPwd.Size = new Size(36, 26);
         ub_cpPwd.TabIndex = 8;
         ub_cpPwd.Text = "cp";
+        utp_tryAll.SetToolTip(ub_cpPwd, "拷贝当前展示的密码到剪切板");
         ub_cpPwd.UseVisualStyleBackColor = true;
         ub_cpPwd.Click += ub_cpPwd_Click;
         // 
-        // button1
+        // ub_test
         // 
-        button1.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        button1.Location = new Point(366, 140);
-        button1.Name = "button1";
-        button1.Size = new Size(91, 23);
-        button1.TabIndex = 9;
-        button1.Text = "button1";
-        button1.UseVisualStyleBackColor = true;
-        button1.Click += button1_Click;
+        ub_test.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        ub_test.Location = new Point(366, 140);
+        ub_test.Name = "ub_test";
+        ub_test.Size = new Size(91, 23);
+        ub_test.TabIndex = 9;
+        ub_test.Text = "button1";
+        ub_test.UseVisualStyleBackColor = true;
+        ub_test.Click += button1_Click;
         // 
         // ucb_pwdRet
         // 
@@ -150,6 +155,7 @@ partial class MainUI
         ucb_pwdRet.Name = "ucb_pwdRet";
         ucb_pwdRet.Size = new Size(267, 25);
         ucb_pwdRet.TabIndex = 10;
+        utp_tryAll.SetToolTip(ucb_pwdRet, "可能匹配到多个密码，请逐个尝试");
         // 
         // ucb_tryAll
         // 
@@ -158,7 +164,9 @@ partial class MainUI
         ucb_tryAll.Name = "ucb_tryAll";
         ucb_tryAll.Size = new Size(15, 14);
         ucb_tryAll.TabIndex = 11;
+        utp_tryAll.SetToolTip(ucb_tryAll, "\"尝试匹配全部测试成功的密码。取消勾选，匹配到一个就停止\"");
         ucb_tryAll.UseVisualStyleBackColor = true;
+        ucb_tryAll.CheckedChanged += ucb_tryAll_CheckedChanged;
         // 
         // MainUI
         // 
@@ -167,7 +175,7 @@ partial class MainUI
         ClientSize = new Size(469, 220);
         Controls.Add(ucb_tryAll);
         Controls.Add(ucb_pwdRet);
-        Controls.Add(button1);
+        Controls.Add(ub_test);
         Controls.Add(ub_cpPwd);
         Controls.Add(utb_format);
         Controls.Add(ucb_archiveType);
@@ -199,7 +207,8 @@ partial class MainUI
     private ComboBox ucb_archiveType;
     private TextBox utb_format;
     private Button ub_cpPwd;
-    private Button button1;
+    private Button ub_test;
     private ComboBox ucb_pwdRet;
     private CheckBox ucb_tryAll;
+    private ToolTip utp_tryAll;
 }
