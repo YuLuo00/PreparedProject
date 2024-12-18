@@ -239,6 +239,11 @@ public partial class MainUI : Form
             return;
         }
 
+        if(header.Contains("ZIP 2.0")) {
+            this.ucb_archiveType.Text = "zip";
+            return;
+        }
+
         this.ucb_archiveType.Text = "Auto";
         for(int i = 0; i < this.ucb_archiveType.Items.Count; i++) {
             string itemStr = this.ucb_archiveType.Items[i]?.ToString() ?? "";
