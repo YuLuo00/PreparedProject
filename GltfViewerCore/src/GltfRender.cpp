@@ -99,12 +99,12 @@ int GltfRender::Run()
     // 顶点数据，两个三角形
     int numVertex = 2;
     std::vector<VertexInfo> vertices(6);
-    vertices[0].position = VertexInfo::Position(-1, 0, 0);
-    vertices[1].position = VertexInfo::Position(-0.1, 1, 0);
-    vertices[2].position = VertexInfo::Position(-0.1, 0, 0);
-    vertices[3].position = VertexInfo::Position(1, 0, 0);
-    vertices[4].position = VertexInfo::Position(0.1, 1, 0);
-    vertices[5].position = VertexInfo::Position(0.1, 0, 0);
+    vertices[0].position = glm::vec3(-1, 0, 0);
+    vertices[1].position = glm::vec3(-0.1, 1, 0);
+    vertices[2].position = glm::vec3(-0.1, 0, 0);
+    vertices[3].position = glm::vec3(1, 0, 0);
+    vertices[4].position = glm::vec3(0.1, 1, 0);
+    vertices[5].position = glm::vec3(0.1, 0, 0);
 
     // 创建顶点数组对象 (VAO) 和顶点缓冲对象 (VBO)
     GLuint VBO, VAO;
@@ -130,7 +130,7 @@ int GltfRender::Run()
     glFlushMappedBufferRange(GL_ARRAY_BUFFER, 0, sizeof(vertices[0]) * vertices.size());
 
     glVertexAttribPointer(0,
-                          sizeof(VertexInfo::Position) / sizeof(float),
+                          sizeof(VertexInfo::position) / sizeof(float),
                           GL_FLOAT,
                           GL_FALSE,
                           sizeof(vertices[0]),
