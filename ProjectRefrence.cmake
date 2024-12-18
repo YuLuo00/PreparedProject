@@ -191,10 +191,6 @@ macro(Add3rd_stb_image ProjectName)
     target_include_directories(${ProjectName} PRIVATE
         "${ProjectRootDir}/ThirdParty/stb_image/"
     )
-    target_compile_definitions(${ProjectName} PRIVATE
-        STB_IMAGE_IMPLEMENTATION
-    )
-
 endmacro()
 
 macro(Add3rd_freeimage ProjectName)

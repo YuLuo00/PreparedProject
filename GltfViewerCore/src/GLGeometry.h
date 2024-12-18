@@ -7,15 +7,13 @@ struct VertexInfo
 {
 public:
     VertexInfo() = default;
-    glm::vec2 m_textCoord = {};
     glm::vec3 position = {};
     glm::vec4 color = {};
     glm::vec2 uv = {};
-    static const int LengthByFloat;
+    float textrueId = 1;
 };
 #pragma pack(pop)
 
-inline const int VertexInfo::LengthByFloat = sizeof(VertexInfo) / sizeof(float);
 
 const int GlVertexSize = sizeof(VertexInfo);
 const int GlVertexLength = sizeof(VertexInfo) / sizeof(float);

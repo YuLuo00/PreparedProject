@@ -16,31 +16,47 @@
 #include "GltfRender.h"
 
 // 顶点着色器源码
-static const char *vertexShaderSource = R"(
+static const char* vertexShaderSource = R"(
 #version 330 core
-layout(location = 0) in vec3 position; // 输入顶点位置
-layout(location = 1) in vec3 color;    // 输入顶点颜色
+layout(location = 0) in vec3 position;  // 输入顶点位置
+layout(location = 1) in vec2 uv;        // 输入纹理坐标
+layout(location = 2) in float textureID;  // 纹理ID
 
-uniform mat4 view; // 声明视图矩阵uniform变量
-uniform mat4 projection;
+out vec2 fragUV;  // 将纹理坐标传递到片段着色器
+out float fragTextureID;  // 传递纹理ID到片段着色器
 
-out vec3 fragColor; // 输出到片段着色器
+uniform mat4 view;        // 视图矩阵
+uniform mat4 projection;  // 投影矩阵
 
 void main() {
-    gl_Position = vec4(position, 1.0); // 设置顶点位置
-    gl_Position = projection * view * vec4(position, 1.0);
-    fragColor = color; // 将颜色传递给片段着色器
+    gl_Position = projection * view * vec4(position, 1.0);  // 计算顶点位置
+    fragUV = uv;  // 传递纹理坐标到片段着色器
+    fragTextureID = textureID;  // 传递纹理ID
 }
 )";
 
 // 片段着色器源码
-static const char *fragmentShaderSource = R"(
+static const char* fragmentShaderSource = R"(
 #version 330 core
+in vec2 fragUV;  // 接收从顶点着色器传递的纹理坐标
+flat in float fragTextureID;   // 从顶点着色器传递的纹理ID
+
 out vec4 FragColor;
+
+uniform sampler2D texture1;  // 纹理1
+uniform sampler2D texture2;  // 纹理2
+
 void main() {
-    FragColor = vec4(1.0, 0.5, 0.2, 1.0);
+    // 每个三角形都独立显示自己的纹理
+    if (fragTextureID == 1) {
+        FragColor = texture(texture1, fragUV);  // 采样纹理1
+    } else if (fragTextureID == 2) {
+        FragColor = texture(texture2, fragUV);  // 采样纹理2
+    }
 }
 )";
+
+
 
 // 检查编译和链接错误
 void checkCompileErrors1(GLuint shader, std::string type)
@@ -112,6 +128,20 @@ void GltfRenderGLCore::FrameEvent()
             // 重置计时器和帧计数
             lastTime = currentTime;
             frameCount = 0;
+            {
+                GLuint textureIDLocation = glGetUniformLocation(shaderProgram, "textureID");
+                int textureIDValue;
+                glGetUniformiv(shaderProgram, textureIDLocation, &textureIDValue);
+                std::cout << "textureID value: " << textureIDValue << std::endl;
+                GLint value;
+                glGetVertexAttribiv(0, GL_VERTEX_ATTRIB_ARRAY_POINTER, &value);
+                std::cout << "VertexAttribPointer location 0 points to: " << value << std::endl;
+                glGetVertexAttribiv(1, GL_VERTEX_ATTRIB_ARRAY_POINTER, &value);
+                std::cout << "VertexAttribPointer location 1 points to: " << value << std::endl;
+                glGetVertexAttribiv(2, GL_VERTEX_ATTRIB_ARRAY_POINTER, &value);
+                std::cout << "VertexAttribPointer location 2 points to: " << value << std::endl;
+
+            }
         }
     }
 }

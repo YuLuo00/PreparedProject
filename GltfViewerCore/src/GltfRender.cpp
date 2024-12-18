@@ -12,6 +12,8 @@
 #include <opencv2/opencv.hpp>
 #include <tiny_gltf.h>
 
+#include <stb_image.h>
+
 #include "GLGeometry.h"
 #include "GltfRenderGLCore.h"
 
@@ -80,6 +82,31 @@ GLFWwindow *InitWindowForGlfw()
     return window;
 }
 
+GLuint LoadTexture(const char *filepath)
+{
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    // 读取图片文件
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load(filepath, &width, &height, &nrChannels, 0);
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else {
+        std::cerr << "Failed to load texture: " << filepath << std::endl;
+    }
+    stbi_image_free(data);
+
+    // 设置纹理过滤方式
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    return textureID;
+}
+
 int GltfRender::Run()
 {
     GLFWwindow *window = InitWindowForGlfw();
@@ -100,11 +127,23 @@ int GltfRender::Run()
     int numVertex = 2;
     std::vector<VertexInfo> vertices(6);
     vertices[0].position = glm::vec3(-1, 0, 0);
+    vertices[0].uv = glm::vec2(0, 0);
+    vertices[0].textrueId = 1;
     vertices[1].position = glm::vec3(-0.1, 1, 0);
+    vertices[1].uv = glm::vec2(1, 1);
+    vertices[1].textrueId = 1;
     vertices[2].position = glm::vec3(-0.1, 0, 0);
+    vertices[2].uv = glm::vec2(0, 1);
+    vertices[2].textrueId = 1;
     vertices[3].position = glm::vec3(1, 0, 0);
+    vertices[3].uv = glm::vec2(1, 0);
+    vertices[3].textrueId = 2;
     vertices[4].position = glm::vec3(0.1, 1, 0);
+    vertices[4].uv = glm::vec2(0, 1);
+    vertices[4].textrueId = 2;
     vertices[5].position = glm::vec3(0.1, 0, 0);
+    vertices[5].uv = glm::vec2(0, 0);
+    vertices[5].textrueId = 2;
 
     // 创建顶点数组对象 (VAO) 和顶点缓冲对象 (VBO)
     GLuint VBO, VAO;
@@ -114,34 +153,33 @@ int GltfRender::Run()
     glBindVertexArray(VAO);             // 绑定 VAO，后续操作会与此 VAO 相关联
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // 绑定 VBO，用于顶点数据存储
 
-    glBufferStorage(
-        GL_ARRAY_BUFFER, sizeof(vertices[0]) * vertices.size(), NULL, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
-
     // 持久化映射
-    void *mappedPtr = glMapBufferRange(
-        GL_ARRAY_BUFFER, 0, sizeof(vertices[0]) * vertices.size(), GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+    int verticesSize = sizeof(vertices[0]) * vertices.size();
+    glBufferStorage(GL_ARRAY_BUFFER, verticesSize, NULL, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+    void *mappedPtr = glMapBufferRange(GL_ARRAY_BUFFER, 0, verticesSize, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
     if (!mappedPtr) {
         std::cerr << "Failed to map buffer!" << std::endl;
         return -1;
     }
     // 修改数据（直接操作 mappedData）
-    memcpy(mappedPtr, vertices.data(), sizeof(vertices[0]) * vertices.size());
+    memcpy(mappedPtr, vertices.data(), verticesSize);
     // 刷新缓冲区的数据，确保写入的数据会正确传递到 GPU
-    glFlushMappedBufferRange(GL_ARRAY_BUFFER, 0, sizeof(vertices[0]) * vertices.size());
-
-    glVertexAttribPointer(0,
-                          sizeof(VertexInfo::position) / sizeof(float),
-                          GL_FLOAT,
-                          GL_FALSE,
-                          sizeof(vertices[0]),
-                          (void *)offsetof(VertexInfo, position));
+    glFlushMappedBufferRange(GL_ARRAY_BUFFER, 0, verticesSize);
 
     // 启用顶点属性数组 0
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexInfo), (void *)offsetof(VertexInfo, position));
     glEnableVertexAttribArray(0); // 启用顶点属性位置 0，以便在着色器中使用
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexInfo), (void *)offsetof(VertexInfo, uv));
+    glEnableVertexAttribArray(1); // 启用纹理坐标属性
+    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(VertexInfo), (void *)offsetof(VertexInfo, textrueId));
+    glEnableVertexAttribArray(2); // 启用纹理ID属性
 
     // 解绑 VBO 和 VAO，恢复到默认状态
     glBindBuffer(GL_ARRAY_BUFFER, 0); // 解除绑定当前的 VBO
     glBindVertexArray(0);             // 解除绑定当前的 VAO，表示不再使用此 VAO
+
+    GLuint texture1 = LoadTexture("texture1.jpg"); // 第一个纹理
+    GLuint texture2 = LoadTexture("texture2.jpg"); // 第二个纹理
 
     // 编译顶点着色器
     this->m_data->InitShaderProgram();
@@ -154,6 +192,16 @@ int GltfRender::Run()
 
     glUseProgram(this->m_data->shaderProgram);
     glBindVertexArray(VAO);
+
+
+    // 第二个三角形 - 使用第二个纹理
+    glActiveTexture(GL_TEXTURE1); // 激活纹理单元 1
+    glBindTexture(GL_TEXTURE_2D, texture2);
+    glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "texture2"), 1);
+    // 第一个三角形 - 使用第一个纹理
+    glActiveTexture(GL_TEXTURE0); // 激活纹理单元 0
+    glBindTexture(GL_TEXTURE_2D, texture1);
+    glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "texture1"), 0);
 
     // 渲染循环
     while (!glfwWindowShouldClose(window)) {
@@ -169,8 +217,21 @@ int GltfRender::Run()
                      this->m_data->backgroundColor[3]);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // 绘制三角形
+        //// 第一个三角形 - 使用第一个纹理
+        //glActiveTexture(GL_TEXTURE0); // 激活纹理单元 0
+        //glBindTexture(GL_TEXTURE_2D, texture1);
+        //glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "texture1"), 0);
+
+        // 绘制第一个三角形
         glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        //// 第二个三角形 - 使用第二个纹理
+        //glActiveTexture(GL_TEXTURE1); // 激活纹理单元 1
+        //glBindTexture(GL_TEXTURE_2D, texture2);
+        //glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "texture2"), 1);
+
+        // 绘制第二个三角形
+        //glDrawArrays(GL_TRIANGLES, 3, 6);
 
         // 刷新窗口，交换缓冲区
         glfwSwapBuffers(window);
@@ -188,12 +249,12 @@ int GltfRender::Run()
 
 bool GltfRender::LoadGltf(const std::string &filePath)
 {
-    tinygltf::Model model;
-    tinygltf::TinyGLTF loader;
-    std::string err, warn;
-    if (!loader.LoadASCIIFromFile(&model, &err, &warn, filePath)) {
-        return false;
-    };
+    //tinygltf::Model model;
+    //tinygltf::TinyGLTF loader;
+    //std::string err, warn;
+    //if (!loader.LoadASCIIFromFile(&model, &err, &warn, filePath)) {
+    //    return false;
+    //};
 
     return false;
 }
