@@ -73,7 +73,6 @@ GLFWwindow *InitWindowForGlfw()
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 核心配置
     //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // 对于 MacOS 和某些系统
 
-
     //// 隐藏窗口
     //glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 强制使用核心配置文件
@@ -124,8 +123,6 @@ GLuint LoadTexture(const char *filepath)
 
 int GltfRender::Run()
 {
-
-
     GLFWwindow *window = InitWindowForGlfw();
     if (window == nullptr) {
         return -1;
@@ -162,41 +159,50 @@ int GltfRender::Run()
     vertices[5].uv = glm::vec2(1, 0);
     vertices[5].textrueId = 1;
 
+    std::vector<InstanceInfo> insts(2);
+    insts[0].vertexInfoIdx = {0, 1, 2};
+    insts[0].mtx = glm::translate(insts[0].mtx, glm::vec3(0, 1, 0));
+    insts[1].vertexInfoIdx = {0, 1, 2};
+    insts[1].mtx = glm::translate(insts[1].mtx, glm::vec3(-1, 0, 0));
+
     // 创建顶点数组对象 (VAO) 和顶点缓冲对象 (VBO)
-    GLuint VBO, VAO;
+    GLuint VBO, VAO, InstanceVBO;
     glGenVertexArrays(1, &VAO); // 生成一个 VAO，保存到 VAO 变量中
     glGenBuffers(1, &VBO);      // 生成一个 VBO，保存到 VBO 变量中
+    glGenBuffers(1, &InstanceVBO);
 
-    glBindVertexArray(VAO);             // 绑定 VAO，后续操作会与此 VAO 相关联
+    glBindVertexArray(VAO); // 绑定 VAO，后续操作会与此 VAO 相关联
+
+    // 持久化映射 vt
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // 绑定 VBO，用于顶点数据存储
-
-    // 持久化映射
     int verticesSize = sizeof(vertices[0]) * vertices.size();
     glBufferStorage(GL_ARRAY_BUFFER, verticesSize, NULL, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
-    void *mappedPtr = glMapBufferRange(GL_ARRAY_BUFFER, 0, verticesSize, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
-    if (!mappedPtr) {
-        std::cerr << "Failed to map buffer!" << std::endl;
-        return -1;
-    }
-    // 修改数据（直接操作 mappedData）
-    memcpy(mappedPtr, vertices.data(), verticesSize);
-    // 刷新缓冲区的数据，确保写入的数据会正确传递到 GPU
+    void *vtMap = glMapBufferRange(GL_ARRAY_BUFFER, 0, verticesSize, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+    memcpy(vtMap, vertices.data(), verticesSize); // 修改数据（直接操作 mappedData）
+    glFlushMappedBufferRange(GL_ARRAY_BUFFER, 0, verticesSize); // 刷新缓冲区的数据，确保写入的数据会正确传递到 GPU
+    // 启用顶点属性数组 0
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexInfo), (void*)offsetof(VertexInfo, position));
+    glEnableVertexAttribArray(0); // 启用顶点属性位置 0，以便在着色器中使用
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexInfo), (void*)offsetof(VertexInfo, uv));
+    glEnableVertexAttribArray(1); // 启用纹理坐标属性
+    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(VertexInfo), (void*)offsetof(VertexInfo, textrueId));
+    glEnableVertexAttribArray(2); // 启用纹理ID属性
+
+    // 持久化映射 inst
+    glBindBuffer(GL_ARRAY_BUFFER, InstanceVBO);
+    int instanceDataSize = sizeof(InstanceInfo) * insts.size();
+    glBufferStorage(GL_ARRAY_BUFFER, instanceDataSize, NULL, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+    void *instsMap = glMapBufferRange(GL_ARRAY_BUFFER, 0, instanceDataSize, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+    memcpy(instsMap, insts.data(), instanceDataSize);
     glFlushMappedBufferRange(GL_ARRAY_BUFFER, 0, verticesSize);
 
-    // 启用顶点属性数组 0
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexInfo), (void *)offsetof(VertexInfo, position));
-    glEnableVertexAttribArray(0); // 启用顶点属性位置 0，以便在着色器中使用
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexInfo), (void *)offsetof(VertexInfo, uv));
-    glEnableVertexAttribArray(1); // 启用纹理坐标属性
-    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(VertexInfo), (void *)offsetof(VertexInfo, textrueId));
-    glEnableVertexAttribArray(2); // 启用纹理ID属性
+    glVertexAttribPointer(3, 16, GL_FLOAT, GL_FALSE, sizeof(InstanceInfo), (void*)offsetof(InstanceInfo, mtx));
+    glEnableVertexAttribArray(3); // 启用矩阵实例
+    glVertexAttribDivisor(3, 1);  // 每个实例使用不同的变换矩阵
 
     // 解绑 VBO 和 VAO，恢复到默认状态
     glBindBuffer(GL_ARRAY_BUFFER, 0); // 解除绑定当前的 VBO
     glBindVertexArray(0);             // 解除绑定当前的 VAO，表示不再使用此 VAO
-
-    GLuint texture0 = LoadTexture("texture0.jpg"); // 第一个纹理
-    GLuint texture1 = LoadTexture("texture1.jpg"); // 第二个纹理
 
     // 编译顶点着色器
     this->m_data->InitShaderProgram();
@@ -232,7 +238,8 @@ int GltfRender::Run()
         //加载图片
         for (int i = 0; i < 2; i++) {
             // 使用 OpenCV 读取图片
-            cv::Mat image = cv::imread(path[i], cv::IMREAD_COLOR);  // 读取彩色图像
+            cv::Mat image = cv::imread(path[i], cv::IMREAD_COLOR); // 读取彩色图像
+            cv::cvtColor(image, image, cv::COLOR_BGR2RGBA);        // 将 BGR 转换为 RGBA
 
             if (image.empty()) {
                 std::cerr << "Failed to load image: " << path[i] << std::endl;
@@ -241,32 +248,22 @@ int GltfRender::Run()
 
             // 使用 OpenCV 缩放图像到 1000x1000
             cv::Mat resizedImage;
-            cv::resize(image, resizedImage, cv::Size(1000, 1000));  // 目标尺寸 1000x1000
+            cv::resize(image, resizedImage, cv::Size(1000, 1000)); // 目标尺寸 1000x1000
 
             // 更新纹理数据，OpenGL 纹理需要传入原始的 uchar 数组数据
             // OpenCV 读取的图像是 BGR 格式，如果是 RGBA 格式，你可以使用 cv::cvtColor 转换为 RGBA
-            cv::Mat rgbaImage;
-            cv::cvtColor(resizedImage, rgbaImage, cv::COLOR_BGR2RGBA); // 将 BGR 转换为 RGBA
             // y轴翻转
-            cv::flip(rgbaImage, rgbaImage, 0);
+            cv::flip(resizedImage, resizedImage, 0);
 
             // 更新 OpenGL 纹理
-            glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, 1000, 1000, 1, GL_RGBA, GL_UNSIGNED_BYTE, rgbaImage.data);
+            glTexSubImage3D(
+                GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, 1000, 1000, 1, GL_RGBA, GL_UNSIGNED_BYTE, resizedImage.data);
         }
 
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D_ARRAY, textureID);
         glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "TextureArray"), 2); //纹理传入binding=2
     }
-
-    // 第一个三角形 - 使用第一个纹理
-    glActiveTexture(GL_TEXTURE0); // 激活纹理单元 0
-    glBindTexture(GL_TEXTURE_2D, texture0);
-    glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "texture0"), 0);
-    // 第二个三角形 - 使用第二个纹理
-    glActiveTexture(GL_TEXTURE1); // 激活纹理单元 1
-    glBindTexture(GL_TEXTURE_2D, texture1);
-    glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "texture1"), 1);
 
     // 渲染循环
     while (!glfwWindowShouldClose(window)) {

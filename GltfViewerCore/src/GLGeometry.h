@@ -1,6 +1,11 @@
 ﻿#ifndef _GL_GEOMETRY_H
 #define _GL_GEOMETRY_H
 
+#include <vector>
+
+#include <glm/fwd.hpp>
+#include <glm/glm.hpp>
+
 // 使用 #pragma pack(1) 禁止内存对齐
 #pragma pack(push, 1)
 struct VertexInfo
@@ -12,8 +17,15 @@ public:
     glm::vec2 uv = {};
     float textrueId = 1;
 };
-#pragma pack(pop)
 
+struct InstanceInfo
+{
+public:
+    InstanceInfo() = default;
+    glm::mat4 mtx = glm::identity<glm::mat4>();
+    std::vector<int> vertexInfoIdx;
+};
+#pragma pack(pop)
 
 const int GlVertexSize = sizeof(VertexInfo);
 const int GlVertexLength = sizeof(VertexInfo) / sizeof(float);

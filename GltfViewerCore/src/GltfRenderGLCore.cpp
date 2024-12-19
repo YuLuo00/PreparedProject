@@ -116,6 +116,11 @@ void GltfRenderGLCore::FrameEvent()
             GLint maxArrayLayers;
             glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &maxArrayLayers);
             std::cout << fmt::format("Maximum texture array layers : {}", maxArrayLayers) << std::endl;
+            // 最大绑定点数量
+            GLint maxVertexAttribs;
+            glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
+            std::cout << "Maximum vertex attribute bindings: " << maxVertexAttribs << std::endl;
+
 
             // 获取供应商信息
             const GLubyte *vendor = glGetString(GL_VENDOR);
@@ -160,7 +165,7 @@ void GltfRenderGLCore::FrameEvent()
         if (elapsed >= 1) {
             // 计算帧率
             float fps = frameCount / static_cast<float>(elapsed);
-            //std::cout << "FPS: " << fps << std::endl;
+            std::cout << "FPS: " << fps << std::endl;
 
             // 重置计时器和帧计数
             lastTime = currentTime;
