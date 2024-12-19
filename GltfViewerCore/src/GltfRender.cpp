@@ -10,9 +10,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <opencv2/opencv.hpp>
+//#include <SDL2/SDL.h>
+//#include <SDL2/SDL_opengl.h> // 如果你使用 OpenGL
 #include <tiny_gltf.h>
 
 #include <stb_image.h>
+#include <stb_image_resize.h>
 
 #include "GLGeometry.h"
 #include "GltfRenderGLCore.h"
@@ -53,15 +56,27 @@ GltfRender::GltfRender()
 
 GLFWwindow *InitWindowForGlfw()
 {
+    //// 创建上下文时指定为核心上下文（4.3或更高版本）
+    //SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE); // 使用核心模式
+    //SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    //SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+
     GLFWwindow *window = nullptr;
     // 初始化 GLFW
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW!" << std::endl;
         return nullptr;
     }
+    // 确保请求一个支持 OpenGL 4.3 的上下文
+    //glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    //glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 核心配置
+    //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // 对于 MacOS 和某些系统
+
 
     //// 隐藏窗口
     //glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 强制使用核心配置文件
 
     // 创建窗口
     window = glfwCreateWindow(800, 600, "Offscreen", NULL, NULL);
@@ -109,6 +124,8 @@ GLuint LoadTexture(const char *filepath)
 
 int GltfRender::Run()
 {
+
+
     GLFWwindow *window = InitWindowForGlfw();
     if (window == nullptr) {
         return -1;
@@ -129,20 +146,20 @@ int GltfRender::Run()
     vertices[0].position = glm::vec3(-1, 0, 0);
     vertices[0].uv = glm::vec2(0, 0);
     vertices[0].textrueId = 0;
-    vertices[1].position = glm::vec3(-0.1, 1, 0);
+    vertices[1].position = glm::vec3(-0, 1, 0);
     vertices[1].uv = glm::vec2(1, 1);
     vertices[1].textrueId = 0;
-    vertices[2].position = glm::vec3(-0.1, 0, 0);
-    vertices[2].uv = glm::vec2(0, 1);
+    vertices[2].position = glm::vec3(-0, 0, 0);
+    vertices[2].uv = glm::vec2(1, 0);
     vertices[2].textrueId = 0;
-    vertices[3].position = glm::vec3(1, 0, 0);
-    vertices[3].uv = glm::vec2(1, 0);
+    vertices[3].position = glm::vec3(0, 0, 0);
+    vertices[3].uv = glm::vec2(0, 0);
     vertices[3].textrueId = 1;
-    vertices[4].position = glm::vec3(0.1, 1, 0);
+    vertices[4].position = glm::vec3(0, 1, 0);
     vertices[4].uv = glm::vec2(0, 1);
     vertices[4].textrueId = 1;
-    vertices[5].position = glm::vec3(0.1, 0, 0);
-    vertices[5].uv = glm::vec2(0, 0);
+    vertices[5].position = glm::vec3(1, 0, 0);
+    vertices[5].uv = glm::vec2(1, 0);
     vertices[5].textrueId = 1;
 
     // 创建顶点数组对象 (VAO) 和顶点缓冲对象 (VBO)
@@ -192,7 +209,7 @@ int GltfRender::Run()
 
     glUseProgram(this->m_data->shaderProgram);
     glBindVertexArray(VAO);
-    if(0)
+    //if(0)
     {
         GLuint textureID = -1;
         //生成纹理
@@ -207,30 +224,39 @@ int GltfRender::Run()
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-        //接下来就是不同的地方了--
         //两种分配方式都可以，glTexImage3D好像是老版本的方式
         glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, 1000, 1000, 2);
         //glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB, 1000, 1000, 2, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
-        const char* path[2] = { "texture0.jpg","texture1.jpg" };
+        const char *path[2] = {"texture0.jpg", "texture1.jpg"};
         //加载图片
         for (int i = 0; i < 2; i++) {
-            unsigned char* pBits;
-            int nWidth, nHeight, nComponents;
+            // 使用 OpenCV 读取图片
+            cv::Mat image = cv::imread(path[i], cv::IMREAD_COLOR);  // 读取彩色图像
 
-            // Read the texture bits 读取纹理数据
-            stbi_set_flip_vertically_on_load(true); //告诉stb_image.h在y轴上翻转加载的纹理。
+            if (image.empty()) {
+                std::cerr << "Failed to load image: " << path[i] << std::endl;
+                continue;
+            }
 
-            pBits = stbi_load(path[i], &nWidth, &nHeight, &nComponents, 0);
+            // 使用 OpenCV 缩放图像到 1000x1000
+            cv::Mat resizedImage;
+            cv::resize(image, resizedImage, cv::Size(1000, 1000));  // 目标尺寸 1000x1000
 
-            //更新纹理 这里把深度进行了修改，下面的i就代表深度
-            glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, nWidth, nHeight, 1, GL_RGB, GL_UNSIGNED_BYTE, pBits);
-            stbi_image_free(pBits);
+            // 更新纹理数据，OpenGL 纹理需要传入原始的 uchar 数组数据
+            // OpenCV 读取的图像是 BGR 格式，如果是 RGBA 格式，你可以使用 cv::cvtColor 转换为 RGBA
+            cv::Mat rgbaImage;
+            cv::cvtColor(resizedImage, rgbaImage, cv::COLOR_BGR2RGBA); // 将 BGR 转换为 RGBA
+            // y轴翻转
+            cv::flip(rgbaImage, rgbaImage, 0);
+
+            // 更新 OpenGL 纹理
+            glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, 1000, 1000, 1, GL_RGBA, GL_UNSIGNED_BYTE, rgbaImage.data);
         }
 
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D_ARRAY, textureID);
-        glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "TextureArray"), 2);//纹理传入binding=2
+        glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "TextureArray"), 2); //纹理传入binding=2
     }
 
     // 第一个三角形 - 使用第一个纹理

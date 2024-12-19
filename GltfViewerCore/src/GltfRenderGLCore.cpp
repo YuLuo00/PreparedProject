@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <map>
+#include <string>
 #include <vector>
 
 #include <GL/glew.h>
@@ -16,8 +17,8 @@
 #include "GltfRender.h"
 
 // 顶点着色器源码
-static const char* vertexShaderSource = R"(
-#version 450 core
+static const char *vertexShaderSource = R"(
+#version 330 compatibility
 layout(location = 0) in vec3 position;  // 输入顶点位置
 layout(location = 1) in vec2 uv;        // 输入纹理坐标
 layout(location = 2) in float textureID;  // 纹理ID
@@ -36,8 +37,8 @@ void main() {
 )";
 
 // 片段着色器源码
-static const char* fragmentShaderSource = R"(
-#version 450 core
+static const char *fragmentShaderSource = R"(
+#version 330 compatibility
 in vec2 fragUV;  // 接收从顶点着色器传递的纹理坐标
 flat in float fragTextureID;   // 从顶点着色器传递的纹理ID
 
@@ -46,23 +47,19 @@ out vec4 FragColor;
 uniform sampler2D texture0;  // 纹理1
 uniform sampler2D texture1;  // 纹理2
 //uniform sampler2D textures[32];
-uniform sampler2D TextureArray;
+uniform sampler2DArray TextureArray;
 
 void main() {
-    {
-        int tId = int(fragTextureID);
-        //textures[tId];
-    }
-    // 每个三角形都独立显示自己的纹理
-    if (fragTextureID == 0.0) {
-        FragColor = texture(texture0, fragUV);  // 采样纹理1
-    } else if (fragTextureID == 1.0) {
-        FragColor = texture(texture1, fragUV);  // 采样纹理2
-    }
+    int tId = int(fragTextureID);
+
+    //if (fragTextureID == 0.0) {
+    //    FragColor = texture(texture0, fragUV);  // 采样纹理1
+    //} else if (fragTextureID == 1.0) {
+    //    FragColor = texture(texture1, fragUV);  // 采样纹理2
+    //}
+    FragColor = texture(TextureArray, vec3(fragUV, tId));//纹理坐标第三位为纹理序号索引
 }
 )";
-
-
 
 // 检查编译和链接错误
 void checkCompileErrors1(GLuint shader, std::string type)
@@ -104,12 +101,38 @@ void GltfRenderGLCore::FrameEvent()
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->view));             // 设置 view 矩阵
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(this->projection)); // 设置 projection 矩阵
         {
+            std::cout << "-------------------------------------------" << std::endl;
+            const char *version = (const char *)glGetString(GL_VERSION);
+            std::cout << fmt::format("OpenGL version: {}", version) << std::endl;
+            // 获取最大纹理尺寸
+            GLint maxTextureSize;
+            glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+            std::cout << "Maximum texture size: " << maxTextureSize << std::endl;
+            // 最大纹理单元数
             GLint maxTextures;
             glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTextures);
             std::cout << "Maximum texture units: " << maxTextures << std::endl;
+            // 最大纹理数组层数
             GLint maxArrayLayers;
             glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &maxArrayLayers);
             std::cout << fmt::format("Maximum texture array layers : {}", maxArrayLayers) << std::endl;
+
+            // 获取供应商信息
+            const GLubyte *vendor = glGetString(GL_VENDOR);
+            std::cout << "OpenGL vendor: " << vendor << std::endl;
+
+            // 获取渲染器信息
+            const GLubyte *renderer = glGetString(GL_RENDERER);
+            std::cout << "OpenGL renderer: " << renderer << std::endl;
+            // 渲染器
+            const GLubyte* shadingLanguageVersion = glGetString(GL_SHADING_LANGUAGE_VERSION);
+            std::cout << "GLSL shader language version: " << shadingLanguageVersion << std::endl;
+
+            // 获取扩展信息
+            const GLubyte *extensions = glGetString(GL_EXTENSIONS);
+            std::string extensionsStr = extensions != nullptr ? reinterpret_cast<const char*>(extensions) : "";
+            //std::cout << fmt::format("OpenGL extensions: {}", extensionsStr) << std::endl;
+            std::cout << "-------------------------------------------" << std::endl;
         }
     }
 
@@ -154,7 +177,6 @@ void GltfRenderGLCore::FrameEvent()
                 //std::cout << "VertexAttribPointer location 1 points to: " << value << std::endl;
                 //glGetVertexAttribiv(2, GL_VERTEX_ATTRIB_ARRAY_POINTER, &value);
                 //std::cout << "VertexAttribPointer location 2 points to: " << value << std::endl;
-
             }
         }
     }
