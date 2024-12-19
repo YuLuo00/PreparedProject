@@ -24,7 +24,7 @@ layout(location = 1) in vec2 uv;        // 输入纹理坐标
 layout(location = 2) in float textureID;  // 纹理ID
 
 out vec2 fragUV;  // 将纹理坐标传递到片段着色器
-out float fragTextureID;  // 传递纹理ID到片段着色器
+flat out float fragTextureID;  // 传递纹理ID到片段着色器
 
 uniform mat4 view;        // 视图矩阵
 uniform mat4 projection;  // 投影矩阵
