@@ -282,21 +282,8 @@ int GltfRender::Run()
                      this->m_data->backgroundColor[3]);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        //// 第一个三角形 - 使用第一个纹理
-        //glActiveTexture(GL_TEXTURE0); // 激活纹理单元 0
-        //glBindTexture(GL_TEXTURE_2D, texture1);
-        //glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "texture1"), 0);
-
-        // 绘制第一个三角形
+        // 绘制三角形
         glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        //// 第二个三角形 - 使用第二个纹理
-        //glActiveTexture(GL_TEXTURE1); // 激活纹理单元 1
-        //glBindTexture(GL_TEXTURE_2D, texture2);
-        //glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "texture2"), 1);
-
-        // 绘制第二个三角形
-        //glDrawArrays(GL_TRIANGLES, 3, 6);
 
         // 刷新窗口，交换缓冲区
         glfwSwapBuffers(window);
