@@ -17,7 +17,7 @@
 
 // 顶点着色器源码
 static const char* vertexShaderSource = R"(
-#version 330 core
+#version 450 core
 layout(location = 0) in vec3 position;  // 输入顶点位置
 layout(location = 1) in vec2 uv;        // 输入纹理坐标
 layout(location = 2) in float textureID;  // 纹理ID
@@ -37,21 +37,27 @@ void main() {
 
 // 片段着色器源码
 static const char* fragmentShaderSource = R"(
-#version 330 core
+#version 450 core
 in vec2 fragUV;  // 接收从顶点着色器传递的纹理坐标
 flat in float fragTextureID;   // 从顶点着色器传递的纹理ID
 
 out vec4 FragColor;
 
-uniform sampler2D texture1;  // 纹理1
-uniform sampler2D texture2;  // 纹理2
+uniform sampler2D texture0;  // 纹理1
+uniform sampler2D texture1;  // 纹理2
+//uniform sampler2D textures[32];
+uniform sampler2D TextureArray;
 
 void main() {
+    {
+        int tId = int(fragTextureID);
+        //textures[tId];
+    }
     // 每个三角形都独立显示自己的纹理
-    if (fragTextureID == 1) {
-        FragColor = texture(texture1, fragUV);  // 采样纹理1
-    } else if (fragTextureID == 2) {
-        FragColor = texture(texture2, fragUV);  // 采样纹理2
+    if (fragTextureID == 0.0) {
+        FragColor = texture(texture0, fragUV);  // 采样纹理1
+    } else if (fragTextureID == 1.0) {
+        FragColor = texture(texture1, fragUV);  // 采样纹理2
     }
 }
 )";
@@ -97,6 +103,14 @@ void GltfRenderGLCore::FrameEvent()
         // 相机的设置
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(this->view));             // 设置 view 矩阵
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(this->projection)); // 设置 projection 矩阵
+        {
+            GLint maxTextures;
+            glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTextures);
+            std::cout << "Maximum texture units: " << maxTextures << std::endl;
+            GLint maxArrayLayers;
+            glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &maxArrayLayers);
+            std::cout << fmt::format("Maximum texture array layers : {}", maxArrayLayers) << std::endl;
+        }
     }
 
     // 检查按键事件
@@ -123,23 +137,23 @@ void GltfRenderGLCore::FrameEvent()
         if (elapsed >= 1) {
             // 计算帧率
             float fps = frameCount / static_cast<float>(elapsed);
-            std::cout << "FPS: " << fps << std::endl;
+            //std::cout << "FPS: " << fps << std::endl;
 
             // 重置计时器和帧计数
             lastTime = currentTime;
             frameCount = 0;
             {
-                GLuint textureIDLocation = glGetUniformLocation(shaderProgram, "textureID");
-                int textureIDValue;
-                glGetUniformiv(shaderProgram, textureIDLocation, &textureIDValue);
-                std::cout << "textureID value: " << textureIDValue << std::endl;
-                GLint value;
-                glGetVertexAttribiv(0, GL_VERTEX_ATTRIB_ARRAY_POINTER, &value);
-                std::cout << "VertexAttribPointer location 0 points to: " << value << std::endl;
-                glGetVertexAttribiv(1, GL_VERTEX_ATTRIB_ARRAY_POINTER, &value);
-                std::cout << "VertexAttribPointer location 1 points to: " << value << std::endl;
-                glGetVertexAttribiv(2, GL_VERTEX_ATTRIB_ARRAY_POINTER, &value);
-                std::cout << "VertexAttribPointer location 2 points to: " << value << std::endl;
+                //GLuint textureIDLocation = glGetUniformLocation(shaderProgram, "textureID");
+                //int textureIDValue;
+                //glGetUniformiv(shaderProgram, textureIDLocation, &textureIDValue);
+                //std::cout << "textureID value: " << textureIDValue << std::endl;
+                //GLint value;
+                //glGetVertexAttribiv(0, GL_VERTEX_ATTRIB_ARRAY_POINTER, &value);
+                //std::cout << "VertexAttribPointer location 0 points to: " << value << std::endl;
+                //glGetVertexAttribiv(1, GL_VERTEX_ATTRIB_ARRAY_POINTER, &value);
+                //std::cout << "VertexAttribPointer location 1 points to: " << value << std::endl;
+                //glGetVertexAttribiv(2, GL_VERTEX_ATTRIB_ARRAY_POINTER, &value);
+                //std::cout << "VertexAttribPointer location 2 points to: " << value << std::endl;
 
             }
         }

@@ -128,22 +128,22 @@ int GltfRender::Run()
     std::vector<VertexInfo> vertices(6);
     vertices[0].position = glm::vec3(-1, 0, 0);
     vertices[0].uv = glm::vec2(0, 0);
-    vertices[0].textrueId = 1;
+    vertices[0].textrueId = 0;
     vertices[1].position = glm::vec3(-0.1, 1, 0);
     vertices[1].uv = glm::vec2(1, 1);
-    vertices[1].textrueId = 1;
+    vertices[1].textrueId = 0;
     vertices[2].position = glm::vec3(-0.1, 0, 0);
     vertices[2].uv = glm::vec2(0, 1);
-    vertices[2].textrueId = 1;
+    vertices[2].textrueId = 0;
     vertices[3].position = glm::vec3(1, 0, 0);
     vertices[3].uv = glm::vec2(1, 0);
-    vertices[3].textrueId = 2;
+    vertices[3].textrueId = 1;
     vertices[4].position = glm::vec3(0.1, 1, 0);
     vertices[4].uv = glm::vec2(0, 1);
-    vertices[4].textrueId = 2;
+    vertices[4].textrueId = 1;
     vertices[5].position = glm::vec3(0.1, 0, 0);
     vertices[5].uv = glm::vec2(0, 0);
-    vertices[5].textrueId = 2;
+    vertices[5].textrueId = 1;
 
     // 创建顶点数组对象 (VAO) 和顶点缓冲对象 (VBO)
     GLuint VBO, VAO;
@@ -178,8 +178,8 @@ int GltfRender::Run()
     glBindBuffer(GL_ARRAY_BUFFER, 0); // 解除绑定当前的 VBO
     glBindVertexArray(0);             // 解除绑定当前的 VAO，表示不再使用此 VAO
 
-    GLuint texture1 = LoadTexture("texture1.jpg"); // 第一个纹理
-    GLuint texture2 = LoadTexture("texture2.jpg"); // 第二个纹理
+    GLuint texture0 = LoadTexture("texture0.jpg"); // 第一个纹理
+    GLuint texture1 = LoadTexture("texture1.jpg"); // 第二个纹理
 
     // 编译顶点着色器
     this->m_data->InitShaderProgram();
@@ -192,16 +192,55 @@ int GltfRender::Run()
 
     glUseProgram(this->m_data->shaderProgram);
     glBindVertexArray(VAO);
+    if(0)
+    {
+        GLuint textureID = -1;
+        //生成纹理
+        glGenTextures(1, &textureID);
+        //绑定纹理
+        glBindTexture(GL_TEXTURE_2D_ARRAY, textureID); //绑定时选择纹理数组类型
+        //设置如何从数据缓冲区去读取图像数据
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        //设置纹理过滤的参数
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+        //接下来就是不同的地方了--
+        //两种分配方式都可以，glTexImage3D好像是老版本的方式
+        glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, 1000, 1000, 2);
+        //glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB, 1000, 1000, 2, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
-    // 第二个三角形 - 使用第二个纹理
-    glActiveTexture(GL_TEXTURE1); // 激活纹理单元 1
-    glBindTexture(GL_TEXTURE_2D, texture2);
-    glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "texture2"), 1);
+        const char* path[2] = { "texture0.jpg","texture1.jpg" };
+        //加载图片
+        for (int i = 0; i < 2; i++) {
+            unsigned char* pBits;
+            int nWidth, nHeight, nComponents;
+
+            // Read the texture bits 读取纹理数据
+            stbi_set_flip_vertically_on_load(true); //告诉stb_image.h在y轴上翻转加载的纹理。
+
+            pBits = stbi_load(path[i], &nWidth, &nHeight, &nComponents, 0);
+
+            //更新纹理 这里把深度进行了修改，下面的i就代表深度
+            glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, nWidth, nHeight, 1, GL_RGB, GL_UNSIGNED_BYTE, pBits);
+            stbi_image_free(pBits);
+        }
+
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, textureID);
+        glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "TextureArray"), 2);//纹理传入binding=2
+    }
+
     // 第一个三角形 - 使用第一个纹理
     glActiveTexture(GL_TEXTURE0); // 激活纹理单元 0
+    glBindTexture(GL_TEXTURE_2D, texture0);
+    glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "texture0"), 0);
+    // 第二个三角形 - 使用第二个纹理
+    glActiveTexture(GL_TEXTURE1); // 激活纹理单元 1
     glBindTexture(GL_TEXTURE_2D, texture1);
-    glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "texture1"), 0);
+    glUniform1i(glGetUniformLocation(this->m_data->shaderProgram, "texture1"), 1);
 
     // 渲染循环
     while (!glfwWindowShouldClose(window)) {
