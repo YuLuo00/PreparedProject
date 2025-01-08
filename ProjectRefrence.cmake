@@ -16,8 +16,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${ProjectRootDir}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${ProjectRootDir}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${ProjectRootDir}/bin)
 
-# 设置仅生成 Debug 和 Release 配置
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Limited build configurations" FORCE)
+if(NOT DEFINED INITIALED)
+    set(INITIALED "" CACHE STRING "initial flag" FORCE)
+    message(--------INITIAL_SOME_CONFIGURATIONS----------)
+    set(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "Limited build configurations" FORCE)
+endif()
 
 # 添加分组
 macro(target_sources_group TargetName GroupName PERMISSION)
