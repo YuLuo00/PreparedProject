@@ -119,7 +119,7 @@ macro(Add3rd_OpenCV ProjectName)
     set(TIFF_INCLUDE_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/include/")
     set(TIFF_LIBRARY "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/bin/")
     list(APPEND ALL_IMPORTED_LOCATION_Debug "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/debug/bin/tiffd.dll")
-    list(APPEND ALL_IMPORTED_LOCATION_Release "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/bin/tiffd.dll")
+    list(APPEND ALL_IMPORTED_LOCATION_Release "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/bin/tiff.dll")
     message("OpenCV_DIR == ${OpenCV_DIR}")
 
     set(libjpeg-turbo_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/libjpeg-turbo/")
