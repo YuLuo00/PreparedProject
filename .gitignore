@@ -11,3 +11,8 @@
 /Output/Debug
 /.vs
 /out/build/x64-Debug
+/ThirdParty/libtorch-win-shared-with-deps-debug-2.5.1+cpu/libtorch
+/ThirdParty/libtorch-win-shared-with-deps-2.5.1+cpu/libtorch
+/ThirdParty/curl_export.zip
+/ThirdParty/libtorch-win-shared-with-deps-2.5.1+cpu.zip
+/ThirdParty/libtorch-win-shared-with-deps-debug-2.5.1+cpu.zip
