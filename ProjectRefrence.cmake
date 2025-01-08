@@ -83,6 +83,28 @@ macro(Add3rd_ ProjectName)
     Add_Interface_Imported_Location()
 endmacro()
 
+macro(Add3rd_CURL ProjectName)
+    set(CURL_DIR "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/share/curl/")
+    message("CURL_DIR == ${CURL_DIR}")
+    # this is heuristically generated, and may not be correct
+    find_package(CURL CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE CURL::libcurl CURL::libcurl_shared)
+
+    Add_Interface_Imported_Location(CURL::libcurl CURL::libcurl_shared)
+    list(APPEND ALL_IMPORTED_LOCATION_Debug)
+    
+    file(GLOB_RECURSE DLL_FILES "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/bin/*.dll")
+    foreach(_dll ${DLL_FILES})
+        message(STATUS " ${_dll}")
+        list(APPEND ALL_IMPORTED_LOCATION_Release ${_dll})
+    endforeach()
+    file(GLOB_RECURSE DLL_FILES "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/debug/bin/*.dll")
+    foreach(_dll ${DLL_FILES})
+        message(STATUS " ${_dll}")
+        list(APPEND ALL_IMPORTED_LOCATION_Debug ${_dll})
+    endforeach()
+endmacro()
+
 macro(Add3rd_tinygltf ProjectName)
     target_include_directories(${ProjectName} PRIVATE
         "${ProjectRootDir}/ThirdParty/tinygltf/installed/x64-windows/include/"
