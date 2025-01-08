@@ -83,6 +83,40 @@ macro(Add3rd_ ProjectName)
     Add_Interface_Imported_Location()
 endmacro()
 
+macro(Add3rd_libtorch ProjectName)
+    # 检查是否为多配置生成器
+    if(CMAKE_CONFIGURATION_TYPES)
+        # 获取配置项的数量
+        list(LENGTH CMAKE_CONFIGURATION_TYPES CONFIG_COUNT)
+        if(NOT CONFIG_COUNT EQUAL 1)
+            message(FATAL_ERROR "CMAKE_CONFIGURATION_TYPES must contain only one configuration. Current configurations: ${CMAKE_CONFIGURATION_TYPES}.")
+        endif()
+    endif()
+    
+    if(CMAKE_CONFIGURATION_TYPES)
+        message("Multiple Configurations == [${CMAKE_CONFIGURATION_TYPES}]")
+        set(CONFIG_SINGLE ${CMAKE_CONFIGURATION_TYPES})
+    else()
+        message("Single Configurations == [${CMAKE_BUILD_TYPE}]")
+        set(CONFIG_SINGLE ${CMAKE_BUILD_TYPE})
+    endif()
+    # 设置 Torch_DIR
+    if(CONFIG_SINGLE STREQUAL "Debug")
+        set(Torch_DIR "${ProjectRootDir}/ThirdParty/libtorch-win-shared-with-deps-2.5.1+cpu/libtorch/share/cmake/Torch/")
+    elseif(CONFIG_SINGLE STREQUAL "Release")
+        set(Torch_DIR "${ProjectRootDir}/ThirdParty/libtorch-win-shared-with-deps-debug-2.5.1+cpu/libtorch/share/cmake/Torch/")
+    else()
+        message(FATAL_ERROR "[Add3rd_libtorch] Unsupported build type. Please specify Debug or Release. [${CONFIG_SINGLE}]")
+    endif()
+
+    message("torch_DIR == ${Torch_DIR}")
+    # this is heuristically generated, and may not be correct
+    find_package(Torch CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE torch)
+
+    Add_Interface_Imported_Location(torch)
+endmacro()
+
 macro(Add3rd_CURL ProjectName)
     set(CURL_DIR "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/share/curl/")
     message("CURL_DIR == ${CURL_DIR}")
