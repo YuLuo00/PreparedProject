@@ -5,6 +5,9 @@ set(ALL_IMPORTED_LOCATION "")
 set(ALL_IMPORTED_LOCATION_Debug "")
 set(ALL_IMPORTED_LOCATION_Release "")
 
+get_filename_component(CURRENT_FOLDER_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+message(STATUS "***********Current folder name: ${CURRENT_FOLDER_NAME}")
+
 # 设置 C++ 标准
 set(CMAKE_CXX_STANDARD 17)
 
@@ -78,6 +81,12 @@ macro(Add3rd_ ProjectName)
     target_link_libraries(${ProjectName} PRIVATE )
 
     Add_Interface_Imported_Location()
+endmacro()
+
+macro(Add3rd_tinygltf ProjectName)
+    target_include_directories(${ProjectName} PRIVATE
+        "${ProjectRootDir}/ThirdParty/tinygltf/installed/x64-windows/include/"
+    )
 endmacro()
 
 macro(Add3rd_OpenCV ProjectName)

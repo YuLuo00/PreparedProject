@@ -9,3 +9,5 @@
 /lib
 /include
 /Output/Debug
+/.vs
+/out
