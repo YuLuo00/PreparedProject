@@ -15,3 +15,5 @@ add_custom_target(ZERO_CHECK_with_cSharp ALL
 )
 set_property(TARGET ZERO_CHECK_with_cSharp PROPERTY FOLDER "CMakePredefinedTargets")
 
+add_subdirectory("${ProjectRootDir}/RawMove/")
+add_dependencies(RawMove ZERO_CHECK_with_cSharp)
