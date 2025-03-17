@@ -8,4 +8,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Reference Include="RawMoveCLR">
+      <HintPath>..\bin\RawMoveCLR.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

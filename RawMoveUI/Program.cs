@@ -1,3 +1,5 @@
+
+
 namespace RawMoveUI
 {
     internal static class Program
@@ -8,6 +10,7 @@ namespace RawMoveUI
         [STAThread]
         static void Main()
         {
+            NS_RawMoveCLR.RawMoveCLR.test();
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
