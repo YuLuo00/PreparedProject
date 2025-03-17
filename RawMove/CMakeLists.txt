@@ -27,6 +27,8 @@ target_sources_group(${PROJECT_NAME} "interface" PRIVATE
 )
 target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/RawMoveMain.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/CommonTool.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/CommonTool.h"
 )
 
 # dll导出宏
