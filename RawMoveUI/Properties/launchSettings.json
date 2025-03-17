@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "RawMoveUI": {
+      "commandName": "Project",
+      "workingDirectory": "$(ProjectDir)/../bin/"
+    }
+  }
+}
