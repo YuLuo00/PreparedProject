@@ -5,11 +5,18 @@ namespace RawMoveUI
         public Form1()
         {
             InitializeComponent();
+
         }
 
-        private void Button1_Click(object sender, EventArgs e)
+        private void Bt_raw2store_click(object sender, EventArgs e)
         {
+            Program.clr.MoveAllRawToStorePath();
+        }
 
+        void SyncThePath()
+        {
+            Program.clr.SetRootDir(this.u_tb_rootDirPath.Text);
+            Program.clr.SetRawStoreDir(this.u_tb_rawStorePath.Text);
         }
 
         /// <summary>
@@ -55,12 +62,27 @@ namespace RawMoveUI
 
             if(folderBrowserDialog1.ShowDialog() == DialogResult.OK) {
                 string folderPath = folderBrowserDialog1.SelectedPath;
-                this.u_tb_rootDirPath.Text = folderPath;
+                this.u_tb_rawStorePath.Text = folderPath;
                 Console.WriteLine($"选择的文件夹: {folderPath}");
             }
             else {
                 Console.WriteLine("未选择文件夹");
             }
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void u_tb_rootDirPath_TextChanged(object sender, EventArgs e)
+        {
+            Program.clr.SetRootDir(this.u_tb_rootDirPath.Text);
+        }
+
+        private void u_tb_rawStorePath_TextChanged(object sender, EventArgs e)
+        {
+            Program.clr.SetRawStoreDir(this.u_tb_rawStorePath.Text);
         }
     }
 }

@@ -2,7 +2,8 @@
   "profiles": {
     "RawMoveUI": {
       "commandName": "Project",
-      "workingDirectory": "$(ProjectDir)/../bin/"
+      "workingDirectory": "$(ProjectDir)/../bin/",
+      "nativeDebugging": true
     }
   }
 }
