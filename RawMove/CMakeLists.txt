@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.18)
 
 include("${CMAKE_CURRENT_LIST_DIR}/../ProjectRefrence.cmake")
 
-project(GltfViewerCore)
+project(RawMove)
 
 # 定义库
 # add_library(${PROJECT_NAME} SHARED)
@@ -16,29 +16,29 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # 三方库
 Add3rd_nlohmann_json(${PROJECT_NAME})
 Add3rd_fmt(${PROJECT_NAME})
-Add3rd_Glad(${PROJECT_NAME})
-Add3rd_glfw3(${PROJECT_NAME})
-Add3rd_GLEW(${PROJECT_NAME})
-Add3rd_glm(${PROJECT_NAME})
-Add3rd_stb_image(${PROJECT_NAME})
-Add3rd_OpenCV(${PROJECT_NAME})
+# Add3rd_Glad(${PROJECT_NAME})
+# Add3rd_glfw3(${PROJECT_NAME})
+# Add3rd_GLEW(${PROJECT_NAME})
+# Add3rd_glm(${PROJECT_NAME})
+# Add3rd_stb_image(${PROJECT_NAME})
+# Add3rd_OpenCV(${PROJECT_NAME})
 
 # 包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE
-    "${ProjectRootDir}/GltfViewerCore"
-    "${ProjectRootDir}/GltfViewerCore/src"
-    "${ProjectRootDir}/GltfViewerCore/interface"
+    "${ProjectRootDir}/RawMove"
+    "${ProjectRootDir}/RawMove/src"
+    "${ProjectRootDir}/RawMove/interface"
 )
 
 # 源文件
 target_sources_group(${PROJECT_NAME} "src" PRIVATE
-    "${ProjectRootDir}/GltfViewerCore/src/CommonTool.cpp"
-    "${ProjectRootDir}/GltfViewerCore/src/CommonTool.h"
-    "${ProjectRootDir}/GltfViewerCore/src/main.cpp"
-    "${ProjectRootDir}/GltfViewerCore/src/GltfRender.cpp"
+    "${ProjectRootDir}/RawMove/src/CommonTool.cpp"
+    "${ProjectRootDir}/RawMove/src/CommonTool.h"
+    "${ProjectRootDir}/RawMove/src/main.cpp"
+    "${ProjectRootDir}/RawMove/src/GltfRender.cpp"
 )
 target_sources_group(${PROJECT_NAME} "interface" PRIVATE
-    "${ProjectRootDir}/GltfViewerCore/interface/GltfRender.h"
+    "${ProjectRootDir}/RawMove/interface/GltfRender.h"
 )
 
 # dll导出宏
@@ -46,7 +46,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE ZYB_GLTFVIEWER_API=__declspec
 target_compile_definitions(${PROJECT_NAME} INTERFACE ZYB_GLTFVIEWER_API=__declspec\(dllimport\))
 
 # 导出属性
-target_include_directories(${PROJECT_NAME} INTERFACE "${ProjectRootDir}/GltfViewerCore/interface/")
+target_include_directories(${PROJECT_NAME} INTERFACE "${ProjectRootDir}/RawMove/interface/")
 
 # 安装
 install(TARGETS ${PROJECT_NAME}
@@ -55,7 +55,7 @@ install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION lib
 )
 install(DIRECTORY
-        "${ProjectRootDir}/GltfViewerCore/interface/"
+        "${ProjectRootDir}/RawMove/interface/"
     DESTINATION include
     FILES_MATCHING PATTERN "*.h"
 )
