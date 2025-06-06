@@ -15,3 +15,5 @@ namespace CommonTool {
 
     std::vector<std::string> ReadFileTxtAsLocal(const std::string &filePath);
 }
+
+
