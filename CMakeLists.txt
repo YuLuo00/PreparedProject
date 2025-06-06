@@ -8,7 +8,7 @@ project(GltfViewer)
 set(CMAKE_CXX_STANDARD 17)
 message("${PROJECT_NAME} --------------------- ffffffff")
 
-add_subdirectory("${ProjectRootDir}/GltfViewerCore/")
+add_subdirectory("${ProjectRootDir}/RawMove/")
 # add_subdirectory("${ProjectRootDir}/GltfViewerCLR/")
 # # 添加C#项目
 # add_custom_target(ZERO_CHECK_with_cSharp ALL
