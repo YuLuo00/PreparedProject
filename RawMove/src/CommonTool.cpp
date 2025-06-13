@@ -2,9 +2,9 @@
 
 #include <Windows.h>
 
-#include <fstream>
 #include <codecvt>
 #include <corecrt_wstring.h>
+#include <fstream>
 
 std::string CommonTool::Local2Utf8(const std::string &str)
 {
@@ -122,4 +122,87 @@ std::vector<std::string> CommonTool::ReadFileTxtAsLocal(const std::string &fileP
 
     file.close();
     return ret;
+}
+
+#include <filesystem>
+#include <iostream>
+#include <queue>
+#include <stack>
+#include <string>
+#include <vector>
+namespace fs = std::filesystem;
+
+#include <windows.h>
+
+#include "CommonTool.h"
+
+
+
+/// <summary>
+///
+/// </summary>
+/// <param name="skipThisFolder"></param>
+void FindFilesDfs(const std::wstring &directory,
+                  std::function<GoOnFind(const std::wstring &folderPath, const WIN32_FIND_DATAW &item)> itemCallback,
+                  std::function<void(bool inInto, const std::wstring&folder)> folderInOutCallback)
+{
+    if (fs::exists(directory) == false || fs::is_directory(directory) == false) {
+        return;
+    }
+    std::wstring dirFullPath = fs::absolute(directory).wstring();
+    std::stack<std::wstring> subFolders({dirFullPath});
+    while (subFolders.empty() == false) {
+        std::wstring curFolder = subFolders.top();
+        subFolders.pop();
+
+        // call back for on and off folder
+        if (folderInOutCallback) {
+            folderInOutCallback(true, curFolder);
+        }
+        CallByRAII triggerFolderOffCb([&]() {
+            if (folderInOutCallback) {
+                folderInOutCallback(false, curFolder);
+            }
+        });
+
+        std::wstring searchPath = curFolder + L"\\*";
+        WIN32_FIND_DATAW findData;
+        HANDLE hFind = FindFirstFileW(searchPath.c_str(), &findData);
+        if (hFind == INVALID_HANDLE_VALUE) {
+            continue;
+        }
+        do {
+            // 排除 "." 和 ".." 目录
+            if (lstrcmpW(findData.cFileName, L".") == 0 || lstrcmpW(findData.cFileName, L"..") == 0) {
+                continue;
+            }
+            std::wstring fullPath = curFolder + L"\\" + findData.cFileName;
+            GoOnFind goOnFind = itemCallback == nullptr ? GoOnFind::CONTINUE : itemCallback(curFolder, findData);
+            switch (goOnFind) {
+                case GoOnFind::SKIP:
+                    continue;
+                case GoOnFind::BREAK:
+                    return;
+                case GoOnFind::CONTINUE:
+                default: {
+                    if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                        subFolders.push(fullPath);
+                        continue;
+                    }
+                    break;
+                }
+            };
+            continue;
+        } while (FindNextFileW(hFind, &findData) != 0);
+        FindClose(hFind);
+    }
+}
+
+void CommonTool::getFilesInDirectory(const std::string &directory)
+{
+    //FindFilesDfs(directory, [](const std::wstring &file, const WIN32_FIND_DATAW &findData) {
+    //    std::string fileStr = CommonTool::Wstr2Utf8(file);
+    //    std::wstring fileWStr = CommonTool::Utf82Wstr(fileStr);
+    //    return GoOnFind::CONTINUE;
+    //});
 }

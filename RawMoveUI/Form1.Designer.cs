@@ -58,6 +58,7 @@
             dataGridView1.Name = "dataGridView1";
             dataGridView1.Size = new Size(504, 194);
             dataGridView1.TabIndex = 0;
+            dataGridView1.CellContentClick += dataGridView1_CellContentClick;
             // 
             // statusStrip1
             // 
@@ -131,7 +132,6 @@
             u_tabControl1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             u_tabControl1.Controls.Add(tabPage1);
             u_tabControl1.Controls.Add(tabPage2);
-            u_tabControl1.Cursor = Cursors.PanNW;
             u_tabControl1.Location = new Point(12, 93);
             u_tabControl1.Multiline = true;
             u_tabControl1.Name = "u_tabControl1";

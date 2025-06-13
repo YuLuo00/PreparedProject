@@ -16,10 +16,10 @@ add_custom_target(ZERO_CHECK_with_cSharp ALL
 set_property(TARGET ZERO_CHECK_with_cSharp PROPERTY FOLDER "CMakePredefinedTargets")
 
 add_subdirectory("${ProjectRootDir}/RawMove/")
-add_dependencies(RawMove ZERO_CHECK_with_cSharp)
+# add_dependencies(RawMove ZERO_CHECK_with_cSharp)
 
-add_subdirectory("${ProjectRootDir}/RawMoveCLR/")
-add_dependencies(RawMoveCLR ZERO_CHECK_with_cSharp)
-add_dependencies(RawMoveCLR RawMove)
-cmake_policy(SET CMP0079 NEW)
-target_link_libraries(RawMoveCLR RawMove)
+# add_subdirectory("${ProjectRootDir}/RawMoveCLR/")
+# add_dependencies(RawMoveCLR ZERO_CHECK_with_cSharp)
+# add_dependencies(RawMoveCLR RawMove)
+# cmake_policy(SET CMP0079 NEW)
+# target_link_libraries(RawMoveCLR RawMove)

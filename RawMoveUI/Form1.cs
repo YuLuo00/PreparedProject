@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace RawMoveUI
 {
     public partial class Form1 : Form
@@ -18,7 +20,16 @@ namespace RawMoveUI
             Program.clr.SetRootDir(this.u_tb_rootDirPath.Text);
             Program.clr.SetRawStoreDir(this.u_tb_rawStorePath.Text);
         }
-
+        void ErrMsgBack(IntPtr msg, IntPtr obj, int level)
+        {
+            string? message = Marshal.PtrToStringUni(msg);
+            Console.WriteLine(message);
+        }
+        void test()
+        {
+            NS_RawMoveCLR.RawMoveCLR.CallbackDelegate dele = this.ErrMsgBack;
+            Program.clr.SetCbErrMsg(dele);
+        }
         /// <summary>
         /// 双击
         /// 选一个文件夹作为root dir
@@ -83,6 +94,11 @@ namespace RawMoveUI
         private void u_tb_rawStorePath_TextChanged(object sender, EventArgs e)
         {
             Program.clr.SetRawStoreDir(this.u_tb_rawStorePath.Text);
+        }
+
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
         }
     }
 }
