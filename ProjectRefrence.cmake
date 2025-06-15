@@ -89,6 +89,25 @@ endmacro()
 
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
 
+macro(Add3rd_freeimage ProjectName)
+    set(libpng_DIR "${ProjectRootDir}/ThirdParty/libpng/installed/x64-windows/share/libpng/")
+    find_package(PNG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE PNG::PNG)
+    Add_Interface_Imported_Location(PNG::PNG)
+
+    set(freeimage_DIR "${ProjectRootDir}/ThirdParty/freeimage/installed/x64-windows/share/freeimage/")
+    message("freeimage_DIR == ${freeimage_DIR}")
+    # this is heuristically generated, and may not be correct
+    find_package(freeimage CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE
+        freeimage::FreeImage
+        # freeimage::FreeImagePlus
+    )
+
+    Add_Interface_Imported_Location(freeimage::FreeImage)
+    # Add_Interface_Imported_Location(freeimage::FreeImagePlus)
+endmacro()
+
 macro(Add3rd_glm ProjectName)
     set(glm_DIR "${ProjectRootDir}/ThirdParty/GLM/installed/x64-windows/share/glm")
     message("glm_DIR == ${glm_DIR}")
