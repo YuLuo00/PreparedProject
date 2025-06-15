@@ -54,6 +54,20 @@ macro(Add_Interface_Imported_Location ProjectName)
     endif()
 endmacro()
 
+macro(Add_Imported_Location ProjectName)
+    get_target_property(_locs ${ProjectName} IMPORTED_LOCATION_DEBUG)
+    if(NOT _locs STREQUAL "_locs-NOTFOUND")
+    message(STATUS "${ProjectName} >>>> ${_locs}")
+        list(APPEND ALL_IMPORTED_LOCATION_Debug ${_locs})
+    endif()
+
+    get_target_property(_locs ${ProjectName} IMPORTED_LOCATION_RELEASE)
+    if(NOT _locs STREQUAL "_locs-NOTFOUND")
+        message(STATUS "${ProjectName} >>>> ${_locs}")
+        list(APPEND ALL_IMPORTED_LOCATION_Release ${_locs})
+    endif()
+endmacro()
+
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
 
 macro(Add3rd_fmt ProjectName)
@@ -64,4 +78,15 @@ macro(Add3rd_fmt ProjectName)
     target_link_libraries(${ProjectName} PRIVATE fmt::fmt-header-only)
 
     Add_Interface_Imported_Location(fmt::fmt-header-only)
+endmacro()
+
+macro(Add3rd_sqlite3 ProjectName)
+    set(unofficial-sqlite3_DIR "${ProjectRootDir}/ThirdParty/sqlite3/installed/x64-windows/share/unofficial-sqlite3/")
+    message("unofficial-sqlite3_DIR == ${unofficial-sqlite3_DIR}")
+
+    find_package(unofficial-sqlite3 CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE unofficial::sqlite3::sqlite3)
+
+    Add_Interface_Imported_Location(unofficial::sqlite3::sqlite3)
+    Add_Imported_Location(unofficial::sqlite3::sqlite3)
 endmacro()
