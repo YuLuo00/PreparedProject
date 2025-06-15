@@ -89,6 +89,16 @@ endmacro()
 
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
 
+macro(Add3rd_vulkan ProjectName)
+    set(vulkan_DIR "${ProjectRootDir}/ThirdParty/vulkan/installed/x64-windows/share/VulkanLoader/")
+    message("vulkan_DIR == ${vulkan_DIR}")
+    # https://cmake.org/cmake/help/latest/module/FindVulkan.html
+    find_package(Vulkan REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE Vulkan::Vulkan)
+
+    Add_Interface_Imported_Location(Vulkan::Vulkan)
+endmacro()
+
 macro(Add3rd_freeimage ProjectName)
     set(libpng_DIR "${ProjectRootDir}/ThirdParty/libpng/installed/x64-windows/share/libpng/")
     find_package(PNG REQUIRED)
