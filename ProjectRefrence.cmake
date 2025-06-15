@@ -97,3 +97,14 @@ macro(Add3rd_Glad ProjectName)
     target_link_libraries(${ProjectName} PRIVATE glad::glad)
     Add_Interface_Imported_Location(glad::glad)
 endmacro()
+
+
+macro(Add3rd_GLEW ProjectName)
+    set(GLEW_DIR "${ProjectRootDir}/ThirdParty/GLEW/installed/x64-windows/share/glew")
+    message("GLEW_DIR == ${GLEW_DIR}")
+    # this is heuristically generated, and may not be correct
+    find_package(GLEW REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE GLEW::GLEW)
+
+    Add_Interface_Imported_Location(GLEW::GLEW)
+endmacro()
