@@ -52,6 +52,18 @@ macro(Add_Interface_Imported_Location ProjectName)
         message(STATUS "MY_VAR is _locs-NOTFOUND")
         list(APPEND ALL_IMPORTED_LOCATION_Release ${_locs})
     endif()
+
+    get_target_property(_locs ${ProjectName} IMPORTED_LOCATION_DEBUG)
+    if(NOT _locs STREQUAL "_locs-NOTFOUND")
+        message(STATUS "MY_VAR is _locs-NOTFOUND")
+        list(APPEND ALL_IMPORTED_LOCATION_Debug ${_locs})
+    endif()
+
+    get_target_property(_locs ${ProjectName} IMPORTED_LOCATION_RELEASE)
+    if(NOT _locs STREQUAL "_locs-NOTFOUND")
+        message(STATUS "MY_VAR is _locs-NOTFOUND")
+        list(APPEND ALL_IMPORTED_LOCATION_Release ${_locs})
+    endif()
 endmacro()
 
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
