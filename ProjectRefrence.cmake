@@ -98,6 +98,15 @@ macro(Add3rd_Glad ProjectName)
     Add_Interface_Imported_Location(glad::glad)
 endmacro()
 
+macro(Add3rd_glfw3 ProjectName)
+    set(glfw3_DIR "${ProjectRootDir}/ThirdParty/GLFW3/installed/x64-windows/share/glfw3")
+    message("glfw3_DIR == ${glfw3_DIR}")
+    # this is heuristically generated, and may not be correct
+    find_package(glfw3 CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE glfw)
+
+    Add_Interface_Imported_Location(glfw)
+endmacro()
 
 macro(Add3rd_GLEW ProjectName)
     set(GLEW_DIR "${ProjectRootDir}/ThirdParty/GLEW/installed/x64-windows/share/glew")
