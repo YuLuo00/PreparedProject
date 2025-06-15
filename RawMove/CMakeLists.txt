@@ -13,6 +13,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 # 三方库
+Add3rd_fmt(${PROJECT_NAME})
+Add3rd_sqlite3(${PROJECT_NAME})
 
 # 包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE
