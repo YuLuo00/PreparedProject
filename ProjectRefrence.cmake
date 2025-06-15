@@ -89,6 +89,10 @@ endmacro()
 
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
 
+macro(Add3rd_7zExtra ProjectName)
+    list(APPEND ALL_IMPORTED_LOCATION "${ProjectRootDir}/ThirdParty/7z2409-extra/x64/7za.dll")
+endmacro()
+
 macro(Add3rd_bit7z ProjectName)
     set(ghc_filesystem_DIR "${ProjectRootDir}/ThirdParty/bit7z/installed/x64-windows/share/ghc_filesystem/")
     set(7zip_DIR "${ProjectRootDir}/ThirdParty/bit7z/installed/x64-windows/share/7zip/")
