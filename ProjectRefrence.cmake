@@ -90,6 +90,15 @@ endmacro()
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
 
 
+macro(Add3rd_nlohmann_json ProjectName)
+    set(nlohmann_json_DIR "${ProjectRootDir}/ThirdParty/nlohmann/installed/x64-windows/share/nlohmann_json/")
+    message("nlohmann_json_DIR == ${nlohmann_json_DIR}")
+    # this is heuristically generated, and may not be correct
+    find_package(nlohmann_json CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE nlohmann_json::nlohmann_json)
+    Add_Interface_Imported_Location(nlohmann_json::nlohmann_json)
+endmacro()
+
 macro(Add3rd_LibArchive ProjectName)
     message("LibArchive == ${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/")
     set(CMAKE_INCLUDE_PATH "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/include")
