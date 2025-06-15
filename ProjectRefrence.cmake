@@ -89,3 +89,11 @@ endmacro()
 
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
 
+macro(Add3rd_Glad ProjectName)
+    set(glad_DIR "${ProjectRootDir}/ThirdParty/glad/installed/x64-windows/share/glad")
+    message("glad_DIR == ${glad_DIR}")
+    # this is heuristically generated, and may not be correct
+    find_package(glad CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE glad::glad)
+    Add_Interface_Imported_Location(glad::glad)
+endmacro()
