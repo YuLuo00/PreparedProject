@@ -209,3 +209,39 @@ macro(Add3rd_GLEW ProjectName)
 
     Add_Interface_Imported_Location(GLEW::GLEW)
 endmacro()
+
+macro(Add3rd_OpenCV ProjectName)
+    set(Protobuf_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/protobuf/")
+    set(quirc_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/quirc/")
+    set(OpenCV_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/opencv4/")
+    
+    set(TIFF_INCLUDE_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/include/")
+    set(TIFF_LIBRARY "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/bin/")
+    list(APPEND ALL_IMPORTED_LOCATION_Debug "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/debug/bin/tiffd.dll")
+    list(APPEND ALL_IMPORTED_LOCATION_Release "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/bin/tiffd.dll")
+    message("OpenCV_DIR == ${OpenCV_DIR}")
+
+    set(libjpeg-turbo_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/libjpeg-turbo/")
+    set(WebP_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/WebP/")
+    set(libpng_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/libpng/")
+    find_package(libpng CONFIG REQUIRED)
+    find_package(libjpeg-turbo CONFIG REQUIRED)
+    find_package(WebP CONFIG REQUIRED)
+    # this is heuristically generated, and may not be correct
+    find_package(OpenCV CONFIG REQUIRED)
+    
+
+    # note: 10 additional targets are not displayed.
+    target_link_libraries(${ProjectName} PRIVATE
+        opencv_ml opencv_dnn opencv_core opencv_flann opencv_imgcodecs opencv_imgproc
+        libjpeg-turbo::jpeg
+        WebP::webp WebP::webpdecoder WebP::webpdemux WebP::sharpyuv
+        png
+    )
+    Add_Interface_Imported_Location(
+        opencv_ml opencv_dnn opencv_core opencv_flann opencv_imgcodecs opencv_imgproc
+        libjpeg-turbo::jpeg
+        WebP::webp WebP::webpdecoder WebP::webpdemux WebP::sharpyuv
+        png
+    )
+endmacro()
