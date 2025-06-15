@@ -89,6 +89,16 @@ endmacro()
 
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
 
+macro(Add3rd_glm ProjectName)
+    set(glm_DIR "${ProjectRootDir}/ThirdParty/GLM/installed/x64-windows/share/glm")
+    message("glm_DIR == ${glm_DIR}")
+    # this is heuristically generated, and may not be correct
+    find_package(glm CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE glm::glm)
+
+    Add_Interface_Imported_Location(glm::glm)
+endmacro()
+
 macro(Add3rd_Glad ProjectName)
     set(glad_DIR "${ProjectRootDir}/ThirdParty/glad/installed/x64-windows/share/glad")
     message("glad_DIR == ${glad_DIR}")
