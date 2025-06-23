@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 #include <cwctype> // for std::towlower
+#include <math.h>
+#include <algorithm>
 
 namespace CommonTool
 {
@@ -42,18 +44,33 @@ struct CaseInsCmpW
 {
     bool operator()(const std::wstring &a, const std::wstring &b) const
     {
-        bool ret = std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end(), [](wchar_t c1, wchar_t c2) {
-            return std::towlower(c1) < std::towlower(c2);
-        });
+        return this->compare(a, b) < 0;
+    }
 
-        return ret;
+    int compare(const std::wstring &a, const std::wstring &b) const
+    {
+        size_t len = std::min(a.size(), b.size());
+
+        for (size_t i = 0; i < len; ++i) {
+            wchar_t ca = std::towlower(a[i]);
+            wchar_t cb = std::towlower(b[i]);
+            if (ca != cb) {
+                return (ca < cb) ? -1 : 1;
+            }
+        }
+
+        // 如果前面都相等，长度决定大小
+        if (a.size() == b.size()) {
+            return 0;
+        }
+        return (a.size() < b.size()) ? -1 : 1;
     }
 
     static bool sameIns(const std::wstring &a, const std::wstring &b)
     {
         static CaseInsCmpW inst;
-        bool notSameIns = inst(a, b);
-        return !notSameIns;
+        bool same = inst.compare(a, b) == 0;
+        return same;
     }
 };
 
