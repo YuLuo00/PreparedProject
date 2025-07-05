@@ -176,3 +176,15 @@ macro(Add3rd_FFmpeg ProjectName)
         ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/swscale-8.dll
     )
 endmacro()
+
+macro(Add3rd_spdlog ProjectName)
+    set(fmt_DIR "${ProjectRootDir}/ThirdParty/spdlog/installed/x64-windows/share/fmt")
+    set(spdlog_DIR "${ProjectRootDir}/ThirdParty/spdlog/installed/x64-windows/share/spdlog")
+    message("spdlog_DIR == ${spdlog_DIR}")
+
+    find_package(spdlog CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE spdlog::spdlog)
+
+    Add_Interface_Imported_Location(spdlog::spdlog)
+endmacro()
+
