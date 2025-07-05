@@ -381,11 +381,17 @@ public:
                         L".png",
                         L".jpeg",
                     };
+                    if (fileName == L"DSC04327.xmp") {
+                        int i = 0;
+                    }
                     if (picExts.count(extName) > 0) {
                         file.file_type = L"PIC";
                     }
                     else if (CaseInsCmpW::sameIns(extName, L".arw")) {
                         file.file_type = L"RAW";
+                    }
+                    else {
+                        file.file_type = extName;
                     }
                     file.full_path = fileFullPath;
                     file.file_name = fileFs.filename().generic_wstring();
@@ -396,7 +402,7 @@ public:
                 return GoOnFind::CONTINUE;
             },
             [&](bool isInto, const std::wstring &folderName) {
-                if (fs::canonical(folderName) == fs::canonical(m_rawStoreDir)) {
+                if (fs::weakly_canonical(folderName) == fs::weakly_canonical(m_rawStoreDir)) {
                     isRawStoreDir = isInto;
                 }
             });
@@ -455,6 +461,10 @@ public:
 
     void MoveAllRawsToStoreDir()
     {
+        if (fs::exists(m_rawStoreDir) == false) {
+            fs::create_directories(m_rawStoreDir);
+        }
+
         std::vector<FileRecord> raws = m_db.queryByType(L"RAW");
         std::map<fs::path, FileRecord> rawsRec;
         for (size_t i = 0; i < raws.size(); i++) {
@@ -522,17 +532,14 @@ void main()
     std::wcout << L"Hello 控制台" << std::endl;
 
     RawRemoveCore core;
-
-    core.m_rootDir = LR"(D:\_File\a6700\2025-03-15-深圳AB动漫展_)";
-    core.m_rawStoreDir = LR"(D:\_File\a6700\2025-03-15-深圳AB动漫展_\ALL_RAW🚀)";
+    std::wstring rootDir = LR"(D:\_File\a6700\2025-06-28-\)";
+    core.m_rootDir = rootDir;
+    core.m_rawStoreDir = rootDir + LR"(\ALL_RAW)";
 
     core.ParseFileLocation();
-    core.MoveAllRawsToStoreDir();
 
-    core.RemoveUnuseRawsTo(LR"(D:\_File\a6700\2025-03-15-深圳AB动漫展_\unuseRaws)");
-
-
-    //core.MoveRaw2Pic({L"DSC03656.JPG"});
-
+    //core.MoveAllRawsToStoreDir();
+    core.RemoveUnuseRawsTo(rootDir + LR"(\unuseRaws)");
+    //core.MoveRaw2Pic({L"DSC04802.JPG"});
     return;
 }
