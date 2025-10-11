@@ -488,7 +488,7 @@ public:
         for (auto pic : pics) {
             if (baseName2Pic.insert(std::make_pair(pic.base_name, pic)).second == false) {
                 // 禁止重复名字的图片干扰
-                throw std::exception();
+                //throw std::exception();
             }
         }
         // 检查和建立RAW索引
@@ -522,9 +522,26 @@ public:
     }
 };
 
+extern void
+moveFilesWithPrefixes(const std::set<std::string> &prefixes, const fs::path &srcDir, const fs::path &dstDir);
+
+extern void testMain();
 
 void main()
 {
+    return testMain();
+    //moveFilesWithPrefixes(
+    //    {
+    //        "DSC06242", "DSC06247", "DSC06250", "DSC06288", "DSC06300", "DSC06310", "DSC06330", "DSC06363", "DSC06392",
+    //        "DSC06393", "DSC06399", "DSC06536", "DSC06547", "DSC06582", "DSC06609", "DSC06623", "DSC06633", "DSC06170",
+    //        "DSC06172", "DSC06173", "DSC06176", "DSC06178", "DSC06211", "DSC06232", "DSC06240",
+    //    },
+    //    R"(D:\_File\a6700\2025-08-02-和倪倪一起委托\倪倪)",
+    //    R"(D:\_File\a6700\2025-08-02-和倪倪一起委托\已完成)");
+    //return;
+
+
+
     //// 设置控制台为 UTF-8 编码
     //SetConsoleOutputCP(CP_UTF8);
     // 设置控制台为 UTF-16 编码
@@ -532,14 +549,31 @@ void main()
     std::wcout << L"Hello 控制台" << std::endl;
 
     RawRemoveCore core;
-    std::wstring rootDir = LR"(D:\_File\a6700\2025-06-28-\)";
+    std::wstring rootDir = LR"(D:\_File\a6700\100MSDCF)";
     core.m_rootDir = rootDir;
     core.m_rawStoreDir = rootDir + LR"(\ALL_RAW)";
 
     core.ParseFileLocation();
 
-    //core.MoveAllRawsToStoreDir();
+    core.MoveAllRawsToStoreDir();
+
     core.RemoveUnuseRawsTo(rootDir + LR"(\unuseRaws)");
-    //core.MoveRaw2Pic({L"DSC04802.JPG"});
+    //core.MoveRaw2Pic({L"DSC06024.JPG"});
+    //core.MoveRaw2Pic({L"DSC06029.JPG"});
+    //core.MoveRaw2Pic({L"DSC05792.JPG"});
+    //std::vector<std::wstring> pics = {L"DSC06243.JPG",
+    //                                  L"DSC06252.JPG",
+    //                                  L"DSC06263.JPG",
+    //                                  L"DSC06358.JPG",
+    //                                  L"DSC06539.JPG",
+    //                                  L"DSC06549.JPG",
+    //                                  L"DSC06571.JPG",
+    //                                  L"DSC06586.JPG",
+    //                                  L"DSC06610.JPG",
+    //                                  L"DSC06636.JPG",
+    //                                  L"DSC06175.JPG",
+    //};
+    //core.MoveRaw2Pic(pics);
+
     return;
 }
