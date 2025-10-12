@@ -15,7 +15,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # 三方库
 Add3rd_fmt(${PROJECT_NAME})
 Add3rd_sqlite3(${PROJECT_NAME})
-Add3rd_OpenCV(${PROJECT_NAME})
+Add3rd_OpenCV411(${PROJECT_NAME})
 
 # 预定义宏
 target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX)

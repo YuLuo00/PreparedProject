@@ -4,8 +4,13 @@
 #include <vector>
 #include <string>
 #include <regex>
-
+#include <Windows.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/ocl.hpp>
+#include <opencv2/highgui.hpp>
+
+#include "CommonTool.h"
 
 using namespace cv;
 using namespace std;
@@ -54,13 +59,6 @@ std::vector<cv::Point> FindTemplateMatches(const cv::Mat& src, const cv::Mat& te
 
     cv::Mat result;
     cv::Mat srcGray, templGray;
-
-    std::wcout << L"src.empty = " << src.empty() << std::endl;
-    std::wcout << L"src.type = " << src.type() << std::endl;
-    std::wcout << L"src.channels = " << src.channels() << std::endl;
-    std::wcout << L"src.depth = " << src.depth() << std::endl;
-    std::wcout << L"src.isContinuous = " << src.isContinuous() << std::endl;
-    std::wcout << L"src.step = " << src.step << L" expected = " << src.cols * src.elemSize() << std::endl;
 
     cv::imwrite("check.png", src);
     cv::Mat test = cv::imread("check.png", cv::IMREAD_UNCHANGED);
@@ -172,15 +170,110 @@ bool CaptureWindow(HWND hWnd, const std::wstring &savePath)
     return CaptureScreenRect(rect, savePath);
 }
 
+#include <fstream>
+#include <windows.h>
+
+bool CaptureWindowToBMP(HWND hWnd, const wchar_t *filename)
+{
+    RECT rect;
+    if (!GetWindowRect(hWnd, &rect))
+        return false;
+
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
+
+    HDC hdcScreen = GetDC(nullptr);
+    HDC hdcMem = CreateCompatibleDC(hdcScreen);
+    HBITMAP hBmp = CreateCompatibleBitmap(hdcScreen, width, height);
+    HGDIOBJ old = SelectObject(hdcMem, hBmp);
+
+    // 把窗口内容拷贝到内存 DC
+    PrintWindow(hWnd, hdcMem, PW_CLIENTONLY);
+
+    // 准备 DIB 信息
+    BITMAP bmp;
+    GetObject(hBmp, sizeof(bmp), &bmp);
+
+    BITMAPINFOHEADER bi{};
+    bi.biSize = sizeof(BITMAPINFOHEADER);
+    bi.biWidth = bmp.bmWidth;
+    bi.biHeight = -bmp.bmHeight; // 负数表示 top-down
+    bi.biPlanes = 1;
+    bi.biBitCount = 32;
+    bi.biCompression = BI_RGB;
+
+    int imageSize = bmp.bmWidth * bmp.bmHeight * 4;
+    std::vector<BYTE> pixels(imageSize);
+
+    GetDIBits(hdcMem, hBmp, 0, bmp.bmHeight, pixels.data(), reinterpret_cast<BITMAPINFO *>(&bi), DIB_RGB_COLORS);
+
+    // 写 BMP 文件
+    BITMAPFILEHEADER bfh{};
+    bfh.bfType = 0x4D42; // "BM"
+    bfh.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+    bfh.bfSize = bfh.bfOffBits + imageSize;
+
+
+    {
+        std::wcout << L"Use OpenCL: " << (cv::ocl::useOpenCL() ? L"true" : L"false") << std::endl;
+
+        width = 1320;
+        height = 824;
+        cv::Mat mat(height, width, CV_8UC4, cv::Scalar(255, 255, 255, 255));
+        //cv::imwrite("_iii---.png", mat);
+        std::wcout << L"isContinuous: " << (mat.isContinuous() ? L"true" : L"false") << std::endl;
+        std::wcout << L"step: " << mat.step << std::endl;
+        std::wcout << L"elemSize: " << mat.elemSize() << std::endl;
+        std::wcout << L"total bytes: " << (mat.total() * mat.elemSize()) << std::endl;
+
+        cv::Mat bgr;
+            cv::cvtColor(mat.clone(), bgr, cv::COLOR_RGBA2BGR);
+        //cv::imwrite("_iii.png", bgr);
+    }
+
+
+
+    std::ofstream ofs(filename, std::ios::binary);
+    ofs.write(reinterpret_cast<const char *>(&bfh), sizeof(bfh));
+    ofs.write(reinterpret_cast<const char *>(&bi), sizeof(bi));
+    ofs.write(reinterpret_cast<const char *>(pixels.data()), imageSize);
+    ofs.close();
+    // 清理
+    SelectObject(hdcMem, old);
+    DeleteObject(hBmp);
+    DeleteDC(hdcMem);
+    ReleaseDC(nullptr, hdcScreen);
+
+    return true;
+}
+
+
 // 截图到 cv::Mat（不保存文件）
 bool CaptureWindowToMat(HWND hWnd, cv::Mat &outImage)
 {
-    if (!::IsWindow(hWnd))
-        return false;
 
     RECT rect{};
-    if (!::GetWindowRect(hWnd, &rect))
-        return false;
+    if (hWnd == nullptr) {
+        rect.left = 0;
+        rect.top = 0;
+        rect.right = GetSystemMetrics(SM_CXSCREEN);
+        rect.bottom = GetSystemMetrics(SM_CYSCREEN);
+
+            DEVMODE dm{};
+        dm.dmSize = sizeof(dm);
+        if (EnumDisplaySettings(nullptr, ENUM_CURRENT_SETTINGS, &dm)) {
+            rect.left = 0;
+            rect.top = 0;
+            rect.right = dm.dmPelsWidth;
+            rect.bottom = dm.dmPelsHeight;
+        }
+    }
+    else {
+        if (!::IsWindow(hWnd))
+            return false;
+        if (!::GetWindowRect(hWnd, &rect))
+            return false;
+    }
 
     int width = rect.right - rect.left;
     int height = rect.bottom - rect.top;
@@ -200,45 +293,9 @@ bool CaptureWindowToMat(HWND hWnd, cv::Mat &outImage)
     BITMAP bmp{};
     ::GetObject(hBitmap, sizeof(BITMAP), &bmp);
 
-    //cv::Mat mat(bmp.bmHeight, bmp.bmWidth, CV_8UC4);
-    //GetBitmapBits(hBitmap, bmp.bmHeight * bmp.bmWidthBytes, mat.data);
-    //cv::cvtColor(mat, outImage, cv::COLOR_BGRA2BGR);
-
     cv::Mat mat(bmp.bmHeight, bmp.bmWidth, CV_8UC4);
-    std::vector<uchar> buffer(bmp.bmHeight * bmp.bmWidthBytes);
-    GetBitmapBits(hBitmap, buffer.size(), buffer.data());
-
-    // 注意：Mat 的 step 要和 bmWidthBytes 对齐
-    cv::Mat tmp(bmp.bmHeight, bmp.bmWidth, CV_8UC4, buffer.data(), bmp.bmWidthBytes);
-    tmp.copyTo(mat); // 拷贝成连续的 Mat
-    mat = mat.clone();
-    cv::imwrite("./_temp_tmppng.png", tmp);
-    cv::imwrite("./_temp_matpng.png", mat);
-    outImage = mat;
-    if (false)
-    {
-        cv::Mat reloaded = cv::imread("./_temp_matpng.png", cv::IMREAD_UNCHANGED);
-        if (reloaded.empty()) {
-            std::cerr << "Failed to read image!" << std::endl;
-            //return;
-        }
-
-        // 确保连续
-        if (!reloaded.isContinuous()) {
-            reloaded = reloaded.clone();
-        }
-
-        
-
-        string msg = string("reloaded.size = ") + std::to_string(reloaded.cols) + "x" + std::to_string(reloaded.rows)
-            +"reloaded.channels = " + std::to_string(reloaded.channels()) +
-            "reloaded.type = " + std::to_string(reloaded.type());
-        std::cout << msg << std::endl;
-        cv::Mat outImage;
-        cv::cvtColor(reloaded, outImage, cv::COLOR_RGB2BGR);
-        ColorConversionCodes;
-    }
-
+    GetBitmapBits(hBitmap, bmp.bmHeight * bmp.bmWidthBytes, mat.data);
+    cv::cvtColor(mat, outImage, cv::COLOR_BGRA2BGR);
 
     ::SelectObject(hdcMem, oldObj);
     ::DeleteObject(hBitmap);
@@ -272,10 +329,12 @@ std::vector<cv::Point> FindTemplateInWindow(HWND hWnd, const cv::Mat &templ, dou
 // 模板参数是图片路径
 std::vector<cv::Point> FindTemplateInWindow(HWND hWnd, const std::wstring &templPath, double threshold)
 {
-    cv::Mat templ = cv::imread(std::string(templPath.begin(), templPath.end()), cv::IMREAD_COLOR);
+    std::string pathUtf8 = CommonTool::Wstr2Local(templPath);
+    cv::Mat templ = cv::imread(pathUtf8, cv::IMREAD_COLOR);
     if (templ.empty())
         return {};
-
+    cv::Mat bgr;
+    cv::cvtColor(templ, bgr, cv::COLOR_BGRA2BGR);
     return FindTemplateInWindow(hWnd, templ, threshold);
 }
 
@@ -292,3 +351,162 @@ auto points = FindTemplateInWindow(hwnd, templ, 0.95);
 for (auto &pt : points)
     std::wcout << L"Found at: (" << pt.x << L"," << pt.y << L")\n";
 */
+
+std::vector<cv::Point> FindTemplateCentersInWindow(HWND hWnd, const wchar_t *templPath, double threshold = 0.9)
+{
+    std::vector<cv::Point> topLeftPoints = FindTemplateInWindow(hWnd, templPath, threshold);
+
+    // 读取模板尺寸
+   cv::Mat templ = cv::imread(CommonTool::Wstr2Utf8(templPath), cv::IMREAD_UNCHANGED);
+    if (templ.empty()) {
+        std::wcerr << L"无法读取模板图像：" << templPath << std::endl;
+        return {};
+    }
+
+    std::vector<cv::Point> centers;
+    for (const auto &pt : topLeftPoints) {
+        // 计算模板中心点
+        //cv::Point center(pt.x + templ.cols / 2, pt.y + templ.rows / 2);
+        cv::Point center(pt.x + 10, pt.y + 10);
+        centers.push_back(center);
+    }
+
+    return centers;
+}
+
+void FlashRedRect(const cv::Rect &rect, int duration_ms)
+{
+    int screenW = GetSystemMetrics(SM_CXSCREEN);
+    int screenH = GetSystemMetrics(SM_CYSCREEN);
+
+    // 创建一个全屏黑色背景的窗口
+    cv::Mat canvas(screenH, screenW, CV_8UC3, cv::Scalar(0, 0, 0));
+
+    // 绘制红色矩形
+    cv::rectangle(canvas, rect, cv::Scalar(0, 0, 255), 3);
+
+    // 显示窗口
+    cv::namedWindow("Flash", cv::WINDOW_NORMAL);
+    cv::setWindowProperty("Flash", cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN);
+    cv::imshow("Flash", canvas);
+
+    // 保持一段时间
+    cv::waitKey(duration_ms);
+
+    // 关闭窗口
+    cv::destroyWindow("Flash");
+}
+
+
+// =======================================================
+// 将字符串拷贝到剪切板
+// =======================================================
+void CopyTextToClipboard(const std::wstring &text)
+{
+    if (!OpenClipboard(nullptr))
+        return;
+    EmptyClipboard();
+
+    size_t sizeInBytes = (text.size() + 1) * sizeof(wchar_t);
+    HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, sizeInBytes);
+    if (!hGlobal) {
+        CloseClipboard();
+        return;
+    }
+
+    void *pData = GlobalLock(hGlobal);
+    memcpy(pData, text.c_str(), sizeInBytes);
+    GlobalUnlock(hGlobal);
+
+    SetClipboardData(CF_UNICODETEXT, hGlobal);
+    CloseClipboard();
+}
+
+// =======================================================
+// 模拟 Ctrl+V 粘贴
+// =======================================================
+void SimulateCtrlV()
+{
+    INPUT inputs[4] = {};
+
+    // Ctrl 按下
+    inputs[0].type = INPUT_KEYBOARD;
+    inputs[0].ki.wVk = VK_CONTROL;
+
+    // V 按下
+    inputs[1].type = INPUT_KEYBOARD;
+    inputs[1].ki.wVk = 'V';
+
+    // V 抬起
+    inputs[2].type = INPUT_KEYBOARD;
+    inputs[2].ki.wVk = 'V';
+    inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;
+
+    // Ctrl 抬起
+    inputs[3].type = INPUT_KEYBOARD;
+    inputs[3].ki.wVk = VK_CONTROL;
+    inputs[3].ki.dwFlags = KEYEVENTF_KEYUP;
+
+    SendInput(4, inputs, sizeof(INPUT));
+}
+
+// =======================================================
+// 模拟 Ctrl+V 粘贴
+// =======================================================
+void SimulateKey(std::vector<DWORD> keys)
+{
+    int size = static_cast<int>(keys.size());
+    std::vector<INPUT> inputVec(size * 2);
+
+    // 按下
+    for (int i = 0; i < size; i++) {
+        inputVec[i].type = INPUT_KEYBOARD;
+        inputVec[i].ki.wVk = keys[i];
+        inputVec[i].ki.dwFlags = 0;
+    }
+
+    // 抬起（反向）
+    for (int i = 0; i < size; i++) {
+        inputVec[size + i].type = INPUT_KEYBOARD;
+        inputVec[size + i].ki.wVk = keys[size - 1 - i];
+        inputVec[size + i].ki.dwFlags = KEYEVENTF_KEYUP;
+    }
+
+    // 发送输入
+    SendInput(static_cast<UINT>(inputVec.size()), inputVec.data(), sizeof(INPUT));
+}
+
+void SimulateCtrlW()
+{
+    INPUT inputs[4] = {};
+
+    // Ctrl 按下
+    inputs[0].type = INPUT_KEYBOARD;
+    inputs[0].ki.wVk = VK_CONTROL;
+
+    // W 按下
+    inputs[1].type = INPUT_KEYBOARD;
+    inputs[1].ki.wVk = 'W';
+
+    // W 抬起
+    inputs[2].type = INPUT_KEYBOARD;
+    inputs[2].ki.wVk = 'W';
+    inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;
+
+    // Ctrl 抬起
+    inputs[3].type = INPUT_KEYBOARD;
+    inputs[3].ki.wVk = VK_CONTROL;
+    inputs[3].ki.dwFlags = KEYEVENTF_KEYUP;
+
+    SendInput(4, inputs, sizeof(INPUT));
+}
+
+// =======================================================
+// 高层封装：拷贝 + 模拟粘贴
+// =======================================================
+void PasteText(const std::wstring &text)
+{
+    CopyTextToClipboard(text);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50)); // 等剪切板稳定
+    SimulateCtrlV();
+}

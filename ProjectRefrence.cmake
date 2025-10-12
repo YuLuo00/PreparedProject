@@ -145,7 +145,6 @@ macro(Add3rd_sqlite3 ProjectName)
     target_link_libraries(${ProjectName} PRIVATE unofficial::sqlite3::sqlite3)
     
     Add_Interface_Imported_Location(unofficial::sqlite3::sqlite3)
-    Add_Imported_Location(unofficial::sqlite3::sqlite3)
 endmacro()
 
 macro(Add3rd_OpenCV411 ProjectName)
@@ -170,16 +169,16 @@ macro(Add3rd_OpenCV411 ProjectName)
     
 
     # note: 10 additional targets are not displayed.
-    target_link_libraries(${ProjectName} PRIVATE
-        opencv_ml opencv_dnn opencv_core opencv_flann opencv_imgcodecs opencv_imgproc
+    target_link_libraries(${ProjectName} PRIVATE 
+        opencv_ml opencv_dnn opencv_core opencv_flann opencv_imgcodecs opencv_imgproc opencv_highgui opencv_videoio
         libjpeg-turbo::jpeg
-        WebP::webp WebP::webpdecoder WebP::webpdemux WebP::sharpyuv
+        WebP::webp WebP::webpdecoder WebP::webpdemux WebP::sharpyuv WebP::libwebpmux
         png
     )
     Add_Interface_Imported_Location(
-        opencv_ml opencv_dnn opencv_core opencv_flann opencv_imgcodecs opencv_imgproc
+        opencv_ml opencv_dnn opencv_core opencv_flann opencv_imgcodecs opencv_imgproc opencv_highgui opencv_videoio
         libjpeg-turbo::jpeg
-        WebP::webp WebP::webpdecoder WebP::webpdemux WebP::sharpyuv
+        WebP::webp WebP::webpdecoder WebP::webpdemux WebP::sharpyuv WebP::libwebpmux
         png
     )
 endmacro()

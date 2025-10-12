@@ -2,6 +2,7 @@
 #define AUTOWINS_H
 
 #include <string>
+#include <functional>
 
 class WinTools
 {
@@ -18,6 +19,8 @@ public:
 #include <set>
 #include <vector>
 #include <regex>
+
+#include <opencv2/core/types.hpp>
 
 bool BringWindowToFront(HWND hWnd);
 bool IsWindowInForeground(HWND hWnd);
@@ -121,6 +124,81 @@ struct UIAElementInfo
     BOOL IsCustomNavigationPatternAvailable;
     BOOL IsSelectionPattern2Available;
 };
+
+class Tasks
+{
+public:
+    Tasks(){};
+    Tasks(std::vector<Tasks> subTasks)
+    {
+        m_subTasks = subTasks;
+    }
+    Tasks(std::function<void()> task)
+    {
+        m_task = task;
+    }
+    Tasks(std::initializer_list<Tasks> list)
+    : m_subTasks(list)
+    {
+    }
+    std::vector<Tasks> m_subTasks;
+    std::function<void()> m_task;
+    void run(int indent)
+    {
+        if (m_task != nullptr) {
+            m_task();
+        }
+        for (size_t i = 0; i < m_subTasks.size(); i++) {
+            m_subTasks[i].run(indent + 1);
+        }
+    }
+};
+
+class Ps2024Main
+{
+public:
+    Ps2024Main(){};
+    void Wait()
+    {
+
+    }
+};
+
+void ClickPoint(const cv::Point &pt);
+HWND WaitForWindow(DWORD pid, const std::wstring &titlePattern, int timeout_ms = 5000, int interval_ms = 200);
+bool WaitNoWindow(HWND hwnd, int timeout_ms = 5000, int interval_ms = 200);
+double GetCpuUsageByPid(DWORD pid, int intervalMs = 1000);
+
+bool WaitForLowCpu(
+    DWORD pid, double threshold = 0.5, int stableDurationMs = 2000, int checkIntervalMs = 200, int timeoutMs = 10000);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #endif // !AUTOWINS_H

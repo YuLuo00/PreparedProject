@@ -4,36 +4,37 @@
 #include <string>
 #include <windows.h>
 
-#include <iostream>
-#include <string>
-#include <windows.h>
+#include <chrono>
 #include <functional>
-#include <tuple>
-#include <regex>
+#include <iostream>
 #include <map>
+#include <regex>
 #include <set>
+#include <string>
+#include <thread>
+#include <tuple>
+#include <windows.h>
 
 #include <UIAutomation.h>
 #include <Windows.h>
-#include <comdef.h> // For _bstr_t
-#include <iostream>
 #include <atlbase.h> // CComBSTR
+#include <comdef.h>  // For _bstr_t
+#include <iostream>
 
 #include <fcntl.h>
 #include <io.h>
 
-#include <Windows.h>
 #include <UIAutomation.h>
+#include <Windows.h>
+#include <atlbase.h>   // for CComPtr
+#include <atlcomcli.h> // for CComQIPtr, etc.
+#include <comdef.h>    // for _bstr_t
 #include <iostream>
-#include <comdef.h>      // for _bstr_t
-#include <atlbase.h>     // for CComPtr
-#include <atlcomcli.h>   // for CComQIPtr, etc.
 
 #pragma comment(lib, "Ole32.lib")
 #pragma comment(lib, "Uiautomationcore.lib")
 
 #include "ImageTools.h"
-
 
 bool FillUIAElementInfo(IUIAutomation *pAutomation, IUIAutomationElement *pElement, UIAElementInfo &info)
 {
@@ -262,11 +263,9 @@ void PrintElementInfo(IUIAutomation *pAutomation, IUIAutomationElement *pElement
 
         PrintElementInfo(pAutomation, pChild, indent + 1, *subInfo);
 
-
         CComPtr<IUIAutomationElement> pNext;
         pWalker->GetNextSiblingElement(pChild, &pNext);
         pChild = pNext;
-        
     }
 }
 
@@ -298,9 +297,8 @@ void EnumUIAElements(HWND hwnd, UIAElementInfo &info)
         }
 
         std::wcout << L"=== 开始枚举 UI 控件 ===" << std::endl;
-        PrintElementInfo(pAutomation,  pRoot, 0, info);
+        PrintElementInfo(pAutomation, pRoot, 0, info);
         std::wcout << L"=== 枚举完成 ===" << std::endl;
-
     }
 
     CoUninitialize();
@@ -308,16 +306,14 @@ void EnumUIAElements(HWND hwnd, UIAElementInfo &info)
 
 struct WinItem
 {
-    std::set<WinItem*> subItems;
+    std::set<WinItem *> subItems;
     std::wstring className;
     std::wstring text;
 };
 
-
-
 BOOL CALLBACK EnumChildProcCommon(HWND hwnd, LPARAM lParam)
 {
-    auto *param = reinterpret_cast<std::tuple<LPARAM, std::function<BOOL(HWND, LPARAM)>>*>(lParam);
+    auto *param = reinterpret_cast<std::tuple<LPARAM, std::function<BOOL(HWND, LPARAM)>> *>(lParam);
     LPARAM lp = std::get<0>(*param);
     std::function<BOOL(HWND, LPARAM)> func = std::get<1>(*param);
     return func(hwnd, lp);
@@ -346,7 +342,6 @@ BOOL CALLBACK EnumChildProc(HWND hwnd, LPARAM lParam)
     item->className = className;
     GetWindowTextW(hwnd, windowText, sizeof(windowText) / sizeof(wchar_t));
     item->text = windowText;
-    
 
     pParentItem->subItems.insert(item);
     if (IsWindowVisible(hwnd) == TRUE) {
@@ -374,8 +369,6 @@ BOOL CALLBACK EnumChildProc(HWND hwnd, LPARAM lParam)
 //    return;
 //}
 //
-
-
 
 bool Find(const UIAElementInfo &pRoot, std::function<bool(const UIAElementInfo &)> func, UIAElementInfo &ret)
 {
@@ -408,6 +401,196 @@ void ClickButton(IUIAutomationElement &pButton)
     }
 }
 
+#include <opencv2/core/base.hpp>
+#include <opencv2/core/ocl.hpp>
+
+#include <chrono>
+#include <thread>
+
+// =====================================================
+// 给定 PID，获取该进程所有窗口的 UIA 信息
+// =====================================================
+std::vector<UIAElementInfo> GetAllUIAInfoByPid(DWORD pid)
+{
+    std::vector<UIAElementInfo> result;
+
+    // 1️⃣ 枚举属于该 PID 的所有可见窗口
+    std::vector<HWND> windows;
+    struct EnumData
+    {
+        DWORD pid;
+        std::vector<HWND> *pResult;
+    } data{pid, &windows};
+
+    EnumWindows(
+        [](HWND hWnd, LPARAM lParam) -> BOOL {
+            EnumData *pData = reinterpret_cast<EnumData *>(lParam);
+            DWORD windowPid = 0;
+            GetWindowThreadProcessId(hWnd, &windowPid);
+            if (windowPid == pData->pid && IsWindowVisible(hWnd)) {
+                pData->pResult->push_back(hWnd);
+            }
+            return TRUE;
+        },
+        reinterpret_cast<LPARAM>(&data));
+
+    // 2️⃣ 遍历窗口，枚举 UIA 元素
+    for (HWND hWnd : windows) {
+        wchar_t title[256];
+        GetWindowTextW(hWnd, title, 256);
+        std::wcout << L"分析窗口: " << title << L" (HWND=" << hWnd << L")" << std::endl;
+
+        UIAElementInfo info;
+        EnumUIAElements(hWnd, info);
+
+        result.push_back(std::move(info));
+    }
+
+    return result;
+}
+
+void RomoveNoisePS(const std::wstring &file)
+{
+    {
+        std::wstring openButton = L"./_button.png";
+        std::wstring fileButton = L"file_button.png";
+        std::wstring fileOpenButton = L"button_file-open.png";
+        std::wstring bOpenO = L"open-O.png";
+        std::wstring bRemoveNoise = L"removeNoise.png";
+        std::wstring bEnhance = L"Enhance.png";
+        std::wstring bOpenDNG = L"openDNG.png";
+        std::wstring bNoN = L"No-N.png";
+        std::wstring filename_input = L"filename_input.png";
+        std::wstring bExport = L"bExport.png";
+        std::wstring targetProcess = L"Photoshop.exe";
+        DWORD pid = GetProcessIdByName(targetProcess);
+        HWND winEnhance = nullptr;
+        HWND winCameraRaw = nullptr;
+        HWND winExportAs = nullptr;
+        HWND winSaveAs = nullptr;
+        auto windows = GetVisibleWindowsByPid(pid);
+        HWND winBuffer = windows[0];
+        cv::Point ptBuffer;
+        Tasks tasks = {
+            Tasks([&]() {
+                BringWindowToFront(winBuffer);
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }),
+            Tasks([&]() {
+                SimulateKey({VK_CONTROL, 'O'});
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }),
+            Tasks([&]() {
+                winBuffer = nullptr;
+                winBuffer = WaitForWindow(pid, L".*打开.*");
+                if (winBuffer == nullptr) {
+                    throw std::runtime_error("winBuffer == nullptr"); // 转成 std::string
+                }
+            }),
+            Tasks([&]() {
+                PasteText(file);
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }),
+            Tasks([&]() {
+                SimulateKey({VK_RETURN});
+                WaitForLowCpu(pid, 5);
+                winCameraRaw = nullptr;
+                winCameraRaw = WaitForWindow(pid, L".*Camera Raw .*");
+                if (winCameraRaw == nullptr) {
+                    throw std::runtime_error("winCameraRaw == nullptr"); // 转成 std::string
+                }
+            }),
+            Tasks([&]() {
+                auto pts = FindTemplateInWindow(nullptr, bRemoveNoise.c_str());
+                ptBuffer = pts[0] + cv::Point(15, 15);
+                ClickPoint(ptBuffer);
+                winEnhance = nullptr;
+                winEnhance = WaitForWindow(pid, L".*增强.*");
+                if (winEnhance == nullptr) {
+                    throw std::runtime_error("winEnhance == nullptr"); // 转成 std::string
+                }
+            }),
+            Tasks([&]() {
+                SimulateKey({VK_RETURN});
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                WaitForLowCpu(pid, 2, 2000, 200, 30 * 1000);
+                WaitNoWindow(winEnhance);
+            }),
+            Tasks([&]() {
+                SimulateKey({VK_RETURN});
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                WaitForLowCpu(pid, 2, 2000, 200, 30 * 1000);
+                WaitNoWindow(winCameraRaw);
+
+                HWND winSaveStatus = WaitForWindow(pid, L".*存储状态.*", 3000);
+                if (winSaveStatus) {
+                    WaitNoWindow(winSaveStatus, 30 * 1000);
+                    WaitForLowCpu(pid, 2, 2000, 200, 30 * 1000);
+                }
+            }),
+            Tasks([&]() {
+                SimulateKey({VK_MENU, VK_SHIFT, VK_CONTROL, 'W'});
+
+                winExportAs = nullptr;
+                winExportAs = WaitForWindow(pid, L".*导出为.*");
+                if (winExportAs == nullptr) {
+                    throw std::runtime_error("winExportAs == nullptr"); // 转成 std::string
+                }
+                WaitForLowCpu(pid, 0.5, 2000, 200, 30 * 1000);
+            }),
+            Tasks([&]() {
+                auto pts = FindTemplateInWindow(nullptr, bExport.c_str());
+                ptBuffer = pts[0] + cv::Point(15, 15);
+                ClickPoint(ptBuffer);
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                WaitForLowCpu(pid, 0.5, 2000, 200, 30 * 1000);
+                WaitNoWindow(winCameraRaw);
+            }),
+            Tasks([&]() {
+                winSaveAs = nullptr;
+                winSaveAs = WaitForWindow(pid, L".*另存为.*");
+                if (winSaveAs == nullptr) {
+                    throw std::runtime_error("winSaveAs == nullptr"); // 转成 std::string
+                }
+
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+
+                SimulateKey({VK_RETURN});
+                WaitForLowCpu(pid, 0.5, 2000, 200, 30 * 1000);
+
+                HWND confirm = WaitForWindow(pid, L".*确认另存为.*");
+                if (confirm) {
+                    SimulateKey({'Y'});
+                    WaitNoWindow(confirm);
+                }
+
+                WaitForLowCpu(pid, 0.5, 2000, 200, 30 * 1000);
+                WaitNoWindow(winSaveAs);
+
+            }),
+            Tasks([&]() {}),
+            Tasks([&]() {}),
+            Tasks([&]() {
+                SimulateCtrlW();
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                auto pts = FindTemplateInWindow(nullptr, bNoN.c_str());
+                ptBuffer = pts[0] + cv::Point(15, 15);
+                ClickPoint(ptBuffer);
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }),
+            Tasks(),
+            Tasks(),
+            Tasks(),
+            Tasks(),
+            Tasks(),
+            Tasks(),
+            Tasks(),
+        };
+        tasks.run(1);
+        return;
+    }
+}
+
 void testMain()
 {
     //// 设置控制台为 UTF-8 编码
@@ -416,19 +599,43 @@ void testMain()
     int retSetMode = _setmode(_fileno(stdout), _O_U16TEXT);
     std::wcout << L"Hello 控制台" << std::endl;
 
-
+    cv::ocl::setUseOpenCL(false);
+    cv::ipp::setUseIPP(false);
+    cv::ipp::setUseIPP_NotExact(false);
 
     std::wstring targetProcess = L"Photoshop.exe";
     DWORD pid = GetProcessIdByName(targetProcess);
 
     if (pid == 0) {
         std::wcout << L"找不到进程: " << targetProcess << L"\n";
-        return ;
+        return;
     }
+
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    //{
+    //std::wregex reg1(L".*增强.*", std::regex_constants::icase);
+    //std::wregex reg(L"*增强*", std::regex_constants::icase);
+
+    HWND enhanceWindow = WaitForWindow(pid, L".*增强.*");
+    auto uias = GetAllUIAInfoByPid(pid);
+    //}
+
+    std::vector<std::wstring> files{
+        LR"(D:\_File\a6700\100MSDCF\ALL_RAW\DSC06684.ARW)",
+        LR"(D:\_File\a6700\100MSDCF\ALL_RAW\DSC06685.ARW)",
+        LR"(D:\_File\a6700\100MSDCF\ALL_RAW\DSC06686.ARW)",
+        LR"(D:\_File\a6700\100MSDCF\ALL_RAW\DSC06687.ARW)",
+    };
+    for (size_t i = 0; i < files.size(); i++) {
+        RomoveNoisePS(files[i]);
+    }
+
+    return;
 
     std::wcout << L"找到进程 " << targetProcess << L" ，PID=" << pid << L"\n";
 
     auto windows = GetVisibleWindowsByPid(pid, L"Camera Raw 16*");
+    windows = GetVisibleWindowsByPid(pid);
     std::wcout << L"共找到 " << windows.size() << L" 个可见窗口。\n";
 
     for (HWND hWnd : windows) {
@@ -442,37 +649,27 @@ void testMain()
     }
     HWND window = windows[0];
     BringWindowToFront(window);
-    std::vector<cv::Point> pts = FindTemplateInWindow(window, L"./_button.png");
-
-
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::vector<cv::Point> pts = FindTemplateInWindow(nullptr, L"./_button.png");
 
     // 例如：找到“记事本”的主窗口
     HWND hwnd = FindWindowW(L"Adobe Photoshop 2024", NULL);
     hwnd = reinterpret_cast<HWND>(0x30EB2);
+    hwnd = window;
     if (!hwnd) {
         std::wcerr << L"未找到记事本窗口，请先打开一个记事本。" << std::endl;
-        return ;
+        return;
     }
     UIAElementInfo info;
     EnumUIAElements(hwnd, info);
     UIAElementInfo openButton;
-    
+
     if (Find(
-        info,
-        [](const UIAElementInfo &item)
-        {
-            if (item.Name == L"打开") {
-                return true;
-            }
-            return false;
-        },
-        openButton))             {
-
+            info, [](const UIAElementInfo &item) { return item.Name == L"打开"; }, openButton)) {
         //ClickButton(openButton);
-
     }
 
-    return ;
+    return;
 }
 
 // 将指定窗口提到最前面
@@ -563,8 +760,6 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam)
     return TRUE; // 继续枚举
 }
 
-
-
 // 获取某个进程的所有可见窗口，可选正则标题过滤
 std::vector<HWND> GetVisibleWindowsByPid(DWORD pid, const std::wregex *titleRegex)
 {
@@ -606,4 +801,154 @@ std::vector<HWND> GetVisibleWindowsByPid(DWORD pid, const std::wregex *titleRege
         reinterpret_cast<LPARAM>(&data));
 
     return result;
+}
+
+void ClickPoint(const cv::Point &pt)
+{
+    // 移动鼠标
+    SetCursorPos(pt.x, pt.y);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    // 鼠标左键按下
+    mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+    Sleep(50); // 保证系统能捕捉到点击
+
+    // 鼠标左键抬起
+    mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+
+    Sleep(50); // 防止连续点击过快
+}
+
+// ===================================================
+// 函数2：传入匹配点，点击每个匹配中心
+// ===================================================
+void ClickMatchedPoints(const std::vector<cv::Point> &points, const cv::Size &templSize)
+{
+    for (const auto &pt : points) {
+        // 计算模板中心点
+        cv::Point center(pt.x + templSize.width / 2, pt.y + templSize.height / 2);
+        ClickPoint(center);
+    }
+}
+
+// =======================================================
+// 轮询等待窗口出现
+// =======================================================
+HWND WaitForWindow(DWORD pid, const std::wstring &titlePattern, int timeout_ms, int interval_ms)
+{
+    auto start = std::chrono::steady_clock::now();
+    HWND found = nullptr;
+
+    while (true) {
+        auto windows = GetVisibleWindowsByPid(pid, titlePattern);
+        if (!windows.empty()) {
+            found = windows[0]; // 找到第一个符合的窗口
+            break;
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+        if (elapsed >= timeout_ms) {
+            break; // 超时退出
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
+    }
+
+    return found; // nullptr 表示未找到
+}
+
+bool WaitNoWindow(HWND hwnd, int timeout_ms, int interval_ms)
+{
+    auto start = std::chrono::steady_clock::now();
+    while (true) {
+        if (::IsWindow(hwnd) == false) {
+            return true;
+        }
+        if (::IsWindowVisible(hwnd) == false) {
+            return true;
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+        if (elapsed >= timeout_ms) {
+            break; // 超时退出
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
+    }
+
+    return false; // nullptr 表示未找到
+}
+
+double GetCpuUsageByPid(DWORD pid, int intervalMs)
+{
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+    if (!hProcess) {
+        std::cerr << "无法打开进程: " << pid << std::endl;
+        return -1;
+    }
+
+    FILETIME prevSysIdle, prevSysKernel, prevSysUser;
+    FILETIME prevProcCreation, prevProcExit, prevProcKernel, prevProcUser;
+
+    // 获取初始系统时间
+    if (!GetSystemTimes(&prevSysIdle, &prevSysKernel, &prevSysUser)) {
+        CloseHandle(hProcess);
+        return -1;
+    }
+
+    // 获取初始进程时间
+    if (!GetProcessTimes(hProcess, &prevProcCreation, &prevProcExit, &prevProcKernel, &prevProcUser)) {
+        CloseHandle(hProcess);
+        return -1;
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(intervalMs));
+
+    FILETIME sysIdle, sysKernel, sysUser;
+    FILETIME procCreation, procExit, procKernel, procUser;
+
+    if (!GetSystemTimes(&sysIdle, &sysKernel, &sysUser) ||
+        !GetProcessTimes(hProcess, &procCreation, &procExit, &procKernel, &procUser)) {
+        CloseHandle(hProcess);
+        return -1;
+    }
+
+    ULONGLONG sysTotal = (reinterpret_cast<ULONGLONG &>(sysKernel) + reinterpret_cast<ULONGLONG &>(sysUser)) -
+                         (reinterpret_cast<ULONGLONG &>(prevSysKernel) + reinterpret_cast<ULONGLONG &>(prevSysUser));
+
+    ULONGLONG procTotal = (reinterpret_cast<ULONGLONG &>(procKernel) + reinterpret_cast<ULONGLONG &>(procUser)) -
+                          (reinterpret_cast<ULONGLONG &>(prevProcKernel) + reinterpret_cast<ULONGLONG &>(prevProcUser));
+
+    CloseHandle(hProcess);
+
+    if (sysTotal == 0)
+        return 0.0;
+
+    return (double)(procTotal * 100) / sysTotal;
+}
+
+bool WaitForLowCpu(DWORD pid, double threshold, int stableDurationMs, int checkIntervalMs, int timeoutMs)
+{
+    auto startTime = std::chrono::steady_clock::now();
+    int stableTime = 0;
+
+    while (true) {
+        double cpu = GetCpuUsageByPid(pid, checkIntervalMs); // 获取CPU占用
+        if (cpu < threshold) {
+            stableTime += checkIntervalMs;
+            if (stableTime >= stableDurationMs) {
+                return true; // 连续低于阈值
+            }
+        }
+        else {
+            stableTime = 0; // CPU升高，重置计时
+        }
+
+        // 超时检查
+        auto now = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count() > timeoutMs) {
+            return false; // 超时未达到低CPU
+        }
+    }
 }

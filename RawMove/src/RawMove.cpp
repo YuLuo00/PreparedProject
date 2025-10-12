@@ -527,8 +527,29 @@ moveFilesWithPrefixes(const std::set<std::string> &prefixes, const fs::path &src
 
 extern void testMain();
 
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/base.hpp>
+#include <opencv2/core/ocl.hpp>
+
 void main()
 {
+    cv::ocl::setUseOpenCL(false);
+    cv::ipp::setUseIPP(false);
+    cv::ipp::setUseIPP_NotExact(false);
+
+    int width = 1320, height = 824;
+    cv::Mat mat(height, width, CV_8UC4, cv::Scalar(255, 255, 255, 255));
+
+    std::wcout << L"Use OpenCL: " << (cv::ocl::useOpenCL() ? L"true" : L"false") << std::endl;
+    std::wcout << L"Use IPP: " << (cv::ipp::useIPP() ? L"true" : L"false") << std::endl;
+    std::wcout << L"Use IPP_NotExact: " << (cv::ipp::useIPP_NotExact() ? L"true" : L"false") << std::endl;
+
+    cv::Mat bgr;
+    cv::cvtColor(mat, bgr, cv::COLOR_RGBA2BGR);
+
+    std::wcout << L"Converted successfully, channels=" << bgr.channels() << std::endl;
+
+
     return testMain();
     //moveFilesWithPrefixes(
     //    {

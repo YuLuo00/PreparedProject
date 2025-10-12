@@ -27,4 +27,29 @@ inline std::vector<cv::Point> FindTemplateInWindow(HWND hWnd, const wchar_t *tem
     return FindTemplateInWindow(hWnd, std::wstring(templPath), threshold);
 }
 
+// =======================================================
+// 新函数：返回匹配区域中心点
+// =======================================================
+std::vector<cv::Point> FindTemplateCentersInWindow(HWND hWnd, const wchar_t *templPath, double threshold = 0.9);
+
+void FlashRedRect(const cv::Rect &rect, int duration_ms = 2000);
+
+
+// =======================================================
+// 将字符串拷贝到剪切板
+// =======================================================
+void CopyTextToClipboard(const std::wstring &text);
+
+// =======================================================
+// 模拟 Ctrl+V 粘贴
+// =======================================================
+void SimulateCtrlV();
+void SimulateCtrlW();
+void SimulateKey(std::vector<DWORD> keys);
+    // =======================================================
+// 高层封装：拷贝 + 模拟粘贴
+// =======================================================
+void PasteText(const std::wstring &text);
+
+
 #endif // !IMAGETOOLS_H
