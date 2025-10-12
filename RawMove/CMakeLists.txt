@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.18)
 
 include("${CMAKE_CURRENT_LIST_DIR}/../ProjectRefrence.cmake")
 
-project(RawMove)
+project(AutoWinUI)
 
 # 定义库
 # add_library(${PROJECT_NAME} SHARED)
@@ -15,6 +15,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # 三方库
 Add3rd_fmt(${PROJECT_NAME})
 Add3rd_sqlite3(${PROJECT_NAME})
+Add3rd_OpenCV(${PROJECT_NAME})
 
 # 预定义宏
 target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX)
@@ -35,12 +36,14 @@ target_sources_group(${PROJECT_NAME} "interface" PRIVATE
 target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/AutoWins.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/AutoWins.h"
-    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/RawMoveMain.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/CommonTool.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/CommonTool.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/ImageTools.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/ImageTools.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/Msg2UI.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/RawMove.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/RawMove.h"
-    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/Msg2UI.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/RawMoveMain.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/WinTool.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/WinTool.h"
 )
@@ -61,9 +64,17 @@ install(DIRECTORY
     DESTINATION include
     FILES_MATCHING PATTERN "*.h"
 )
-install(FILES
-        # ${ALL_IMPORTED_LOCATION}
-        $<$<CONFIG:Debug>:${ALL_IMPORTED_LOCATION_Debug}>
-        $<$<CONFIG:Release>:${ALL_IMPORTED_LOCATION_Release}>
-    DESTINATION bin
-)
+
+foreach(file IN LISTS ALL_IMPORTED_LOCATION_Debug)
+    install(FILES
+            $<$<CONFIG:Debug>:${file}>
+        DESTINATION bin
+    )
+endforeach()
+
+foreach(file IN LISTS ALL_IMPORTED_LOCATION_Release)
+    install(FILES
+            $<$<CONFIG:Release>:${file}>
+        DESTINATION bin
+    )
+endforeach()

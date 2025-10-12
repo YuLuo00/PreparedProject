@@ -9,7 +9,7 @@
 #include <windows.h>
 #include <functional>
 #include <tuple>
-
+#include <regex>
 #include <map>
 #include <set>
 
@@ -31,6 +31,8 @@
 
 #pragma comment(lib, "Ole32.lib")
 #pragma comment(lib, "Uiautomationcore.lib")
+
+#include "ImageTools.h"
 
 
 bool FillUIAElementInfo(IUIAutomation *pAutomation, IUIAutomationElement *pElement, UIAElementInfo &info)
@@ -408,12 +410,40 @@ void ClickButton(IUIAutomationElement &pButton)
 
 void testMain()
 {
-
-     //// 设置控制台为 UTF-8 编码
+    //// 设置控制台为 UTF-8 编码
     //SetConsoleOutputCP(CP_UTF8);
     // 设置控制台为 UTF-16 编码
     int retSetMode = _setmode(_fileno(stdout), _O_U16TEXT);
     std::wcout << L"Hello 控制台" << std::endl;
+
+
+
+    std::wstring targetProcess = L"Photoshop.exe";
+    DWORD pid = GetProcessIdByName(targetProcess);
+
+    if (pid == 0) {
+        std::wcout << L"找不到进程: " << targetProcess << L"\n";
+        return ;
+    }
+
+    std::wcout << L"找到进程 " << targetProcess << L" ，PID=" << pid << L"\n";
+
+    auto windows = GetVisibleWindowsByPid(pid, L"Camera Raw 16*");
+    std::wcout << L"共找到 " << windows.size() << L" 个可见窗口。\n";
+
+    for (HWND hWnd : windows) {
+        wchar_t title[256];
+        GetWindowTextW(hWnd, title, 256);
+        std::wcout << L"  HWND=" << hWnd << L"  标题：" << title << L"\n";
+    }
+
+    if (windows.size() != 1) {
+        return;
+    }
+    HWND window = windows[0];
+    BringWindowToFront(window);
+    std::vector<cv::Point> pts = FindTemplateInWindow(window, L"./_button.png");
+
 
 
     // 例如：找到“记事本”的主窗口
@@ -445,3 +475,135 @@ void testMain()
     return ;
 }
 
+// 将指定窗口提到最前面
+bool BringWindowToFront(HWND hWnd)
+{
+    if (hWnd == nullptr || !IsWindow(hWnd))
+        return false;
+
+    // 如果窗口被最小化，则先恢复
+    if (IsIconic(hWnd))
+        ShowWindow(hWnd, SW_RESTORE);
+
+    // 置顶到最前面，并激活
+    BOOL result = SetForegroundWindow(hWnd);
+    if (!result) {
+        // 某些情况下（比如当前线程不在前台）可能会失败，
+        // 这里可以通过AttachThreadInput提升权限
+        DWORD fgThread = GetWindowThreadProcessId(GetForegroundWindow(), nullptr);
+        DWORD thisThread = GetCurrentThreadId();
+        AttachThreadInput(thisThread, fgThread, TRUE);
+        result = SetForegroundWindow(hWnd);
+        AttachThreadInput(thisThread, fgThread, FALSE);
+    }
+
+    // 再次确保显示
+    BringWindowToTop(hWnd);
+    ShowWindow(hWnd, SW_SHOW);
+
+    return result != FALSE;
+}
+
+// 检查指定窗口是否在最前面
+bool IsWindowInForeground(HWND hWnd)
+{
+    if (hWnd == nullptr || !IsWindow(hWnd))
+        return false;
+
+    HWND hForeground = GetForegroundWindow();
+    return hWnd == hForeground;
+}
+
+#include <iostream>
+#include <string>
+#include <tlhelp32.h>
+#include <vector>
+#include <windows.h>
+
+// 根据进程名获取 PID（不区分大小写）
+DWORD GetProcessIdByName(const std::wstring &processName)
+{
+    DWORD pid = 0;
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snapshot == INVALID_HANDLE_VALUE)
+        return 0;
+
+    PROCESSENTRY32W entry{};
+    entry.dwSize = sizeof(entry);
+
+    if (Process32FirstW(snapshot, &entry)) {
+        do {
+            std::wstring exeName = entry.szExeFile;
+            if (_wcsicmp(exeName.c_str(), processName.c_str()) == 0) {
+                pid = entry.th32ProcessID;
+                break;
+            }
+        } while (Process32NextW(snapshot, &entry));
+    }
+
+    CloseHandle(snapshot);
+    return pid;
+}
+
+// 枚举所有窗口，找到属于 pid 的可见顶层窗口
+BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam)
+{
+    DWORD windowPid = 0;
+    GetWindowThreadProcessId(hWnd, &windowPid);
+
+    if (windowPid == (DWORD)lParam) {
+        if (IsWindowVisible(hWnd)) {
+            // 打印标题
+            wchar_t title[256];
+            GetWindowTextW(hWnd, title, 256);
+            std::wcout << L"[窗口] " << title << L" (HWND=" << hWnd << L")\n";
+        }
+    }
+
+    return TRUE; // 继续枚举
+}
+
+
+
+// 获取某个进程的所有可见窗口，可选正则标题过滤
+std::vector<HWND> GetVisibleWindowsByPid(DWORD pid, const std::wregex *titleRegex)
+{
+    std::vector<HWND> result;
+
+    struct EnumData
+    {
+        DWORD pid;
+        const std::wregex *titleRegex;
+        std::vector<HWND> *pResult;
+    } data{pid, titleRegex, &result};
+
+    EnumWindows(
+        [](HWND hWnd, LPARAM lParam) -> BOOL {
+            auto *pData = reinterpret_cast<EnumData *>(lParam);
+            DWORD windowPid = 0;
+            GetWindowThreadProcessId(hWnd, &windowPid);
+
+            if (windowPid != pData->pid || !IsWindowVisible(hWnd))
+                return TRUE;
+
+            // 获取窗口标题
+            wchar_t title[512];
+            GetWindowTextW(hWnd, title, 512);
+            std::wstring titleStr = title;
+
+            // 如果指定了正则，就匹配
+            if (pData->titleRegex) {
+                if (std::regex_search(titleStr, *pData->titleRegex))
+                    pData->pResult->push_back(hWnd);
+            }
+            else {
+                // 没指定正则就全部加入
+                pData->pResult->push_back(hWnd);
+            }
+
+            return TRUE;
+        },
+        reinterpret_cast<LPARAM>(&data));
+
+    return result;
+}

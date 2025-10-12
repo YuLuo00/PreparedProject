@@ -16,6 +16,32 @@ public:
 #include <Windows.h>
 #include <string>
 #include <set>
+#include <vector>
+#include <regex>
+
+bool BringWindowToFront(HWND hWnd);
+bool IsWindowInForeground(HWND hWnd);
+// 根据进程名获取 PID（不区分大小写）
+DWORD GetProcessIdByName(const std::wstring &processName);
+
+// 枚举所有窗口，找到属于 pid 的可见顶层窗口
+BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam);
+
+// 获取某个进程的所有可见窗口
+std::vector<HWND> GetVisibleWindowsByPid(DWORD pid, const std::wregex *titleRegex);
+inline std::vector<HWND> GetVisibleWindowsByPid(DWORD pid,
+                                         const std::wstring &titleRegex,
+                                         std::regex_constants::syntax_option_type type = std::regex_constants::icase)
+{
+    return GetVisibleWindowsByPid(pid, &std::wregex(titleRegex, type));
+}
+inline std::vector<HWND> GetVisibleWindowsByPid(DWORD pid)
+{
+    return GetVisibleWindowsByPid(pid, nullptr);
+}
+
+
+
 
 struct BoundingRectangle
 {
