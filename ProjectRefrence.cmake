@@ -54,6 +54,26 @@ macro(Add_Interface_Imported_Location ProjectName)
     endif()
 endmacro()
 
+# 添加运行时依赖文件
+macro(Add_Imported_Location ProjectName)
+    get_target_property(_locs ${ProjectName} IMPORTED_LOCATION)
+    if(NOT _locs STREQUAL "_locs-NOTFOUND")
+        message(STATUS "MY_VAR is _locs-NOTFOUND")
+        list(APPEND ALL_IMPORTED_LOCATION ${_locs})
+    endif()
+    
+    get_target_property(_locs ${ProjectName} IMPORTED_LOCATION_DEBUG)
+    if(NOT _locs STREQUAL "_locs-NOTFOUND")
+        message(STATUS "MY_VAR is _locs-NOTFOUND")
+        list(APPEND ALL_IMPORTED_LOCATION_Debug ${_locs})
+    endif()
+
+    get_target_property(_locs ${ProjectName} IMPORTED_LOCATION_RELEASE)
+    if(NOT _locs STREQUAL "_locs-NOTFOUND")
+        message(STATUS "MY_VAR is _locs-NOTFOUND")
+        list(APPEND ALL_IMPORTED_LOCATION_Release ${_locs})
+    endif()
+endmacro()
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
 
 macro(Add3rd_spdlog ProjectName)
@@ -85,4 +105,74 @@ macro(Add3rd_sqlite3 ProjectName)
     
     Add_Interface_Imported_Location(unofficial::sqlite3::sqlite3)
     Add_Imported_Location(unofficial::sqlite3::sqlite3)
+endmacro()
+
+macro(Add3rd_TBB ProjectName)
+    set(TBB_DIR "${ProjectRootDir}/ThirdParty/tbb/installed/x64-windows/share/tbb//")
+    message("TBB_DIR == ${TBB_DIR}")
+
+    find_package(TBB CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE TBB::tbb)
+    
+    Add_Interface_Imported_Location(TBB::tbb)
+    Add_Imported_Location(TBB::tbb)
+endmacro()
+
+# ThirdParty/ffmpeg/installed/x64-windows/share/ffmpeg/FindFFMPEG.cmake
+# FFmpeg::avcodec FFmpeg::avformat FFmpeg::avutil FFmpeg::swresample
+macro(Add3rd_FFmpeg ProjectName)
+    set(FFmpeg_DIR "${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/share/ffmpeg/")
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/share/ffmpeg/")
+    message("FFmpeg_DIR == ${FFmpeg_DIR}")
+
+    find_package(FFmpeg REQUIRED)
+    
+    message("
+        FFMPEG_FOUND == ${FFMPEG_FOUND}
+        FFMPEG_INCLUDE_DIRS == ${FFMPEG_INCLUDE_DIRS}
+        FFMPEG_LIBRARY_DIRS == ${FFMPEG_LIBRARY_DIRS}
+        FFMPEG_LIBRARIES == ${FFMPEG_LIBRARIES}
+    ")
+
+    # ✅ 绑定头文件
+    target_include_directories(${ProjectName} PRIVATE
+        ${FFMPEG_INCLUDE_DIRS}
+    )
+
+    # ✅ 绑定库
+    target_link_directories(${ProjectName} PRIVATE
+        $<$<CONFIG:Debug>:${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/lib/>
+        $<$<CONFIG:Release>:${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/lib>
+    )
+
+    target_link_libraries(${ProjectName} PRIVATE
+        avcodec.lib
+        avdevice.lib
+        avfilter.lib
+        avformat.lib
+        avutil.lib
+        pkgconf.lib
+        swresample.lib
+        swscale.lib
+    )
+    list(APPEND ALL_IMPORTED_LOCATION_Debug
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avcodec-61.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avdevice-61.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avfilter-10.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avformat-61.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avutil-59.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/pkgconf-3.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/swresample-5.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/swscale-8.dll
+    )
+    list(APPEND ALL_IMPORTED_LOCATION_Release
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avcodec-61.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avdevice-61.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avfilter-10.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avformat-61.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avutil-59.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/pkgconf-3.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/swresample-5.dll
+        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/swscale-8.dll
+    )
 endmacro()
