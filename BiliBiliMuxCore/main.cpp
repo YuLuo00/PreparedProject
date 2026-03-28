@@ -287,6 +287,10 @@ void ReadPackets(AVFormatContext *inCtx,
     std::vector<AVPacket *> buffer;
     //avformat_find_stream_info(inCtx, NULL);
     std::vector<PacketsBatch> pktBatches(inCtx->nb_streams);
+    std::set<int> vedioStreamIdx;
+    auto isVedioPacket = [inCtx](const AVPacket *pkt) {
+        return inCtx->streams[pkt->stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
+    };
     for (size_t i = 0; i < inCtx->nb_streams; i++) {
         pktBatches[i].m_inCtx = inCtx;
         pktBatches[i].m_inCtxStmIdx = i;
@@ -319,7 +323,8 @@ void ReadPackets(AVFormatContext *inCtx,
             }
             PacketsBatch &pktBatch = pktBatches[avPacket->stream_index];
             pktBatch.m_pkts.push_back(avPacket);
-            if (pktBatch.m_pkts.size() >= g_BatchDealPktCount) {
+            bool isIFrame = (avPacket->flags & AV_PKT_FLAG_KEY) != 0;
+            if (pktBatch.m_pkts.size() >= g_BatchDealPktCount && (!isVedioPacket(avPacket) || isIFrame)) {
                 pktsRead.push(pktBatch);
                 pktBatch.m_pkts.clear();
             }
@@ -550,7 +555,7 @@ int main()
     int ret = 0;
 
     const std::set<std::string> files = {
-           //R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\audio.m4s)",
+           R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\audio.m4s)",
            R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\video.m4s)",
     };
     // 读取输入文件
@@ -591,13 +596,14 @@ int main()
     }
 
     PacketBatchQueue pktsRead;
-    pktsRead.set_capacity(10); // 队列最大容量
+    //pktsRead.set_capacity(10); // 队列最大容量
 
     tbb::flow::graph g;
     // broadcast_node 触发读取和处理
     tbb::flow::broadcast_node<PacketBatchQueue *> start(g);
 
     // 读取节点
+    std::vector<AVFormatContext *> ctsx;
     for (auto it = inputStreams.begin(); it != inputStreams.end(); it = inputStreams.upper_bound(it->first)) {
         AVFormatContext *inCtx = it->first;
         // 处理这个 key
@@ -609,6 +615,7 @@ int main()
         //    AVStream *st = sit->second;
         //    // 处理 st
         //}
+        ctsx.push_back(inCtx);
 
         auto readPktsNode = new tbb::flow::function_node<PacketBatchQueue *, tbb::flow::continue_msg>(
             g, tbb::flow::serial, [&](PacketBatchQueue *queue) -> tbb::flow::continue_msg {
@@ -626,13 +633,35 @@ int main()
         });
 
 
-    tbb::flow::make_edge(start, dealPktsNode);
+    //tbb::flow::make_edge(start, dealPktsNode);
+
+    
+    bool testSyncRead = true;
+    //testSyncRead = false;
+    if (testSyncRead) // 测试异步读取两个文件
+    {
+        // 假设你有两个队列
+        PacketBatchQueue queue1;
+        PacketBatchQueue queue2;
+
+        // 启动两个线程
+        std::thread t1([&] { ReadPackets(ctsx[0], streamIndexMap, pktsRead); });
+        std::thread t2([&] { ReadPackets(ctsx[1], streamIndexMap, pktsRead); });
+        std::thread t3([&] { DealPkts(outCtx, pktsRead); });
+
+        // 等待两个线程执行完毕
+        t1.join();
+        t2.join();
+        t3.join();
+    }
+    else {
+        start.try_put(&pktsRead);
+    }
 
     // 触发一次
-    start.try_put(&pktsRead);
-
     g.wait_for_all();
 
+    //return 0;
     	// 写入文件尾部
     ret = av_write_trailer(outCtx);
     if (ret != 0) {
