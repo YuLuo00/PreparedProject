@@ -37,6 +37,10 @@ using namespace std;
 #include <iostream>
 #include <tbb/concurrent_queue.h>
 #include <tbb/flow_graph.h>
+#include <tbb/flow_graph.h>
+#include <functional>  // std::reference_wrapper
+
+
 
             using namespace tbb::flow;
 class PacketsBatch
@@ -677,33 +681,48 @@ int main()
     }
     else {
         {
-            graph g;
+            {
+                using namespace oneapi::tbb::flow;
 
-            // 广播启动信号
-            broadcast_node<continue_msg> start(g);
+                graph g;
 
-            // read0
-            continue_node<continue_msg> read0(
-                g, [&](const continue_msg &) { ReadPackets(ctsx[0], streamIndexMap, pktsRead); });
+                // 消息类型改成 PacketBatchQueue*
+                using PktsPtr = PacketBatchQueue *;
 
-            // read1
-            continue_node<continue_msg> read1(
-                g, [&](const continue_msg &) { ReadPackets(ctsx[1], streamIndexMap, pktsRead); });
+                // 广播节点
+                broadcast_node<PktsPtr> start(g);
 
-            // deal
-            continue_node<continue_msg> deal(g, [&](const continue_msg &) { DealPkts(outCtx, pktsRead); });
+                // read0
+                function_node<PktsPtr> read0(g, unlimited, [&](PktsPtr pktsPtr) {
+                    PacketBatchQueue &pkts = *pktsPtr; // 引用语义
+                    ReadPackets(ctsx[0], streamIndexMap, pkts);
+                });
 
-            // 三个节点都从同一个 start 触发
-            make_edge(start, read0);
-            make_edge(start, read1);
-            make_edge(start, deal);
+                // read1
+                function_node<PktsPtr> read1(g, unlimited, [&](PktsPtr pktsPtr) {
+                    PacketBatchQueue &pkts = *pktsPtr;
+                    ReadPackets(ctsx[1], streamIndexMap, pkts);
+                });
 
-            // 发出一次启动消息
-            start.try_put(continue_msg{});
+                // deal
+                function_node<PktsPtr> deal(g, unlimited, [&](PktsPtr pktsPtr) {
+                    PacketBatchQueue &pkts = *pktsPtr;
+                    DealPkts(outCtx, pkts);
+                });
 
-            // 等所有节点完成
-            g.wait_for_all();
+                // 三个节点都从 start 接收同一个 pktsRead 指针
+                make_edge(start, read0);
+                make_edge(start, read1);
+                make_edge(start, deal);
+
+                // 发出一次启动消息，把 &pktsRead 传进去
+                start.try_put(&pktsRead);
+
+                // 等所有节点完成
+                g.wait_for_all();
+            }
         }
+
 
 
         //start.try_put(&pktsRead);
