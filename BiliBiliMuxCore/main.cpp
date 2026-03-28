@@ -38,6 +38,7 @@ using namespace std;
 #include <tbb/concurrent_queue.h>
 #include <tbb/flow_graph.h>
 
+            using namespace tbb::flow;
 class PacketsBatch
 {
 public:
@@ -565,6 +566,10 @@ public:
     }
 };
 
+#include <tbb/flow_graph.h>
+
+
+
 int main()
 {
     std::string vedioPath = R"(C:\Users\Administrator\Desktop\BiliBiliMux\bin\qingziTU.mp4)";
@@ -656,13 +661,9 @@ int main()
 
     
     bool testSyncRead = true;
-    //testSyncRead = false;
+    testSyncRead = false;
     if (testSyncRead) // 测试异步读取两个文件
     {
-        // 假设你有两个队列
-        PacketBatchQueue queue1;
-        PacketBatchQueue queue2;
-
         // 启动两个线程
         std::thread t3([&] { DealPkts(outCtx, pktsRead); });
 
@@ -675,7 +676,37 @@ int main()
         t3.join();
     }
     else {
-        start.try_put(&pktsRead);
+        {
+            graph g;
+
+            // 广播启动信号
+            broadcast_node<continue_msg> start(g);
+
+            // read0
+            continue_node<continue_msg> read0(
+                g, [&](const continue_msg &) { ReadPackets(ctsx[0], streamIndexMap, pktsRead); });
+
+            // read1
+            continue_node<continue_msg> read1(
+                g, [&](const continue_msg &) { ReadPackets(ctsx[1], streamIndexMap, pktsRead); });
+
+            // deal
+            continue_node<continue_msg> deal(g, [&](const continue_msg &) { DealPkts(outCtx, pktsRead); });
+
+            // 三个节点都从同一个 start 触发
+            make_edge(start, read0);
+            make_edge(start, read1);
+            make_edge(start, deal);
+
+            // 发出一次启动消息
+            start.try_put(continue_msg{});
+
+            // 等所有节点完成
+            g.wait_for_all();
+        }
+
+
+        //start.try_put(&pktsRead);
     }
 
     // 触发一次
