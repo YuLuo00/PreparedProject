@@ -296,18 +296,21 @@ void ReadPackets(AVFormatContext *inCtx,
         // 读取
         try {
             ret = av_read_frame(inCtx, avPacket);
+            if (ret == AVERROR_EOF) {
+                std::cout << "读取文件结束" << std::endl;
+                av_packet_free(&avPacket);
+                break;
+            }
             if (ret < 0) {
-                std::cout << "读取数据包错误" << std::endl;
+                char errbuf[256];
+                av_strerror(ret, errbuf, sizeof(errbuf));
+                std::cout << "读取数据包错误: " << errbuf << std::endl;
+
                 av_packet_free(&avPacket);
                 break;
             }
             if (avPacket->dts < 0) {
                 std::cout << "解码时间戳小于0" << std::endl;
-            }
-            if (avPacket->size <= 0) {
-                std::cout << "读取文件结束" << std::endl;
-                av_packet_free(&avPacket);
-                break;
             }
             PacketsBatch &pktBatch = pktBatches[avPacket->stream_index];
             pktBatch.m_pkts.push_back(avPacket);
@@ -376,8 +379,8 @@ void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
 
             if (pkt->flags & AV_PKT_FLAG_KEY) {
             }
-            std::cout << "\t\tpkt->dts" << pkt->dts << "\tpkt->stream_index" << pkt->stream_index << "\tpkt->flags"
-                      << pkt->flags << "\tpkt->size" << pkt->size << "\tpkt->pos" << pkt->pos << std::endl;
+            //std::cout << "\t\tpkt->dts" << pkt->dts << "\tpkt->stream_index" << pkt->stream_index << "\tpkt->flags"
+            //          << pkt->flags << "\tpkt->size" << pkt->size << "\tpkt->pos" << pkt->pos << std::endl;
             pkt->stream_index = pktBatch.m_outCtxStmIdx;
             int ret = av_interleaved_write_frame(outCtx, pkt);
             if (0 != ret) {
@@ -519,6 +522,8 @@ public:
 int main()
 {
     std::string vedioPath = R"(C:\Users\Administrator\Desktop\BiliBiliMux\bin\qingziTU.mp4)";
+    vedioPath = R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\audio.m4s)";
+    vedioPath = R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\video.m4s)";
     MediaMux mux;
     int ret = 0;
 
