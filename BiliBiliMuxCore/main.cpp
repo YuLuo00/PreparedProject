@@ -43,6 +43,10 @@ using namespace std;
 #include <tbb/concurrent_queue.h>
 #include <tbb/flow_graph.h>
 
+#include <libavformat/avformat.h>
+#include <libavutil/avutil.h>
+#include <libavutil/mem.h>
+
 
 
 
@@ -192,11 +196,6 @@ void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
         }
     }
 }
-
-
-#include <libavformat/avformat.h>
-#include <libavutil/avutil.h>
-#include <libavutil/mem.h>
 
 /**
  * 将输入流 in 的必要信息安全地复制到输出流 out（用于 remux）。
@@ -430,20 +429,34 @@ int main()
                 using PktsPtr = PacketBatchQueue *;
 
                 broadcast_node<PktsPtr> start(g);
-
                 // read 节点数组（必须保证节点对象本身不被移动）
-                std::vector<std::unique_ptr<function_node<PktsPtr>>> readNodes;
-                readNodes.reserve(ctsx.size());
+                std::vector<std::unique_ptr<function_node<PktsPtr, int>>> readNodes;
+                readNodes.resize(ctsx.size());
+
+                std::atomic<int> counter{0};
+                // 计数节点：每来一个输入就 ++counter
+                function_node<int, continue_msg> counter_node(g,
+                                                              serial, // 串行保证计数安全
+                                                              [&](int) -> continue_msg {
+                                                                  counter.fetch_add(1);
+                                                                  if (counter.load() >= readNodes.size()) {
+                                                                      
+                                                                  }
+                                                                  return continue_msg{}; // 始终输出一个信号
+                                                              });
 
                 for (int i = 0; i < ctsx.size(); ++i) {
-                    auto node = std::make_unique<function_node<PktsPtr>>(g, unlimited, [&, i](PktsPtr pktsPtr) {
-                        PacketBatchQueue &pkts = *pktsPtr;
-                        ReadPackets(ctsx[i], streamIndexMap, pkts);
-                    });
+                    auto readNode =
+                        std::make_unique<function_node<PktsPtr, int>>(g, unlimited, [&, i](PktsPtr pktsPtr) -> int {
+                            PacketBatchQueue &pkts = *pktsPtr;
+                            return ReadPackets(ctsx[i], streamIndexMap, pkts); // ✔ 返回 int
+                        });
 
-                    make_edge(start, *node);
-                    readNodes.push_back(std::move(node));
+                    make_edge(start, *readNode);
+                    make_edge(*readNode, counter_node);
+                    readNodes.push_back(std::move(readNode));
                 }
+
 
                 // deal 节点
                 function_node<PktsPtr> deal(g, unlimited, [&](PktsPtr pktsPtr) {

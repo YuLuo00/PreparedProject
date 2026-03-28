@@ -41,7 +41,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 # 源文件
-target_sources_group(${PROJECT_NAME} "interface" PRIVATE
+target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/main.cpp"
     # BiliBiliMuxCore\main.cpp
 )
