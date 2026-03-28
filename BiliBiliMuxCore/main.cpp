@@ -32,17 +32,22 @@ extern "C"
 #include <fstream>
 #include <iosfwd>
 #include <sstream>
+#include <iostream>
+#include <functional>  // std::reference_wrapper
+#include <chrono>
+#include <fstream>
+#include <iostream>
+#include <thread>
 using namespace std;
 
-#include <iostream>
 #include <tbb/concurrent_queue.h>
 #include <tbb/flow_graph.h>
-#include <tbb/flow_graph.h>
-#include <functional>  // std::reference_wrapper
 
 
 
-            using namespace tbb::flow;
+
+using namespace tbb::flow;
+
 class PacketsBatch
 {
 public:
@@ -51,8 +56,6 @@ public:
     AVFormatContext *m_inCtx = nullptr;
     int m_inCtxStmIdx = 0;
     int m_outCtxStmIdx = 0;
-
-
 };
 using PacketBatchQueue=tbb::concurrent_bounded_queue<PacketsBatch>;
 
@@ -60,219 +63,7 @@ const int g_BatchDealPktCount = 120;
 
 AVPacket *g_EOSPacket = (AVPacket *)1;
 
-class LogDebug
-{
-public:
-    LogDebug(){};
 
-    template <class T> LogDebug operator<<(T t)
-    {
-        log(t);
-        return *this;
-    };
-
-    template <class T> void log(T t)
-    {
-        cout << t;
-    };
-
-private:
-    function<void(void *)> m_logCb = nullptr;
-};
-
-void ReadFileTTTT(const string vedioPath,
-                  AVFormatContext *outCtx,
-                  AVMediaType type,
-                  map<int, pair<vector<AVPacket *>, AVRational>> &allPackets)
-{
-    set<int> dtsDedupCheck;
-    map<int, int> streamsIdx; // <输入流流序号，输出流流序号>
-    char errors[1024];
-    AVFormatContext *inCtx = nullptr;
-    int ret = 0;
-    // 读取视频文件
-    ret = avformat_open_input(&inCtx, vedioPath.c_str(), NULL, NULL);
-    if (inCtx == nullptr) {
-        std::cout << "严重错误，open失败" << std::endl;
-        return;
-    }
-    if (ret != 0) {
-        av_strerror(ret, errors, strlen(errors));
-        av_log(NULL, AV_LOG_WARNING, "error, ret=%d, msg=%s\n", ret, errors);
-        return;
-    }
-    avformat_find_stream_info(inCtx, NULL);
-    for (int i = 0; i < inCtx->nb_streams; i++) {
-        // 遍历指定媒体流
-        AVStream *inputStream = inCtx->streams[i];
-        int inIdx = inputStream->index;
-        if (inputStream->codecpar->codec_type == type) {
-            // 复制到输出流
-            AVStream *newStream = avformat_new_stream(outCtx, NULL);
-            avcodec_parameters_copy(newStream->codecpar, inCtx->streams[i]->codecpar);
-            // 记录索引
-            streamsIdx[i] = newStream->index;
-            if (allPackets.count(newStream->index)) {
-                std::cout << "严重错误，输出流重复" << std::endl;
-                exit(-1);
-            }
-            // 录入丢失的流数据字段
-            newStream->time_base = inputStream->time_base;
-            allPackets[newStream->index].second = newStream->time_base;
-        }
-    }
-    int sizeBuff = 0;
-    int index = 0;
-    // 读取一段数据包
-    while (true) {
-        AVPacket *avPacket = av_packet_alloc();
-        int ret = 0;
-        // 读取
-        try {
-            ret = av_read_frame(inCtx, avPacket);
-            if (ret < 0) {
-                std::cout << "读取数据包错误" << std::endl;
-                av_packet_free(&avPacket);
-                break;
-            }
-            if (avPacket->dts < 0) {
-                std::cout << "解码时间戳小于0" << std::endl;
-            }
-            if (avPacket->size <= 0) {
-                std::cout << "读取文件结束" << std::endl;
-                av_packet_free(&avPacket);
-                break;
-            }
-        }
-        catch (...) {
-            std::cout << "触发了异常" << std::endl;
-        }
-        // 校验序号
-        if (streamsIdx.count(avPacket->stream_index) < 0) {
-            av_packet_free(&avPacket);
-            continue;
-        }
-        // 缓存
-        if (dtsDedupCheck.count(avPacket->dts) > 0) {
-            av_packet_free(&avPacket);
-            continue;
-        }
-        dtsDedupCheck.insert(avPacket->dts);
-        int outStreamIdx = streamsIdx[avPacket->stream_index];
-        allPackets[outStreamIdx].first.push_back(avPacket);
-    }
-};
-
-#include <chrono>
-#include <fstream>
-#include <iostream>
-#include <tbb/flow_graph.h>
-#include <thread>
-
-int mainCheckDoubleRead(std::string vedioPath)
-{
-    char errors[1024];
-    AVFormatContext *inCtx = nullptr;
-    int ret = 0;
-    // 读取视频文件
-    ret = avformat_open_input(&inCtx, vedioPath.c_str(), NULL, NULL);
-    if (inCtx == nullptr) {
-        std::cout << "严重错误，open失败" << std::endl;
-        return 1;
-    }
-    if (ret != 0) {
-        av_strerror(ret, errors, strlen(errors));
-        av_log(NULL, AV_LOG_WARNING, "error, ret=%d, msg=%s\n", ret, errors);
-        return 1;
-    }
-
-    // 构建输出文件
-    AVFormatContext *outCtx = nullptr;
-    char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
-    int error = avformat_alloc_output_context2(&outCtx, nullptr, nullptr, "result.mp4");
-    if (error < 0) {
-        // 输出错误代码及错误信息
-        av_make_error_string(errMsg, AV_ERROR_MAX_STRING_SIZE, error);
-        std::cout << "Failed to allocate output format context: " << errMsg << std::endl;
-        // 处理错误情况
-        return -2;
-    }
-
-    // 检查 && 复制 流信息
-    avformat_find_stream_info(inCtx, NULL);
-    std::map<AVFormatContext *, std::map<int, int>> streamIndexMap; // <inputCtx, <InputCtxStmIndex, outputCtxStmIdx>>
-    std::vector<AVMediaType> streamsType(inCtx->nb_streams, AVMediaType::AVMEDIA_TYPE_UNKNOWN);
-    for (int i = 0; i < inCtx->nb_streams; i++) {
-        // 遍历媒体流
-        AVStream *inputStream = inCtx->streams[i];
-        int inIdx = inputStream->index;
-        streamsType[i] = inputStream->codecpar->codec_type;
-
-        // 复制到输出流
-        AVStream *newStream = avformat_new_stream(outCtx, NULL);
-        avcodec_parameters_copy(newStream->codecpar, inputStream->codecpar);
-
-        // 录入丢失的流数据字段
-        newStream->time_base = inputStream->time_base;
-
-        // 记录流映射
-        if (streamIndexMap[inCtx].count(inIdx)) {
-            av_log(NULL, AV_LOG_ERROR, "error, 重复映射了同一个输入流\n");
-        }
-        streamIndexMap[inCtx][inIdx] = newStream->index;
-    }
-
-
-    tbb::flow::graph g;
-
-    //// 打开一个文件（共享）
-    // std::ifstream file(path, std::ios::binary);
-    // if (!file.is_open()) {
-    //     std::cerr << "Failed to open file!" << std::endl;
-    //     return -1;
-    // }
-
-    //AVFormatContext *inCtx = nullptr;
-    //int ret = 0;
-    // 读取视频文件
-    ret = avformat_open_input(&inCtx, vedioPath.c_str(), NULL, NULL);
-    if (inCtx == nullptr) {
-        std::cout << "严重错误，open失败" << std::endl;
-        return 2;
-    }
-
-    // 第一个节点
-    tbb::flow::function_node<int, int> node1(g,
-                                             tbb::flow::serial, // 单线程处理
-                                             [&](int token) -> int {
-                                                 for (int i = 0; i < 10; ++i) {
-                                                     std::this_thread::sleep_for(std::chrono::seconds(1));
-                                                     std::cout << "Node1 iteration " << i + 1 << std::endl;
-                                                 }
-                                                 return 0;
-                                             });
-
-    // 第二个节点
-    tbb::flow::function_node<int, int> node2(g, tbb::flow::serial, [&](int token) -> int {
-        for (int i = 0; i < 10; ++i) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            std::cout << "Node2 iteration " << i + 1 << std::endl;
-        }
-        return 0;
-    });
-
-    // 可以用 a broadcast_node 给两个节点发信号启动
-    tbb::flow::broadcast_node<int> start(g);
-    tbb::flow::make_edge(start, node1);
-    tbb::flow::make_edge(start, node2);
-
-    // 发一个信号开始执行
-    start.try_put(0);
-
-    g.wait_for_all();
-    std::cout << "All nodes finished!" << std::endl;
-    return 0;
-}
 
 void ReadPackets(AVFormatContext *inCtx,
     const std::map<AVFormatContext *, std::map<int, int>> &streamIndexMap,
@@ -364,31 +155,6 @@ void ReadPackets(AVFormatContext *inCtx,
     pktBatches[0].m_pkts.push_back(g_EOSPacket);
     pktsRead.push(pktBatches[0]);
 };
-////std::map<AVFormatContext *, std::map<int, int>> streamIndexMa;
-//void ReadPackets(const string vedioPath,
-//    PacketBatchQueue &pktsRead)
-//{
-//    set<int> dtsDedupCheck;
-//    map<int, int> streamsIdx; // <输入流流序号，输出流流序号>
-//    char errors[1024];
-//    AVFormatContext *inCtx = nullptr;
-//    int ret = 0;
-//
-//    std::vector<AVPacket *> buffer;
-//    // 读取视频文件
-//    ret = avformat_open_input(&inCtx, vedioPath.c_str(), NULL, NULL);
-//    if (inCtx == nullptr) {
-//        std::cout << "严重错误，open失败" << std::endl;
-//        return;
-//    }
-//    if (ret != 0) {
-//        av_strerror(ret, errors, strlen(errors));
-//        av_log(NULL, AV_LOG_WARNING, "error, ret=%d, msg=%s\n", ret, errors);
-//        return;
-//    }
-//
-//    return ReadPackets(inCtx, pktsRead);
-//}
 
 void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
 {
@@ -570,22 +336,18 @@ public:
     }
 };
 
-#include <tbb/flow_graph.h>
-
-
-
 int main()
 {
     std::string vedioPath = R"(C:\Users\Administrator\Desktop\BiliBiliMux\bin\qingziTU.mp4)";
-    vedioPath = R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\audio.m4s)";
-    vedioPath = R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\video.m4s)";
+    vedioPath = R"()";
+    vedioPath = R"()";
     MediaMux mux;
     int ret = 0;
     
     
     const std::set<std::string> files = {
-           R"(C:\Users\Administrator\Desktop\bili_zip_1\285915854\1\120\audio.m4s)",
-           R"(C:\Users\Administrator\Desktop\bili_zip_1\285915854\1\120\video.m4s)",
+           R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\audio.m4s)",
+           R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\video.m4s)",
     };
     // 读取输入文件
     //std::multimap<AVFormatContext *, AVStream *> inputStreams = mux.GetInputStreams(vedioPath);
