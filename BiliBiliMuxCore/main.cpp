@@ -65,7 +65,7 @@ AVPacket *g_EOSPacket = (AVPacket *)1;
 
 
 
-void ReadPackets(AVFormatContext *inCtx,
+int ReadPackets(AVFormatContext *inCtx,
     const std::map<AVFormatContext *, std::map<int, int>> &streamIndexMap,
     PacketBatchQueue &pktsRead)
 {
@@ -154,6 +154,8 @@ void ReadPackets(AVFormatContext *inCtx,
     }
     pktBatches[0].m_pkts.push_back(g_EOSPacket);
     pktsRead.push(pktBatches[0]);
+
+    return 0;
 };
 
 void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
