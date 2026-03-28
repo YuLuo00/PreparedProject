@@ -8,3 +8,5 @@
 /bin
 bin
 obj
+/.vscode
+/build
