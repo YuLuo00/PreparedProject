@@ -25,6 +25,9 @@ extern "C"
 #include <set>
 #include <shared_mutex>
 #include <string>
+#include <fstream>
+#include <iosfwd>
+#include <sstream>
 using namespace std;
 
 #include <iostream>
@@ -266,6 +269,11 @@ void ReadPackets(AVFormatContext *inCtx,
     const std::map<AVFormatContext *, std::map<int, int>> &streamIndexMap,
     PacketBatchQueue &pktsRead)
 {
+    std::ostringstream oss;
+    oss << " >>>>>>>>>> Thread for Read" << std::this_thread::get_id();
+    std::string idStr = oss.str();
+    std::cout << idStr << std::endl;
+
     set<int> dtsDedupCheck;
     map<int, int> streamsIdx; // <输入流流序号，输出流流序号>
     char errors[1024];
@@ -351,7 +359,11 @@ void ReadPackets(AVFormatContext *inCtx,
 
 void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
 {
-    std::cout << " >>>>>>>>>> Thread for Deal" << std::this_thread::get_id() << std::endl;
+    std::ostringstream oss;
+    oss << " >>>>>>>>>> Thread for Deal" << std::this_thread::get_id();
+    std::string idStr = oss.str();
+    std::cout << idStr << std::endl;
+
     bool finished = false;
     PacketsBatch pktBatch;
     while (finished == false) {
@@ -463,25 +475,55 @@ int remux_copy_stream_info(AVStream *in, AVStream *out)
     return ret >= 0 ? 0 : ret;
 }
 
+class MediaMux
+{
+public:
+    MediaMux(){};
+    std::multimap<AVFormatContext *, AVStream *> GetInputStreams(const std::string &file,
+                                                                 std::set<AVMediaType> types = {})
+    {
+        std::multimap<AVFormatContext *, AVStream *> result;
+        // 读取视频文件
+        char errors[1024];
+        AVFormatContext *inCtx = nullptr;
+        int ret = 0;
+        ret = avformat_open_input(&inCtx, file.c_str(), NULL, NULL);
+        if (inCtx == nullptr) {
+            std::cout << "严重错误，open失败" << std::endl;
+            av_strerror(ret, errors, strlen(errors));
+            av_log(NULL, AV_LOG_WARNING, "error, ret=%d, msg=%s\n", ret, errors);
+            return result;
+        }
+        if (ret != 0) {
+            av_strerror(ret, errors, strlen(errors));
+            av_log(NULL, AV_LOG_WARNING, "error, ret=%d, msg=%s\n", ret, errors);
+            return result;
+        }
+        // 检查 流信息
+        avformat_find_stream_info(inCtx, NULL);
+        for (int i = 0; i < inCtx->nb_streams; i++) {
+            // 遍历媒体流
+            AVStream *inputStream = inCtx->streams[i];
+            // 按类型过滤
+            AVMediaType type = inputStream->codecpar->codec_type;
+            if (types.empty() == false && types.count(type) == 0) {
+                continue;
+            }
+
+            result.insert({inCtx, inputStream});
+        }
+        return result;
+    }
+};
 
 int main()
 {
     std::string vedioPath = R"(C:\Users\Administrator\Desktop\BiliBiliMux\bin\qingziTU.mp4)";
-
-    char errors[1024];
-    AVFormatContext *inCtx = nullptr;
+    MediaMux mux;
     int ret = 0;
-    // 读取视频文件
-    ret = avformat_open_input(&inCtx, vedioPath.c_str(), NULL, NULL);
-    if (inCtx == nullptr) {
-        std::cout << "严重错误，open失败" << std::endl;
-        return 1;
-    }
-    if (ret != 0) {
-        av_strerror(ret, errors, strlen(errors));
-        av_log(NULL, AV_LOG_WARNING, "error, ret=%d, msg=%s\n", ret, errors);
-        return 2;
-    }
+
+    // 读取输入文件
+    std::multimap<AVFormatContext *, AVStream *> inputStreams = mux.GetInputStreams(vedioPath);
 
     // 构建输出文件
     AVFormatContext *outCtx = nullptr;
@@ -494,26 +536,19 @@ int main()
         // 处理错误情况
         return -2;
     }
-
-    // 检查 && 复制 流信息
-    avformat_find_stream_info(inCtx, NULL);
+    // 构建输出流， 记录映射关系
     std::map<AVFormatContext *, std::map<int, int>> streamIndexMap; // <inputCtx, <InputCtxStmIndex, outputCtxStmIdx>>
-    std::vector<AVMediaType> streamsType(inCtx->nb_streams, AVMediaType::AVMEDIA_TYPE_UNKNOWN);
-    for (int i = 0; i < inCtx->nb_streams; i++) {
-        // 遍历媒体流
-        AVStream *inputStream = inCtx->streams[i];
-        int inIdx = inputStream->index;
-        streamsType[i] = inputStream->codecpar->codec_type;
-
+    for (const auto &p : inputStreams) {
+        AVFormatContext *inCtx = p.first;
+        AVStream *inputStream = p.second;
         // 复制到输出流
         AVStream *newStream = avformat_new_stream(outCtx, NULL);
         remux_copy_stream_info(inputStream, newStream);
-
         // 记录流映射
-        if (streamIndexMap[inCtx].count(inIdx)) {
+        if (streamIndexMap[inCtx].count(inputStream->index)) {
             av_log(NULL, AV_LOG_ERROR, "error, 重复映射了同一个输入流\n");
         }
-        streamIndexMap[inCtx][inIdx] = newStream->index;
+        streamIndexMap[inCtx][inputStream->index] = newStream->index;
     }
 
     // 打开文件,写入文件头
@@ -527,19 +562,27 @@ int main()
     pktsRead.set_capacity(10); // 队列最大容量
 
     tbb::flow::graph g;
-
-    //// 处理节点
-    //tbb::flow::function_node<AVPacket *, int> processor(g, tbb::flow::serial, [](AVPacket *pkt) -> int {
-    //    std::cout << "processor: pkt->dts = " << pkt->dts << std::endl;
-    //    return pkt->dts;
-    //});
+    // broadcast_node 触发读取和处理
+    tbb::flow::broadcast_node<PacketBatchQueue *> start(g);
 
     // 读取节点
-    tbb::flow::function_node<PacketBatchQueue *, tbb::flow::continue_msg> readPktsNode(
-        g, tbb::flow::serial, [&](PacketBatchQueue *queue) -> tbb::flow::continue_msg {
-            ReadPackets(inCtx, streamIndexMap, *queue);
-            return tbb::flow::continue_msg();
-        });
+    //for (const auto &p : inputStreams) {
+    
+        AVFormatContext *inCtx = inputStreams.begin()->first;
+        AVStream *inputStream = inputStreams.begin()->second;
+        tbb::flow::function_node<PacketBatchQueue *, tbb::flow::continue_msg> readPktsNode(
+            g, tbb::flow::serial, [&](PacketBatchQueue *queue) -> tbb::flow::continue_msg {
+                ReadPackets(inCtx, streamIndexMap, *queue);
+                return tbb::flow::continue_msg();
+            });
+        //auto readPktsNode = new tbb::flow::function_node<PacketBatchQueue *, tbb::flow::continue_msg>(
+        //    g, tbb::flow::serial, [&](PacketBatchQueue *queue) -> tbb::flow::continue_msg {
+        //        ReadPackets(inCtx, streamIndexMap, *queue);
+        //        return tbb::flow::continue_msg();
+        //    });
+        tbb::flow::make_edge(start, readPktsNode);
+    //}
+
 
     // DealPkts 节点，处理队列中的包
     tbb::flow::function_node<PacketBatchQueue *, tbb::flow::continue_msg> dealPktsNode(
@@ -548,10 +591,7 @@ int main()
             return tbb::flow::continue_msg();
         });
 
-    // broadcast_node 触发读取和处理
-    tbb::flow::broadcast_node<PacketBatchQueue *> start(g);
 
-    tbb::flow::make_edge(start, readPktsNode);
     tbb::flow::make_edge(start, dealPktsNode);
 
     // 触发一次
@@ -562,14 +602,14 @@ int main()
     	// 写入文件尾部
     ret = av_write_trailer(outCtx);
     if (ret != 0) {
-        av_strerror(ret, errors, 200);
-        av_log(NULL, AV_LOG_WARNING, "av_write_trailer error: ret=%d, msg=%s\n", ret, errors);
+        av_strerror(ret, errMsg, 200);
+        av_log(NULL, AV_LOG_WARNING, "av_write_trailer error: ret=%d, msg=%s\n", ret, errMsg);
     }
     // 关闭文件
     avio_close(outCtx->pb);
-    if (inCtx) {
-        avformat_close_input(&inCtx); // 会自动关闭内部的 AVIOContext
-    }
+    //if (inCtx) {
+    //    avformat_close_input(&inCtx); // 会自动关闭内部的 AVIOContext
+    //}
 
     std::cout << "All done!" << std::endl;
     return 0;
