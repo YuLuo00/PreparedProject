@@ -488,6 +488,22 @@ class MediaMux
 {
 public:
     MediaMux(){};
+    std::multimap<AVFormatContext *, AVStream *> GetInputStreams(const std::set<std::string> &files,
+                                                                 std::set<AVMediaType> types = {})
+    {
+        std::multimap<AVFormatContext *, AVStream *> result;
+
+        for (const auto &file : files) {
+            // 调用单文件版本
+            auto one = GetInputStreams(file, types);
+
+            // 合并到 result
+            result.insert(one.begin(), one.end());
+        }
+
+        return result;
+    }
+
     std::multimap<AVFormatContext *, AVStream *> GetInputStreams(const std::string &file,
                                                                  std::set<AVMediaType> types = {})
     {
@@ -533,8 +549,13 @@ int main()
     MediaMux mux;
     int ret = 0;
 
+    const std::set<std::string> files = {
+           //R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\audio.m4s)",
+           R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\video.m4s)",
+    };
     // 读取输入文件
-    std::multimap<AVFormatContext *, AVStream *> inputStreams = mux.GetInputStreams(vedioPath);
+    //std::multimap<AVFormatContext *, AVStream *> inputStreams = mux.GetInputStreams(vedioPath);
+    std::multimap<AVFormatContext *, AVStream *> inputStreams = mux.GetInputStreams(files);
 
     // 构建输出文件
     AVFormatContext *outCtx = nullptr;
