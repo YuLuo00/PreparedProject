@@ -581,10 +581,11 @@ int main()
     vedioPath = R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\video.m4s)";
     MediaMux mux;
     int ret = 0;
-
+    
+    
     const std::set<std::string> files = {
-           R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\audio.m4s)",
-           R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\video.m4s)",
+           R"(C:\Users\Administrator\Desktop\bili_zip_1\285915854\1\120\audio.m4s)",
+           R"(C:\Users\Administrator\Desktop\bili_zip_1\285915854\1\120\video.m4s)",
     };
     // 读取输入文件
     //std::multimap<AVFormatContext *, AVStream *> inputStreams = mux.GetInputStreams(vedioPath);
@@ -624,7 +625,7 @@ int main()
     }
 
     PacketBatchQueue pktsRead;
-    //pktsRead.set_capacity(10); // 队列最大容量
+    pktsRead.set_capacity(10); // 队列最大容量
 
     tbb::flow::graph g;
     // broadcast_node 触发读取和处理
@@ -686,41 +687,39 @@ int main()
 
                 graph g;
 
-                // 消息类型改成 PacketBatchQueue*
                 using PktsPtr = PacketBatchQueue *;
 
-                // 广播节点
                 broadcast_node<PktsPtr> start(g);
 
-                // read0
-                function_node<PktsPtr> read0(g, unlimited, [&](PktsPtr pktsPtr) {
-                    PacketBatchQueue &pkts = *pktsPtr; // 引用语义
-                    ReadPackets(ctsx[0], streamIndexMap, pkts);
-                });
+                // read 节点数组（必须保证节点对象本身不被移动）
+                std::vector<std::unique_ptr<function_node<PktsPtr>>> readNodes;
+                readNodes.reserve(ctsx.size());
 
-                // read1
-                function_node<PktsPtr> read1(g, unlimited, [&](PktsPtr pktsPtr) {
-                    PacketBatchQueue &pkts = *pktsPtr;
-                    ReadPackets(ctsx[1], streamIndexMap, pkts);
-                });
+                for (int i = 0; i < ctsx.size(); ++i) {
+                    auto node = std::make_unique<function_node<PktsPtr>>(g, unlimited, [&, i](PktsPtr pktsPtr) {
+                        PacketBatchQueue &pkts = *pktsPtr;
+                        ReadPackets(ctsx[i], streamIndexMap, pkts);
+                    });
 
-                // deal
+                    make_edge(start, *node);
+                    readNodes.push_back(std::move(node));
+                }
+
+                // deal 节点
                 function_node<PktsPtr> deal(g, unlimited, [&](PktsPtr pktsPtr) {
                     PacketBatchQueue &pkts = *pktsPtr;
                     DealPkts(outCtx, pkts);
                 });
 
-                // 三个节点都从 start 接收同一个 pktsRead 指针
-                make_edge(start, read0);
-                make_edge(start, read1);
                 make_edge(start, deal);
 
-                // 发出一次启动消息，把 &pktsRead 传进去
+                // 启动
                 start.try_put(&pktsRead);
 
-                // 等所有节点完成
                 g.wait_for_all();
             }
+
+
         }
 
 
