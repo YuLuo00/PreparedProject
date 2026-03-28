@@ -638,33 +638,9 @@ int main()
         // 处理这个 key
         std::cout << "inCtx = " << inCtx << std::endl;
         auto range = inputStreams.equal_range(inCtx);
-
-        //// 遍历这个 inCtx 的所有 AVStream*
-        //for (auto sit = range.first; sit != range.second; ++sit) {
-        //    AVStream *st = sit->second;
-        //    // 处理 st
-        //}
         ctsx.push_back(inCtx);
-
-        auto readPktsNode = new tbb::flow::function_node<PacketBatchQueue *, tbb::flow::continue_msg>(
-            g, tbb::flow::serial, [&](PacketBatchQueue *queue) -> tbb::flow::continue_msg {
-                ReadPackets(inCtx, streamIndexMap, *queue);
-                return tbb::flow::continue_msg();
-            });
-        tbb::flow::make_edge(start, *readPktsNode);
     }
 
-    // DealPkts 节点，处理队列中的包
-    tbb::flow::function_node<PacketBatchQueue *, tbb::flow::continue_msg> dealPktsNode(
-        g, tbb::flow::serial, [&outCtx](PacketBatchQueue *queue) -> tbb::flow::continue_msg {
-            DealPkts(outCtx, *queue);
-            return tbb::flow::continue_msg();
-        });
-
-
-    //tbb::flow::make_edge(start, dealPktsNode);
-
-    
     bool testSyncRead = true;
     testSyncRead = false;
     if (testSyncRead) // 测试异步读取两个文件
@@ -718,17 +694,8 @@ int main()
 
                 g.wait_for_all();
             }
-
-
         }
-
-
-
-        //start.try_put(&pktsRead);
     }
-
-    // 触发一次
-    g.wait_for_all();
 
     //return 0;
     	// 写入文件尾部
