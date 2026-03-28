@@ -12,6 +12,21 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     VS_DEBUGGER_COMMAND "${ProjectRootDir}/bin/${PROJECT_NAME}.exe"
 )
 
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        -Wall
+        -Wextra
+        -Werror
+    )
+elseif (MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        /W4 /WX
+    )
+endif()
+
+
+
 # 三方库
 # Add3rd_Xlnt(${PROJECT_NAME})
 Add3rd_nlohmann_json(${PROJECT_NAME})
