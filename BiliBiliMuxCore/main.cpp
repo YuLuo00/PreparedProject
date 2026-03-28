@@ -1,20 +1,24 @@
-﻿extern "C"
+﻿#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
+extern "C"
 {
-#include "libavcodec/avcodec.h"
-#include "libavformat/avformat.h"
-#include "libavformat/avio.h"
-#include "libavutil/avutil.h"
+    #include "libavcodec/avcodec.h"
+    #include "libavformat/avformat.h"
+    #include "libavformat/avio.h"
+    #include "libavutil/avutil.h"
 }
 
 extern "C"
 {
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavutil/avutil.h>
-#include <libavutil/channel_layout.h>
-#include <libavutil/opt.h>
-#include <libavutil/samplefmt.h>
-#include <libswresample/swresample.h>
+    #include <libavcodec/avcodec.h>
+    #include <libavformat/avformat.h>
+    #include <libavutil/avutil.h>
+    #include <libavutil/channel_layout.h>
+    #include <libavutil/opt.h>
+    #include <libavutil/samplefmt.h>
+    #include <libswresample/swresample.h>
 }
 
 #include <atomic>
@@ -269,6 +273,7 @@ void ReadPackets(AVFormatContext *inCtx,
     const std::map<AVFormatContext *, std::map<int, int>> &streamIndexMap,
     PacketBatchQueue &pktsRead)
 {
+    SetThreadDescription(GetCurrentThread(), L"read ");
     std::ostringstream oss;
     oss << " >>>>>>>>>> Thread for Read" << std::this_thread::get_id();
     std::string idStr = oss.str();
@@ -362,6 +367,7 @@ void ReadPackets(AVFormatContext *inCtx,
 
 void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
 {
+    SetThreadDescription(GetCurrentThread(), L"deal ");
     std::ostringstream oss;
     oss << " >>>>>>>>>> Thread for Deal" << std::this_thread::get_id();
     std::string idStr = oss.str();
