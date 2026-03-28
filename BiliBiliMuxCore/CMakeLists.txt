@@ -13,17 +13,17 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(${PROJECT_NAME} PRIVATE
-        -Wall
-        -Wextra
-        -Werror
-    )
-elseif (MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE
-        /W4 /WX
-    )
-endif()
+# if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+#     target_compile_options(${PROJECT_NAME} PRIVATE
+#         -Wall
+#         -Wextra
+#         -Werror
+#     )
+# elseif (MSVC)
+#     target_compile_options(${PROJECT_NAME} PRIVATE
+#         /W4 /WX
+#     )
+# endif()
 
 
 
@@ -43,8 +43,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # 源文件
 target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/main.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/attach.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/attach.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/tools.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/tools.cpp"
     # BiliBiliMuxCore\main.cpp
 )
+
 # target_sources_group(${PROJECT_NAME} "src" PRIVATE
 #     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/RawMoveMain.cpp"
 #     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/src/CommonTool.cpp"

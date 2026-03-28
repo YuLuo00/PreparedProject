@@ -46,11 +46,11 @@ using namespace std;
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
 #include <libavutil/mem.h>
-
-
-
-
 using namespace tbb::flow;
+
+#include "attach.h"
+#include "tools.h"
+
 
 class PacketsBatch
 {
@@ -345,6 +345,8 @@ int main()
     MediaMux mux;
     int ret = 0;
     
+    //return AttachMain();
+    
     
     const std::set<std::string> files = {
            R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\audio.m4s)",
@@ -471,6 +473,26 @@ int main()
 
                 g.wait_for_all();
             }
+        }
+    }
+
+    {
+        std::vector<std::string> files = {
+            //R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\danmaku.xml)",
+            //R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\index.json)",
+            R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\entry.json)",
+        };
+
+        for (size_t i = 0; i < files.size(); i++) {
+            std::string txt;
+            std::string file = files[i];
+            Tools::TextFromFile(files[i], txt);
+            nlohmann::json js;
+            Tools::ParseJsonSafe(txt, js);
+            std::string pretty = js.dump(2); // indent = 2 空格缩进
+            std::string title = js.at("title").get<std::string>();
+            ret = av_dict_set(&outCtx->metadata, "entry.json", txt.c_str(), 0);
+            continue;
         }
     }
 
