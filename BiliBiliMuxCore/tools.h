@@ -5,6 +5,10 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <filesystem>
+#include <vector>
+namespace fs = std::filesystem;
+
 
 #include <nlohmann/json.hpp>
 nlohmann::json;
@@ -21,6 +25,15 @@ namespace Tools
 
     // 返回 true 表示文件是合法的 UTF-8（允许可选 BOM）
     bool IsUtf8File(const std::string &path, bool allow_bom = true);
+
+    // 检查 path/filename 是否存在且为常规文件
+    bool file_exists(const fs::path &dir, const std::string &filename);
+
+    // 判断某个目录 dir 是否包含至少一个子目录 child，且 child 中同时包含 video.m4s, audio.m4s, index.json
+    bool has_media_subdir(const fs::path &dir);
+
+    // 从 root 开始递归扫描，返回所有符合条件的目录路径
+    std::vector<fs::path> CollectBiliFolders(const fs::path &root);
 
     }
 

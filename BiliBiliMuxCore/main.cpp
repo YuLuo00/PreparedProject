@@ -345,7 +345,7 @@ int main()
     MediaMux mux;
     int ret = 0;
     
-    //return AttachMain();
+    return AttachMain();
     
     
     const std::set<std::string> files = {

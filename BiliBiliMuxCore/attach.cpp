@@ -65,6 +65,17 @@ int AttachMain()
         continue;
     }
 
+    {
+        auto folders = Tools::CollectBiliFolders(R"(C:\Users\Administrator\Desktop\bili_zip_1\)");
+        for (auto &p : folders) {
+            std::cout << p.string() << "\n";
+        }
+        std::cout << "Found " << folders.size() << " matching folders.\n";
+        return 0;
+    }
+
+
+
     return 1;
 }
 
@@ -204,28 +215,4 @@ end:
     return true;
 }
 
-// Example usage
-int main1(int argc, char **argv)
-{
-    if (argc < 5) {
-        std::cerr << "Usage: " << argv[0] << " input.mp4 output.mp4 keyName value\n";
-        return 1;
-    }
-    std::string in = argv[1];
-    std::string out = argv[2];
-    std::string key = argv[3];
-    std::string value = argv[4];
 
-    avformat_network_init();
-    bool ok = write_string_to_mp4_metadata(in, out, key, value);
-    avformat_network_deinit();
-
-    if (ok) {
-        std::cout << "Wrote metadata key '" << key << "' to " << out << "\n";
-        return 0;
-    }
-    else {
-        std::cerr << "Failed to write metadata\n";
-        return 2;
-    }
-}

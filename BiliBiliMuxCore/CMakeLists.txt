@@ -47,6 +47,8 @@ target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/attach.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/tools.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/tools.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliCache.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliCache.cpp"
     # BiliBiliMuxCore\main.cpp
 )
 

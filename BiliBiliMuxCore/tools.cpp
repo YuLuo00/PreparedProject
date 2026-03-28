@@ -11,8 +11,14 @@ extern "C"
 #include <streambuf>
 #include <sstream>
 #include <string>
+#include <filesystem>
+#include <vector>
+
+namespace fs = std::filesystem;
+
 
 #include "tools.h"
+using namespace Tools;
 
 std::string Tools::AvErrorCode2Str(int errCode)
 {
@@ -294,3 +300,88 @@ bool Tools::IsUtf8File(const std::string &path, bool allow_bom)
 
     return true;
 }
+
+// 检查 path/filename 是否存在且为常规文件
+bool Tools::file_exists(const fs::path &dir, const std::string &filename)
+{
+    try {
+        fs::path p = dir / filename;
+        return fs::exists(p) && fs::is_regular_file(p);
+    }
+    catch (const fs::filesystem_error &) {
+        return false;
+    }
+}
+
+// 判断某个目录 dir 是否包含至少一个子目录 child，且 child 中同时包含 video.m4s, audio.m4s, index.json
+bool Tools::has_media_subdir(const fs::path &dir)
+{
+    try {
+        for (auto const &entry : fs::directory_iterator(dir)) {
+            if (!entry.is_directory())
+                continue;
+            fs::path child = entry.path();
+            if (file_exists(child, "video.m4s") && file_exists(child, "audio.m4s") &&
+                file_exists(child, "index.json")) {
+                return true;
+            }
+        }
+    }
+    catch (const fs::filesystem_error &) {
+        // 忽略无法访问的目录
+    }
+    return false;
+}
+
+// 从 root 开始递归扫描，返回所有符合条件的目录路径
+std::vector<fs::path> Tools::CollectBiliFolders(const fs::path &root)
+{
+    std::vector<fs::path> result;
+    if (!fs::exists(root) || !fs::is_directory(root))
+        return result;
+
+    try {
+        for (fs::recursive_directory_iterator it(root, fs::directory_options::skip_permission_denied), end; it != end;
+             ++it) {
+            try {
+                if (!it->is_directory())
+                    continue;
+                fs::path dir = it->path();
+
+                // 必须同时存在 entry.json 和 danmaku.xml（在 dir 下）
+                if (!file_exists(dir, "entry.json"))
+                    continue;
+                if (!file_exists(dir, "danmaku.xml"))
+                    continue;
+
+                // 并且存在至少一个子目录包含 video.m4s/audio.m4s/index.json
+                if (has_media_subdir(dir)) {
+                    result.push_back(dir);
+                    // 如果不想在该目录下继续递归（避免重复发现子目录中的子目录），可以跳过递归：
+                    it.disable_recursion_pending();
+                }
+            }
+            catch (const fs::filesystem_error &) {
+                // 忽略单个条目错误，继续扫描
+            }
+        }
+    }
+    catch (const fs::filesystem_error &) {
+        // 根目录不可读或其他全局错误，直接返回已收集的结果（可能为空）
+    }
+
+    return result;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
