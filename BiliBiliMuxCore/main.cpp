@@ -566,18 +566,25 @@ int main()
     tbb::flow::broadcast_node<PacketBatchQueue *> start(g);
 
     // 读取节点
-    for (const auto &p : inputStreams) {
-        AVFormatContext *inCtx = p.first;
-        AVStream *inputStream = p.second;
+    for (auto it = inputStreams.begin(); it != inputStreams.end(); it = inputStreams.upper_bound(it->first)) {
+        AVFormatContext *inCtx = it->first;
+        // 处理这个 key
+        std::cout << "inCtx = " << inCtx << std::endl;
+        auto range = inputStreams.equal_range(inCtx);
+
+        //// 遍历这个 inCtx 的所有 AVStream*
+        //for (auto sit = range.first; sit != range.second; ++sit) {
+        //    AVStream *st = sit->second;
+        //    // 处理 st
+        //}
+
         auto readPktsNode = new tbb::flow::function_node<PacketBatchQueue *, tbb::flow::continue_msg>(
             g, tbb::flow::serial, [&](PacketBatchQueue *queue) -> tbb::flow::continue_msg {
                 ReadPackets(inCtx, streamIndexMap, *queue);
                 return tbb::flow::continue_msg();
             });
         tbb::flow::make_edge(start, *readPktsNode);
-        break;
     }
-
 
     // DealPkts 节点，处理队列中的包
     tbb::flow::function_node<PacketBatchQueue *, tbb::flow::continue_msg> dealPktsNode(
