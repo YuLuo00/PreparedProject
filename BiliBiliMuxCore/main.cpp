@@ -324,9 +324,24 @@ void ReadPackets(AVFormatContext *inCtx,
             PacketsBatch &pktBatch = pktBatches[avPacket->stream_index];
             pktBatch.m_pkts.push_back(avPacket);
             bool isIFrame = (avPacket->flags & AV_PKT_FLAG_KEY) != 0;
-            if (pktBatch.m_pkts.size() >= g_BatchDealPktCount && (!isVedioPacket(avPacket) || isIFrame)) {
-                pktsRead.push(pktBatch);
-                pktBatch.m_pkts.clear();
+            //if (pktBatch.m_pkts.size() >= g_BatchDealPktCount && (!isVedioPacket(avPacket) || isIFrame)) {
+            //    pktsRead.push(pktBatch);
+            //    pktBatch.m_pkts.clear();
+            //}
+            if (pktBatch.m_pkts.size() >= g_BatchDealPktCount) {
+                if (isVedioPacket(avPacket)) {
+                    if (isIFrame) {
+                        pktsRead.push(pktBatch);
+                        pktBatch.m_pkts.clear();
+                    }
+                    else {
+                        //std::cout << "等待I帧" << std::endl;
+                    }
+                }
+                else {
+                    pktsRead.push(pktBatch);
+                    pktBatch.m_pkts.clear();
+                }
             }
         }
         catch (...) {
@@ -380,11 +395,15 @@ void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
 
     bool finished = false;
     PacketsBatch pktBatch;
+    int eosCount = 0;
     while (finished == false) {
         pktsRead.pop(pktBatch);
         for (AVPacket *pkt : pktBatch.m_pkts) {
             if (pkt == g_EOSPacket) {
-                finished = true;
+                eosCount++;
+                if (eosCount >= 2) {
+                    finished = true;
+                }
                 break;
             }
 
@@ -645,13 +664,14 @@ int main()
         PacketBatchQueue queue2;
 
         // 启动两个线程
-        std::thread t1([&] { ReadPackets(ctsx[0], streamIndexMap, pktsRead); });
-        std::thread t2([&] { ReadPackets(ctsx[1], streamIndexMap, pktsRead); });
         std::thread t3([&] { DealPkts(outCtx, pktsRead); });
 
         // 等待两个线程执行完毕
+        std::thread t1([&] { ReadPackets(ctsx[0], streamIndexMap, pktsRead); });
         t1.join();
+        std::thread t2([&] { ReadPackets(ctsx[1], streamIndexMap, pktsRead); });
         t2.join();
+
         t3.join();
     }
     else {
