@@ -336,10 +336,146 @@ public:
         }
         return result;
     }
+
+    int mux(const std::set<std::string> files)
+    {
+        int ret = 0;
+        std::multimap<AVFormatContext *, AVStream *> inputStreams = GetInputStreams(files);
+
+        // 构建输出文件
+        AVFormatContext *outCtx = nullptr;
+        char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+        int error = avformat_alloc_output_context2(&outCtx, nullptr, nullptr, "result.mp4");
+        if (error < 0) {
+            // 输出错误代码及错误信息
+            av_make_error_string(errMsg, AV_ERROR_MAX_STRING_SIZE, error);
+            std::cout << "Failed to allocate output format context: " << errMsg << std::endl;
+            // 处理错误情况
+            return -2;
+        }
+        // 构建输出流， 记录映射关系
+        std::map<AVFormatContext *, std::map<int, int>>
+            streamIndexMap; // <inputCtx, <InputCtxStmIndex, outputCtxStmIdx>>
+        for (const auto &p : inputStreams) {
+            AVFormatContext *inCtx = p.first;
+            AVStream *inputStream = p.second;
+            // 复制到输出流
+            AVStream *newStream = avformat_new_stream(outCtx, NULL);
+            remux_copy_stream_info(inputStream, newStream);
+            // 记录流映射
+            if (streamIndexMap[inCtx].count(inputStream->index)) {
+                av_log(NULL, AV_LOG_ERROR, "error, 重复映射了同一个输入流\n");
+            }
+            streamIndexMap[inCtx][inputStream->index] = newStream->index;
+        }
+
+        // 打开文件,写入文件头
+        avio_open(&outCtx->pb, "result.mp4", AVIO_FLAG_WRITE);
+        ret = avformat_write_header(outCtx, NULL);
+        if (ret != 0) {
+            return -2;
+        }
+
+
+        tbb::flow::graph g;
+        // broadcast_node 触发读取和处理
+        tbb::flow::broadcast_node<PacketBatchQueue *> start(g);
+
+        // 读取节点
+        std::vector<AVFormatContext *> ctsx;
+        for (auto it = inputStreams.begin(); it != inputStreams.end(); it = inputStreams.upper_bound(it->first)) {
+            AVFormatContext *inCtx = it->first;
+            // 处理这个 key
+            std::cout << "inCtx = " << inCtx << std::endl;
+            auto range = inputStreams.equal_range(inCtx);
+            ctsx.push_back(inCtx);
+        }
+
+        {
+            using namespace oneapi::tbb::flow;
+
+            graph g;
+
+            using PktsPtr = PacketBatchQueue *;
+
+            broadcast_node<PktsPtr> start(g);
+            // read 节点数组（必须保证节点对象本身不被移动）
+            std::vector<std::unique_ptr<function_node<PktsPtr, int>>> readNodes;
+            readNodes.resize(ctsx.size());
+
+            std::atomic<int> counter{0};
+            // 计数节点：每来一个输入就 ++counter
+            function_node<int, continue_msg> counter_node(g,
+                                                            serial, // 串行保证计数安全
+                                                            [&](int) -> continue_msg {
+                                                                counter.fetch_add(1);
+                                                                if (counter.load() >= readNodes.size()) {
+                                                                }
+                                                                return continue_msg{}; // 始终输出一个信号
+                                                            });
+            // read 节点
+            for (int i = 0; i < ctsx.size(); ++i) {
+                auto readNode =
+                    std::make_unique<function_node<PktsPtr, int>>(g, unlimited, [&, i](PktsPtr pktsPtr) -> int {
+                        PacketBatchQueue &pkts = *pktsPtr;
+                        return ReadPackets(ctsx[i], streamIndexMap, pkts); // ✔ 返回 int
+                    });
+
+                make_edge(start, *readNode);
+                make_edge(*readNode, counter_node);
+                readNodes.push_back(std::move(readNode));
+            }
+
+            // deal 节点
+            function_node<PktsPtr> deal(g, unlimited, [&](PktsPtr pktsPtr) {
+                PacketBatchQueue &pkts = *pktsPtr;
+                DealPkts(outCtx, pkts);
+            });
+            make_edge(start, deal);
+
+            // 启动
+            PacketBatchQueue pktsRead;
+            pktsRead.set_capacity(10); // 队列最大容量
+            start.try_put(&pktsRead);
+
+            g.wait_for_all();
+        }
+
+        //return 0;
+        // 写入文件尾部
+        ret = av_write_trailer(outCtx);
+        if (ret != 0) {
+            av_strerror(ret, errMsg, 200);
+            av_log(NULL, AV_LOG_WARNING, "av_write_trailer error: ret=%d, msg=%s\n", ret, errMsg);
+        }
+        // 关闭文件
+        avio_close(outCtx->pb);
+        for (size_t i = 0; i < ctsx.size(); i++) {
+            AVFormatContext *ctx = ctsx[i];
+            //avio_close(ctx->pb);
+            avformat_close_input(&ctx);
+        }
+
+        std::cout << "All done!" << std::endl;
+        return 0;
+    }
 };
 
-
 int main()
+{
+    MediaMux mux;
+
+    
+    const std::set<std::string> files = {
+        R"(C:\Users\Administrator\Desktop\bili_zip_1\00\285915854\1\120\audio.m4s)",
+        R"(C:\Users\Administrator\Desktop\bili_zip_1\00\285915854\1\120\video.m4s)",
+    };
+    mux.mux(files);
+
+    return 0;
+}
+
+int main000()
 {
     std::string vedioPath = R"(C:\Users\Administrator\Desktop\BiliBiliMux\bin\qingziTU.mp4)";
     vedioPath = R"()";
