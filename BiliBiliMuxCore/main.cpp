@@ -50,6 +50,7 @@ using namespace tbb::flow;
 
 #include "attach.h"
 #include "tools.h"
+#include "BiliCache.h"
 
 
 class PacketsBatch
@@ -337,6 +338,7 @@ public:
     }
 };
 
+
 int main()
 {
     std::string vedioPath = R"(C:\Users\Administrator\Desktop\BiliBiliMux\bin\qingziTU.mp4)";
@@ -345,12 +347,12 @@ int main()
     MediaMux mux;
     int ret = 0;
     
-    return AttachMain();
+    //return main2();
     
     
     const std::set<std::string> files = {
-           R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\audio.m4s)",
-           R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\80\video.m4s)",
+           R"(C:\Users\Administrator\Desktop\bili_zip_1\00\285915854\1\120\audio.m4s)",
+           R"(C:\Users\Administrator\Desktop\bili_zip_1\00\285915854\1\120\video.m4s)",
     };
     // 读取输入文件
     //std::multimap<AVFormatContext *, AVStream *> inputStreams = mux.GetInputStreams(vedioPath);
