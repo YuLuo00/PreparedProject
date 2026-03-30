@@ -1,5 +1,11 @@
 #include "BiliCache.h"
 
+#include <nlohmann/json.hpp>
+using js = nlohmann::json;
+
+#include "tools.h"
+
+
 // compile: g++ -std=c++17 collect_structured_paths.cpp -o collect_structured_paths
 
 
@@ -102,7 +108,7 @@ std::vector<Match> CollectBiliFoldersStructured(const fs::path &root)
 int main2()
 {
 
-    fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1\00)";
+    fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
     auto matches = CollectBiliFoldersStructured(root);
     for (const auto &m : matches) {
         //std::cout << "Parent dir: " << m.dir.string() << "\n";
@@ -115,30 +121,48 @@ int main2()
         //    std::cout << "      audio: " << c.audio.string() << "\n";
         //    std::cout << "      index: " << c.index.string() << "\n";
         //}
-        std::cout << "\n";
-        auto dirName = m.dir.filename();
-        auto relativePath = m.dir.lexically_relative(root);
-        fs::path aimDir = fs::path(R"(C:\Users\Administrator\Desktop\bili_zip_1\type1)") / relativePath;
-        if (fs::exists(aimDir.parent_path()) == false) {
-            fs::create_directories(aimDir.parent_path());
-            if (fs::exists(aimDir) == false) {
-                continue;
-            }
-        }
-        std::error_code ec;
+        std::string title = BiliCache::GetTitle(m);
+        std::string title_local = Utf8ToLocal(title);
+        std::cout << title_local << std::endl;
+        // 剪切到其他路径
+        {
+            //auto dirName = m.dir.filename();
+            //auto relativePath = m.dir.lexically_relative(root);
+            //fs::path aimDir = fs::path(R"(C:\Users\Administrator\Desktop\bili_zip_1\type1)") / relativePath;
+            //if (fs::exists(aimDir.parent_path()) == false) {
+            //    fs::create_directories(aimDir.parent_path());
+            //    if (fs::exists(aimDir) == false) {
+            //        continue;
+            //    }
+            //}
+            //std::error_code ec;
 
-        fs::rename(m.dir, aimDir, ec);
-        //fs::rename(src, dst, ec); // 不抛异常，错误信息写入 ec
-        if (ec) {
-            std::cerr << m.dir << "\n\t>>>" << aimDir << "\n" 
-                      << " --- rename failed: " << ec.value() << " -> " << ec.message() << "\n";
-            continue;
+            //fs::rename(m.dir, aimDir, ec);
+            ////fs::rename(src, dst, ec); // 不抛异常，错误信息写入 ec
+            //if (ec) {
+            //    std::cerr << m.dir << "\n\t>>>" << aimDir << "\n"
+            //              << " --- rename failed: " << ec.value() << " -> " << ec.message() << "\n";
+            //    continue;
+            //}
+            //else {
+            //    continue;
+            //}
         }
-        else {
-            continue;
-        }
-        continue;
+        //continue;
     }
     std::cout << "Found " << matches.size() << " matching folders.\n";
     return 0;
+}
+
+std::string BiliCache::GetTitle(const std::string &entryPath)
+{
+    json js = Tools::LoadJsonFromFile(entryPath);
+    std::string title = js.at("title").get<std::string>();
+    std::string buffer = js.dump(2);
+    return title;
+}
+
+std::string BiliCache::GetTitle(const Match &match)
+{
+    return GetTitle(match.entry_json_path.generic_string());
 }

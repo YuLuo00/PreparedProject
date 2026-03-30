@@ -506,6 +506,8 @@ public:
 
 int main()
 {
+    return main2();
+
     MediaMux mux;
     //av_log_set_callback(my_ffmpeg_log_callback);
     //av_log_set_level(AV_LOG_VERBOSE); // 或 AV_LOG_DEBUG

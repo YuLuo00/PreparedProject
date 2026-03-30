@@ -12,7 +12,9 @@ namespace fs = std::filesystem;
 
 #include <nlohmann/json.hpp>
 nlohmann::json;
+using json = nlohmann::json;
 
+std::string Utf8ToLocal(const std::string &utf8);
 
 namespace Tools
 {
@@ -35,8 +37,10 @@ namespace Tools
     // 从 root 开始递归扫描，返回所有符合条件的目录路径
     std::vector<fs::path> CollectBiliFolders(const fs::path &root);
 
-    }
+    json LoadJsonFromFile(const std::filesystem::path &path);
 
+
+    }
 
 
 

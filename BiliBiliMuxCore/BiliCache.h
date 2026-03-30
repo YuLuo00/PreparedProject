@@ -24,4 +24,10 @@ struct Match
 
 std::vector<Match> CollectBiliFoldersStructured(const fs::path &root);
 
+namespace BiliCache
+{
+std::string GetTitle(const std::string &entryPath);
+std::string GetTitle(const Match &match);
+} // namespace BiliCache
+
 int main2();

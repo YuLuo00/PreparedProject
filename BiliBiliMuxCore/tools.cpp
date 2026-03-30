@@ -373,6 +373,57 @@ std::vector<fs::path> Tools::CollectBiliFolders(const fs::path &root)
     return result;
 }
 
+json Tools::LoadJsonFromFile(const std::filesystem::path &path)
+{
+    // 打开文件
+    std::ifstream ifs(path);
+    if (!ifs.is_open()) {
+        throw std::runtime_error("Failed to open file: " + path.string());
+    }
+
+    // 解析 JSON
+    try {
+        json j;
+        ifs >> j; // nlohmann::json 支持直接从流解析
+        return j;
+    }
+    catch (const json::parse_error &e) {
+        throw std::runtime_error("JSON parse error in file " + path.string() + ": " + e.what());
+    }
+}
+
+
+#include <string>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+std::string Utf8ToLocal(const std::string &utf8)
+{
+#ifdef _WIN32
+    // UTF-8 → UTF-16
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
+    if (wlen <= 0)
+        return "";
+
+    std::wstring wbuf(wlen, 0);
+    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, &wbuf[0], wlen);
+
+    // UTF-16 → 本地编码（CP_ACP = 系统默认编码，如 GBK）
+    int len = WideCharToMultiByte(CP_ACP, 0, wbuf.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    if (len <= 0)
+        return "";
+
+    std::string buf(len, 0);
+    WideCharToMultiByte(CP_ACP, 0, wbuf.c_str(), -1, &buf[0], len, nullptr, nullptr);
+
+    return buf;
+#else
+    // Linux/macOS 默认 UTF-8，不需要转换
+    return utf8;
+#endif
+}
 
 
 
