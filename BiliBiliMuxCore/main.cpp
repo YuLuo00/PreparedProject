@@ -68,8 +68,6 @@ const int g_BatchDealPktCount = 120;
 
 AVPacket *g_EOSPacket = (AVPacket *)1;
 
-
-
 int ReadPackets(AVFormatContext *inCtx,
     const std::map<AVFormatContext *, std::map<int, int>> &streamIndexMap,
     PacketBatchQueue &pktsRead)
@@ -157,8 +155,8 @@ int ReadPackets(AVFormatContext *inCtx,
         pktsRead.push(pktBatch);
         pktBatch.m_pkts.clear();
     }
-    pktBatches[0].m_pkts.push_back(g_EOSPacket);
-    pktsRead.push(pktBatches[0]);
+    //pktBatches[0].m_pkts.push_back(g_EOSPacket);
+    //pktsRead.push(pktBatches[0]);
 
     return 0;
 };
@@ -173,15 +171,15 @@ void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
 
     bool finished = false;
     PacketsBatch pktBatch;
-    int eosCount = 0;
+    //int eosCount = 0;
     while (finished == false) {
         pktsRead.pop(pktBatch);
         for (AVPacket *pkt : pktBatch.m_pkts) {
             if (pkt == g_EOSPacket) {
-                eosCount++;
-                if (eosCount >= 2) {
+                //eosCount++;
+                //if (eosCount >= 2) {
                     finished = true;
-                }
+                //}
                 break;
             }
 
@@ -401,15 +399,18 @@ public:
             broadcast_node<PktsPtr> start(g);
             // read 节点数组（必须保证节点对象本身不被移动）
             std::vector<std::unique_ptr<function_node<PktsPtr, int>>> readNodes;
-            readNodes.resize(ctsx.size());
 
-            std::atomic<int> counter{0};
+            PacketBatchQueue pktsRead;
+            std::atomic<int> counter = 0;
             // 计数节点：每来一个输入就 ++counter
             function_node<int, continue_msg> counter_node(g,
                                                             serial, // 串行保证计数安全
                                                             [&](int) -> continue_msg {
                                                                 counter.fetch_add(1);
                                                                 if (counter.load() >= readNodes.size()) {
+                                                                    PacketsBatch eosBatch;
+                                                                    eosBatch.m_pkts.push_back(g_EOSPacket);
+                                                                    pktsRead.push(eosBatch);
                                                                 }
                                                                 return continue_msg{}; // 始终输出一个信号
                                                             });
@@ -434,7 +435,6 @@ public:
             make_edge(start, deal);
 
             // 启动
-            PacketBatchQueue pktsRead;
             pktsRead.set_capacity(10); // 队列最大容量
             start.try_put(&pktsRead);
 
