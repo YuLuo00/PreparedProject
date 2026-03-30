@@ -49,6 +49,8 @@ target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/tools.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliCache.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliCache.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ffmpegMsg.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ffmpegMsg.cpp"
     # BiliBiliMuxCore\main.cpp
 )
 

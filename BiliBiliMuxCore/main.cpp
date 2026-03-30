@@ -51,7 +51,33 @@ using namespace tbb::flow;
 #include "attach.h"
 #include "tools.h"
 #include "BiliCache.h"
+#include "ffmpegMsg.h"
 
+
+std::mutex ffmpeg_log_mutex;
+void my_ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vl)
+{
+    std::lock_guard<std::mutex> lock(ffmpeg_log_mutex);
+
+    // 你可以根据 level 过滤
+    if (level <= AV_LOG_WARNING) {
+        return; // 只要 warning/error 以上的
+    }
+
+    char buf[2048];
+    vsnprintf(buf, sizeof(buf), fmt, vl);
+
+    // 去掉换行（FFmpeg 日志通常带 \n）
+    size_t len = strlen(buf);
+    if (len > 0 && buf[len - 1] == '\n') {
+        buf[len - 1] = '\0';
+    }
+
+    // 这里就是你自己的处理逻辑
+    std::cout << buf << std::endl;
+    av_log_default_callback(ptr, level, fmt, vl);
+    //printf("[FFmpeg] %s\n");
+}
 
 class PacketsBatch
 {
@@ -98,11 +124,28 @@ int ReadPackets(AVFormatContext *inCtx,
 
     // 读取一段数据包
     AVPacket *avPacket = nullptr;
+    int i = 0;
     while (true) {
+        FFmpegLogScope *ffmpegLog = new FFmpegLogScope();
+
+        auto guard = std::shared_ptr<void>((void*)0x01, [ffmpegLog](void *) {
+            // 不 delete ffmpegLog，只做你的收尾逻辑
+            int level = FFmpegLogScope::get_level();
+            if (level <= AV_LOG_WARNING) {
+                std::cout << "some error happened" << std::endl;
+            }
+            delete ffmpegLog; // 如果你想 delete，也可以放这里
+        });
+
         avPacket = av_packet_alloc();
         int ret = 0;
         // 读取
         try {
+            i++;
+            if (i > 12791)
+                {
+                std::cout << "-------" << i << std::endl;
+            }
             ret = av_read_frame(inCtx, avPacket);
             if (ret == AVERROR_EOF) {
                 std::cout << "读取文件结束" << std::endl;
@@ -464,6 +507,8 @@ public:
 int main()
 {
     MediaMux mux;
+    //av_log_set_callback(my_ffmpeg_log_callback);
+    //av_log_set_level(AV_LOG_VERBOSE); // 或 AV_LOG_DEBUG
 
     
     const std::set<std::string> files = {
