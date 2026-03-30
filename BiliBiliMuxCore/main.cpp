@@ -469,6 +469,9 @@ int main()
     const std::set<std::string> files = {
         R"(C:\Users\Administrator\Desktop\bili_zip_1\00\285915854\1\120\audio.m4s)",
         R"(C:\Users\Administrator\Desktop\bili_zip_1\00\285915854\1\120\video.m4s)",
+
+        //R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\c_469842584\120\audio.m4s)",
+        //R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\c_469842584\120\video.m4s)",
     };
     mux.mux(files);
 
