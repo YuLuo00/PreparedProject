@@ -40,18 +40,20 @@ extern "C"
 #include <thread>
 using namespace std;
 
-#include <tbb/concurrent_queue.h>
-#include <tbb/flow_graph.h>
-
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
 #include <libavutil/mem.h>
+
+#include <tbb/concurrent_queue.h>
+#include <tbb/flow_graph.h>
 using namespace tbb::flow;
 
 #include "attach.h"
 #include "tools.h"
 #include "BiliCache.h"
 #include "ffmpegMsg.h"
+#include "common.h"
+#include "ReadNode.h"
 
 
 std::mutex ffmpeg_log_mutex;
@@ -78,131 +80,6 @@ void my_ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vl)
     av_log_default_callback(ptr, level, fmt, vl);
     //printf("[FFmpeg] %s\n");
 }
-
-class PacketsBatch
-{
-public:
-    PacketsBatch(){};
-    std::vector<AVPacket *> m_pkts;
-    AVFormatContext *m_inCtx = nullptr;
-    int m_inCtxStmIdx = 0;
-    int m_outCtxStmIdx = 0;
-};
-using PacketBatchQueue=tbb::concurrent_bounded_queue<PacketsBatch>;
-
-const int g_BatchDealPktCount = 120;
-
-AVPacket *g_EOSPacket = (AVPacket *)1;
-
-int ReadPackets(AVFormatContext *inCtx,
-    const std::map<AVFormatContext *, std::map<int, int>> &streamIndexMap,
-    PacketBatchQueue &pktsRead)
-{
-    SetThreadDescription(GetCurrentThread(), L"read ");
-    std::ostringstream oss;
-    oss << " >>>>>>>>>> Thread for Read" << std::this_thread::get_id();
-    std::string idStr = oss.str();
-    std::cout << idStr << std::endl;
-
-    set<int> dtsDedupCheck;
-    map<int, int> streamsIdx; // <输入流流序号，输出流流序号>
-    char errors[1024];
-    int ret = 0;
-
-    std::vector<AVPacket *> buffer;
-    //avformat_find_stream_info(inCtx, NULL);
-    std::vector<PacketsBatch> pktBatches(inCtx->nb_streams);
-    std::set<int> vedioStreamIdx;
-    auto isVedioPacket = [inCtx](const AVPacket *pkt) {
-        return inCtx->streams[pkt->stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
-    };
-    for (size_t i = 0; i < inCtx->nb_streams; i++) {
-        pktBatches[i].m_inCtx = inCtx;
-        pktBatches[i].m_inCtxStmIdx = i;
-        pktBatches[i].m_outCtxStmIdx = streamIndexMap.at(inCtx).at(i);
-    }
-
-    // 读取一段数据包
-    AVPacket *avPacket = nullptr;
-    int i = 0;
-    while (true) {
-        FFmpegLogScope *ffmpegLog = new FFmpegLogScope();
-
-        auto guard = std::shared_ptr<void>((void*)0x01, [ffmpegLog](void *) {
-            // 不 delete ffmpegLog，只做你的收尾逻辑
-            int level = FFmpegLogScope::get_level();
-            if (level <= AV_LOG_WARNING) {
-                std::cout << "some error happened" << std::endl;
-            }
-            delete ffmpegLog; // 如果你想 delete，也可以放这里
-        });
-
-        avPacket = av_packet_alloc();
-        int ret = 0;
-        // 读取
-        try {
-            i++;
-            if (i > 12791)
-                {
-                std::cout << "-------" << i << std::endl;
-            }
-            ret = av_read_frame(inCtx, avPacket);
-            if (ret == AVERROR_EOF) {
-                std::cout << "读取文件结束" << std::endl;
-                av_packet_free(&avPacket);
-                break;
-            }
-            if (ret < 0) {
-                char errbuf[256];
-                av_strerror(ret, errbuf, sizeof(errbuf));
-                std::cout << "读取数据包错误: " << errbuf << std::endl;
-
-                av_packet_free(&avPacket);
-                break;
-            }
-            if (avPacket->dts < 0) {
-                std::cout << "解码时间戳小于0" << std::endl;
-            }
-            PacketsBatch &pktBatch = pktBatches[avPacket->stream_index];
-            pktBatch.m_pkts.push_back(avPacket);
-            bool isIFrame = (avPacket->flags & AV_PKT_FLAG_KEY) != 0;
-            //if (pktBatch.m_pkts.size() >= g_BatchDealPktCount && (!isVedioPacket(avPacket) || isIFrame)) {
-            //    pktsRead.push(pktBatch);
-            //    pktBatch.m_pkts.clear();
-            //}
-            if (pktBatch.m_pkts.size() >= g_BatchDealPktCount) {
-                if (isVedioPacket(avPacket)) {
-                    if (isIFrame) {
-                        pktsRead.push(pktBatch);
-                        pktBatch.m_pkts.clear();
-                    }
-                    else {
-                        //std::cout << "等待I帧" << std::endl;
-                    }
-                }
-                else {
-                    pktsRead.push(pktBatch);
-                    pktBatch.m_pkts.clear();
-                }
-            }
-        }
-        catch (...) {
-            std::cout << "触发了异常" << std::endl;
-        }
-    }
-    for (size_t i = 0; i < pktBatches.size(); i++) {
-        PacketsBatch &pktBatch = pktBatches[i];
-        if (pktBatch.m_pkts.empty()) {
-            continue;
-        }
-        pktsRead.push(pktBatch);
-        pktBatch.m_pkts.clear();
-    }
-    //pktBatches[0].m_pkts.push_back(g_EOSPacket);
-    //pktsRead.push(pktBatches[0]);
-
-    return 0;
-};
 
 void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
 {
@@ -430,8 +307,9 @@ public:
             std::cout << "inCtx = " << inCtx << std::endl;
             auto range = inputStreams.equal_range(inCtx);
             ctsx.push_back(inCtx);
-        }
 
+        }
+        std::vector<ReadNode> readTasks(ctsx.size());
         {
             using namespace oneapi::tbb::flow;
 
@@ -462,7 +340,8 @@ public:
                 auto readNode =
                     std::make_unique<function_node<PktsPtr, int>>(g, unlimited, [&, i](PktsPtr pktsPtr) -> int {
                         PacketBatchQueue &pkts = *pktsPtr;
-                        return ReadPackets(ctsx[i], streamIndexMap, pkts); // ✔ 返回 int
+                        return readTasks[i].ReadPackets(ctsx[i], streamIndexMap, pkts); // ✔ 返回 int
+                        //return ReadPackets(ctsx[i], streamIndexMap, pkts); // ✔ 返回 int
                     });
 
                 make_edge(start, *readNode);
@@ -506,7 +385,7 @@ public:
 
 int main()
 {
-    return main2();
+    //return main2();
 
     MediaMux mux;
     //av_log_set_callback(my_ffmpeg_log_callback);
@@ -602,9 +481,9 @@ int main000()
         std::thread t3([&] { DealPkts(outCtx, pktsRead); });
 
         // 等待两个线程执行完毕
-        std::thread t1([&] { ReadPackets(ctsx[0], streamIndexMap, pktsRead); });
+        std::thread t1([&] { ReadNode().ReadPackets(ctsx[0], streamIndexMap, pktsRead); });
         t1.join();
-        std::thread t2([&] { ReadPackets(ctsx[1], streamIndexMap, pktsRead); });
+        std::thread t2([&] { ReadNode().ReadPackets(ctsx[1], streamIndexMap, pktsRead); });
         t2.join();
 
         t3.join();
@@ -639,7 +518,7 @@ int main000()
                     auto readNode =
                         std::make_unique<function_node<PktsPtr, int>>(g, unlimited, [&, i](PktsPtr pktsPtr) -> int {
                             PacketBatchQueue &pkts = *pktsPtr;
-                            return ReadPackets(ctsx[i], streamIndexMap, pkts); // ✔ 返回 int
+                            return ReadNode().ReadPackets(ctsx[i], streamIndexMap, pkts); // ✔ 返回 int
                         });
 
                     make_edge(start, *readNode);
