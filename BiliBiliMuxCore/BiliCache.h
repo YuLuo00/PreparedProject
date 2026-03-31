@@ -1,33 +1,35 @@
+ï»¿#pragma once
+
 #include <filesystem>
 #include <iostream>
 #include <string>
 #include <vector>
 namespace fs = std::filesystem;
 
-// µ¥¸öÃ½Ìå×ÓÄ¿Â¼ĞÅÏ¢£ºÄ¿Â¼ + Èı¸öÎÄ¼şµÄÍêÕûÂ·¾¶
+// å•ä¸ªåª’ä½“å­ç›®å½•ä¿¡æ¯ï¼šç›®å½• + ä¸‰ä¸ªæ–‡ä»¶çš„å®Œæ•´è·¯å¾„
 struct MediaSubdir
 {
-    fs::path dir;   // ×ÓÄ¿Â¼Â·¾¶£¬ÀıÈç ...\1\80
-    fs::path video; // ×ÓÄ¿Â¼/video.m4s
-    fs::path audio; // ×ÓÄ¿Â¼/audio.m4s
-    fs::path index; // ×ÓÄ¿Â¼/index.json
+    fs::path dir;   // å­ç›®å½•è·¯å¾„ï¼Œä¾‹å¦‚ ...\1\80
+    fs::path video; // å­ç›®å½•/video.m4s
+    fs::path audio; // å­ç›®å½•/audio.m4s
+    fs::path index; // å­ç›®å½•/index.json
 };
 
-// Æ¥Åä½á¹û£º¸¸Ä¿Â¼ + µ¥¶À×Ö¶Î´æÂ·¾¶ + ËùÓĞÆ¥ÅäµÄÃ½Ìå×ÓÄ¿Â¼
+// åŒ¹é…ç»“æœï¼šçˆ¶ç›®å½• + å•ç‹¬å­—æ®µå­˜è·¯å¾„ + æ‰€æœ‰åŒ¹é…çš„åª’ä½“å­ç›®å½•
 struct Match
 {
-    fs::path dir;                           // ·ûºÏÌõ¼şµÄ¸¸Ä¿Â¼£¬ÀıÈç ...\10723293\1
-    fs::path entry_json_path;               // dir/entry.json µÄÍêÕûÂ·¾¶£¨Èô´æÔÚ£©
-    fs::path danmaku_xml_path;              // dir/danmaku.xml µÄÍêÕûÂ·¾¶£¨Èô´æÔÚ£©
-    std::vector<MediaSubdir> media_subdirs; // ËùÓĞ·ûºÏÌõ¼şµÄ×ÓÄ¿Â¼
+    fs::path dir;                           // ç¬¦åˆæ¡ä»¶çš„çˆ¶ç›®å½•ï¼Œä¾‹å¦‚ ...\10723293\1
+    fs::path entry_json_path;               // dir/entry.json çš„å®Œæ•´è·¯å¾„ï¼ˆè‹¥å­˜åœ¨ï¼‰
+    fs::path danmaku_xml_path;              // dir/danmaku.xml çš„å®Œæ•´è·¯å¾„ï¼ˆè‹¥å­˜åœ¨ï¼‰
+    std::vector<MediaSubdir> media_subdirs; // æ‰€æœ‰ç¬¦åˆæ¡ä»¶çš„å­ç›®å½•
 };
 
-std::vector<Match> CollectBiliFoldersStructured(const fs::path &root);
 
 namespace BiliCache
 {
 std::string GetTitle(const std::string &entryPath);
 std::string GetTitle(const Match &match);
+std::vector<Match> CollectBiliFoldersStructured(const fs::path &root);
 } // namespace BiliCache
 
 int main2();

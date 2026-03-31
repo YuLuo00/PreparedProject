@@ -383,9 +383,12 @@ public:
     }
 };
 
+#include "BiliCache.h"
+
 int main()
 {
     //return main2();
+    
 
     MediaMux mux;
     //av_log_set_callback(my_ffmpeg_log_callback);

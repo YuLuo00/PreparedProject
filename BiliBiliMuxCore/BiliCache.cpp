@@ -1,4 +1,4 @@
-#include "BiliCache.h"
+ï»¿#include "BiliCache.h"
 
 #include <nlohmann/json.hpp>
 using js = nlohmann::json;
@@ -9,7 +9,7 @@ using js = nlohmann::json;
 // compile: g++ -std=c++17 collect_structured_paths.cpp -o collect_structured_paths
 
 
-// ¹¤¾ß£º¼ì²é dir/filename ÊÇ·ñ´æÔÚÇÒÎª³£¹æÎÄ¼ş
+// å·¥å…·ï¼šæ£€æŸ¥ dir/filename æ˜¯å¦å­˜åœ¨ä¸”ä¸ºå¸¸è§„æ–‡ä»¶
 static bool file_exists(const fs::path &dir, const std::string &filename)
 {
     try {
@@ -21,7 +21,7 @@ static bool file_exists(const fs::path &dir, const std::string &filename)
     }
 }
 
-// ¼ì²é²¢·µ»Ø×ÓÄ¿Â¼ÖĞÈı¸öÃ½ÌåÎÄ¼şµÄÂ·¾¶£¨Èô¶¼´æÔÚÔò·µ»Ø true ²¢Ìî³ä out£©
+// æ£€æŸ¥å¹¶è¿”å›å­ç›®å½•ä¸­ä¸‰ä¸ªåª’ä½“æ–‡ä»¶çš„è·¯å¾„ï¼ˆè‹¥éƒ½å­˜åœ¨åˆ™è¿”å› true å¹¶å¡«å…… outï¼‰
 bool collect_media_files(const fs::path &child, MediaSubdir &out)
 {
     try {
@@ -38,13 +38,13 @@ bool collect_media_files(const fs::path &child, MediaSubdir &out)
         }
     }
     catch (const fs::filesystem_error &) {
-        // ºöÂÔÎŞ·¨·ÃÎÊµÄ×ÓÏî
+        // å¿½ç•¥æ— æ³•è®¿é—®çš„å­é¡¹
     }
     return false;
 }
 
-// ´Ó root ¿ªÊ¼µİ¹éÉ¨Ãè£¬·µ»ØËùÓĞ·ûºÏÌõ¼şµÄ Match ½á¹¹Ìå
-std::vector<Match> CollectBiliFoldersStructured(const fs::path &root)
+// ä» root å¼€å§‹é€’å½’æ‰«æï¼Œè¿”å›æ‰€æœ‰ç¬¦åˆæ¡ä»¶çš„ Match ç»“æ„ä½“
+std::vector<Match> BiliCache::CollectBiliFoldersStructured(const fs::path &root)
 {
     std::vector<Match> results;
     if (!fs::exists(root) || !fs::is_directory(root))
@@ -58,7 +58,7 @@ std::vector<Match> CollectBiliFoldersStructured(const fs::path &root)
                     continue;
                 fs::path dir = it->path();
 
-                // ±ØĞëÍ¬Ê±´æÔÚ entry.json ºÍ danmaku.xml£¨ÔÚ dir ÏÂ£©
+                // å¿…é¡»åŒæ—¶å­˜åœ¨ entry.json å’Œ danmaku.xmlï¼ˆåœ¨ dir ä¸‹ï¼‰
                 fs::path p_entry = dir / "entry.json";
                 fs::path p_danmaku = dir / "danmaku.xml";
                 if (!(fs::exists(p_entry) && fs::is_regular_file(p_entry)))
@@ -71,7 +71,7 @@ std::vector<Match> CollectBiliFoldersStructured(const fs::path &root)
                 m.entry_json_path = p_entry;
                 m.danmaku_xml_path = p_danmaku;
 
-                // ±éÀú dir µÄÖ±½Ó×ÓÄ¿Â¼£¬ÊÕ¼¯Âú×ã media Ìõ¼şµÄ×ÓÄ¿Â¼
+                // éå† dir çš„ç›´æ¥å­ç›®å½•ï¼Œæ”¶é›†æ»¡è¶³ media æ¡ä»¶çš„å­ç›®å½•
                 try {
                     for (auto const &entry : fs::directory_iterator(dir)) {
                         if (!entry.is_directory())
@@ -83,33 +83,33 @@ std::vector<Match> CollectBiliFoldersStructured(const fs::path &root)
                     }
                 }
                 catch (const fs::filesystem_error &) {
-                    // ºöÂÔÎŞ·¨·ÃÎÊµÄ×ÓÏî
+                    // å¿½ç•¥æ— æ³•è®¿é—®çš„å­é¡¹
                 }
 
                 if (!m.media_subdirs.empty()) {
                     results.push_back(std::move(m));
-                    // Ìø¹ı¸ÃÄ¿Â¼µÄ×ÓÊ÷£¬±ÜÃâÖØ¸´·¢ÏÖ¸üÉî²ãµÄÆ¥Åä
+                    // è·³è¿‡è¯¥ç›®å½•çš„å­æ ‘ï¼Œé¿å…é‡å¤å‘ç°æ›´æ·±å±‚çš„åŒ¹é…
                     it.disable_recursion_pending();
                 }
             }
             catch (const fs::filesystem_error &) {
-                // ºöÂÔµ¥¸öÌõÄ¿´íÎó£¬¼ÌĞøÉ¨Ãè
+                // å¿½ç•¥å•ä¸ªæ¡ç›®é”™è¯¯ï¼Œç»§ç»­æ‰«æ
             }
         }
     }
     catch (const fs::filesystem_error &) {
-        // ¸ùÄ¿Â¼²»¿É¶Á»òÆäËûÈ«¾Ö´íÎó£¬Ö±½Ó·µ»ØÒÑÊÕ¼¯µÄ½á¹û
+        // æ ¹ç›®å½•ä¸å¯è¯»æˆ–å…¶ä»–å…¨å±€é”™è¯¯ï¼Œç›´æ¥è¿”å›å·²æ”¶é›†çš„ç»“æœ
     }
 
     return results;
 }
 
-// Ê¾Àı£º´òÓ¡½á¹û£¨Ã¿¸öÎÄ¼şµ¥¶À×Ö¶ÎÏÔÊ¾ÍêÕûÂ·¾¶£©
+// ç¤ºä¾‹ï¼šæ‰“å°ç»“æœï¼ˆæ¯ä¸ªæ–‡ä»¶å•ç‹¬å­—æ®µæ˜¾ç¤ºå®Œæ•´è·¯å¾„ï¼‰
 int main2()
 {
 
     fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
-    auto matches = CollectBiliFoldersStructured(root);
+    auto matches = BiliCache::CollectBiliFoldersStructured(root);
     for (const auto &m : matches) {
         //std::cout << "Parent dir: " << m.dir.string() << "\n";
         //std::cout << "  entry.json: " << m.entry_json_path.string() << "\n";
@@ -124,7 +124,7 @@ int main2()
         std::string title = BiliCache::GetTitle(m);
         std::string title_local = Utf8ToLocal(title);
         std::cout << title_local << std::endl;
-        // ¼ôÇĞµ½ÆäËûÂ·¾¶
+        // å‰ªåˆ‡åˆ°å…¶ä»–è·¯å¾„
         {
             //auto dirName = m.dir.filename();
             //auto relativePath = m.dir.lexically_relative(root);
@@ -138,7 +138,7 @@ int main2()
             //std::error_code ec;
 
             //fs::rename(m.dir, aimDir, ec);
-            ////fs::rename(src, dst, ec); // ²»Å×Òì³££¬´íÎóĞÅÏ¢Ğ´Èë ec
+            ////fs::rename(src, dst, ec); // ä¸æŠ›å¼‚å¸¸ï¼Œé”™è¯¯ä¿¡æ¯å†™å…¥ ec
             //if (ec) {
             //    std::cerr << m.dir << "\n\t>>>" << aimDir << "\n"
             //              << " --- rename failed: " << ec.value() << " -> " << ec.message() << "\n";
