@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 
 #include <string>
@@ -32,16 +32,16 @@ namespace Tools
 
     bool ParseJsonSafe(const std::string &s, nlohmann::json &out, std::string *err = nullptr);
 
-    // ·µ»Ø true ±íÊ¾ÎÄ¼şÊÇºÏ·¨µÄ UTF-8£¨ÔÊĞí¿ÉÑ¡ BOM£©
+    // è¿”å› true è¡¨ç¤ºæ–‡ä»¶æ˜¯åˆæ³•çš„ UTF-8ï¼ˆå…è®¸å¯é€‰ BOMï¼‰
     bool IsUtf8File(const std::string &path, bool allow_bom = true);
 
-    // ¼ì²é path/filename ÊÇ·ñ´æÔÚÇÒÎª³£¹æÎÄ¼ş
+    // æ£€æŸ¥ path/filename æ˜¯å¦å­˜åœ¨ä¸”ä¸ºå¸¸è§„æ–‡ä»¶
     bool file_exists(const fs::path &dir, const std::string &filename);
 
-    // ÅĞ¶ÏÄ³¸öÄ¿Â¼ dir ÊÇ·ñ°üº¬ÖÁÉÙÒ»¸ö×ÓÄ¿Â¼ child£¬ÇÒ child ÖĞÍ¬Ê±°üº¬ video.m4s, audio.m4s, index.json
+    // åˆ¤æ–­æŸä¸ªç›®å½• dir æ˜¯å¦åŒ…å«è‡³å°‘ä¸€ä¸ªå­ç›®å½• childï¼Œä¸” child ä¸­åŒæ—¶åŒ…å« video.m4s, audio.m4s, index.json
     bool has_media_subdir(const fs::path &dir);
 
-    // ´Ó root ¿ªÊ¼µİ¹éÉ¨Ãè£¬·µ»ØËùÓĞ·ûºÏÌõ¼şµÄÄ¿Â¼Â·¾¶
+    // ä» root å¼€å§‹é€’å½’æ‰«æï¼Œè¿”å›æ‰€æœ‰ç¬¦åˆæ¡ä»¶çš„ç›®å½•è·¯å¾„
     std::vector<fs::path> CollectBiliFolders(const fs::path &root);
 
     json LoadJsonFromFile(const std::filesystem::path &path);

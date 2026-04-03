@@ -102,11 +102,14 @@ static void print_av_error(int err)
 }
 
 // keyName should be a short ASCII key, e.g. "my_blob"
-bool AttachInfo::write_string_to_mp4_metadata(const std::string &in_filename,
-                                            const std::string &out_filename,
+bool AttachInfo::write_string_to_mp4_metadata(const std::wstring &in_filename,
+                                            const std::wstring &out_filename,
                                             const std::string &keyName,
                                             const std::string &value)
 {
+    std::string in_utf8 = Tools::wstring_to_utf8(in_filename);
+    std::string out_utf8 = Tools::wstring_to_utf8(out_filename);
+
     //av_log_set_level(AV_LOG_QUIET);
 
     AVFormatContext *ifmt_ctx = nullptr;
@@ -115,7 +118,7 @@ bool AttachInfo::write_string_to_mp4_metadata(const std::string &in_filename,
     int ret = 0;
 
     // 1. open input
-    if ((ret = avformat_open_input(&ifmt_ctx, in_filename.c_str(), nullptr, nullptr)) < 0) {
+    if ((ret = avformat_open_input(&ifmt_ctx, in_utf8.c_str(), nullptr, nullptr)) < 0) {
         print_av_error(ret);
         return false;
     }
@@ -126,7 +129,7 @@ bool AttachInfo::write_string_to_mp4_metadata(const std::string &in_filename,
     }
 
     // 2. allocate output context (auto-detect format by filename)
-    if ((ret = avformat_alloc_output_context2(&ofmt_ctx, nullptr, nullptr, out_filename.c_str())) < 0 || !ofmt_ctx) {
+    if ((ret = avformat_alloc_output_context2(&ofmt_ctx, nullptr, nullptr, out_utf8.c_str())) < 0 || !ofmt_ctx) {
         print_av_error(ret);
         avformat_close_input(&ifmt_ctx);
         return false;
@@ -157,7 +160,7 @@ bool AttachInfo::write_string_to_mp4_metadata(const std::string &in_filename,
 
     // 5. open output IO
     if (!(ofmt_ctx->oformat->flags & AVFMT_NOFILE)) {
-        if ((ret = avio_open(&ofmt_ctx->pb, out_filename.c_str(), AVIO_FLAG_WRITE)) < 0) {
+        if ((ret = avio_open(&ofmt_ctx->pb, out_utf8.c_str(), AVIO_FLAG_WRITE)) < 0) {
             print_av_error(ret);
             goto end;
         }
@@ -257,13 +260,14 @@ std::vector<AttachedFile> AttachInfo::ReadAttachments(AVFormatContext *ctx)
     return attachments;
 }
 
-AVStream *AttachInfo::MakeAttachStream(AVFormatContext *ctx, std::string fileName)
+AVStream *AttachInfo::MakeAttachStream(AVFormatContext *ctx, std::wstring fileName)
 {
     AVStream *st = avformat_new_stream(ctx, nullptr);
     st->codecpar->codec_type = AVMEDIA_TYPE_ATTACHMENT;
     st->codecpar->codec_id = AV_CODEC_ID_NONE;
     // 文件名
-    av_dict_set(&st->metadata, "filename", fileName.c_str(), 0);
+    std::string utf8Name = Tools::wstring_to_utf8(fileName);
+    av_dict_set(&st->metadata, "filename", utf8Name.c_str(), 0);
     return st;
 }
 
@@ -327,6 +331,7 @@ bool AttachInfo::write_attach(AVFormatContext *ctx, const MediaSubdir &media)
         std::string txt;
         Tools::StringFromFile(file, txt);
         std::string fileNameU8 = fs::path(file).filename().generic_u8string();
+        std::wstring fileNameW = fs::path(file).filename().generic_wstring();
 
         // 文件内容
         AVStream *st = nullptr;
@@ -336,7 +341,7 @@ bool AttachInfo::write_attach(AVFormatContext *ctx, const MediaSubdir &media)
                   fileNameU8, count);
             st = attStms.find(fileNameU8)->second;
         } else {
-            st = MakeAttachStream(ctx, fileNameU8);
+            st = MakeAttachStream(ctx, fileNameW);
         }
         st->codecpar->extradata_size = txt.size();
         st->codecpar->extradata = (uint8_t *)av_malloc(txt.size());
