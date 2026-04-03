@@ -31,7 +31,7 @@ std::shared_ptr<spdlog::logger> Logger::Get(const std::string& group)
     auto logger = std::make_shared<spdlog::logger>(group, g_sinks.begin(), g_sinks.end());
 
     // 格式：yyyy::mm::dd hh::mm::ss [level][group] 内容
-    logger->set_pattern("%Y::%m::%d %H::%M::%S [%^%l%$][%n] %v");
+    logger->set_pattern("%Y::%m::%d %H::%M::%S [%P][%t] [%^%l%$][%n] %v");
 
     logger->set_level(spdlog::level::trace); // 默认全开
     logger->flush_on(spdlog::level::err);

@@ -87,19 +87,19 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
     AVPacket *avPacket = nullptr;
     int i = 0;
     while (true) {
-        FFmpegLogScope *ffmpegLog = new FFmpegLogScope();
+        //FFmpegLogScope *ffmpegLog = new FFmpegLogScope();
 
-        auto guard = std::shared_ptr<void>((void *)0x01, [&](void *) {
-            // 不 delete ffmpegLog，只做你的收尾逻辑
-            int level = FFmpegLogScope::get_level();
-            std::string log = FFmpegLogScope::get_log();
-            this->m_errorLevel.store(std::min(level, this->m_errorLevel.load()));
-            if (level <= AV_LOG_WARNING) {
-                //std::cout << "some error happened" << std::endl;
-            this->m_log.append(log);
-            }
-            delete ffmpegLog; // 如果你想 delete，也可以放这里
-        });
+        //auto guard = std::shared_ptr<void>((void *)0x01, [&](void *) {
+        //    // 不 delete ffmpegLog，只做你的收尾逻辑
+        //    int level = FFmpegLogScope::get_level();
+        //    std::string log = FFmpegLogScope::get_log();
+        //    this->m_errorLevel.store(std::min(level, this->m_errorLevel.load()));
+        //    if (level <= AV_LOG_WARNING) {
+        //        //std::cout << "some error happened" << std::endl;
+        //    this->m_log.append(log);
+        //    }
+        //    delete ffmpegLog; // 如果你想 delete，也可以放这里
+        //});
 
         avPacket = av_packet_alloc();
         int ret = 0;

@@ -21,7 +21,11 @@ using json = nlohmann::json;
 namespace Tools
 {
     std::string AvErrorCode2Str(int errCode);
-    bool StringFromFile(const std::string &file, std::string &cotent);
+    //inline bool StringFromFile(const std::string &file, std::string &cotent)
+    //{
+    //    return false;
+    //}
+    bool StringFromFile(const std::wstring &file, std::string &cotent);
 
     bool        TextFromFile(const std::string &path, std::string &outText, std::string *errMsg = nullptr);
     std::string TextFromFile(const std::string &path);

@@ -58,30 +58,64 @@ using namespace tbb::flow;
 #include "tools.h"
 
 
+#include <mutex>
+#include <cstdarg>
+#include <cstdio>
+#include <cstring>
+
+
+
 std::mutex ffmpeg_log_mutex;
+
+static spdlog::level::level_enum FFmpegLevelToSpd(int level)
+{
+    if (level <= AV_LOG_PANIC)
+        return spdlog::level::critical;
+    if (level <= AV_LOG_FATAL)
+        return spdlog::level::critical;
+    if (level <= AV_LOG_ERROR)
+        return spdlog::level::err;
+    if (level <= AV_LOG_WARNING)
+        return spdlog::level::warn;
+    if (level <= AV_LOG_INFO)
+        return spdlog::level::info;
+    if (level <= AV_LOG_VERBOSE)
+        return spdlog::level::debug;
+    return spdlog::level::trace;
+}
+
 void my_ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vl)
 {
     std::lock_guard<std::mutex> lock(ffmpeg_log_mutex);
 
-    // 你可以根据 level 过滤
-    if (level <= AV_LOG_WARNING) {
-        return; // 只要 warning/error 以上的
+    // ❗注意：FFmpeg 是 level 越小越严重
+    // 如果你只想要 warning 及以上：<std::string>
+    if (level > AV_LOG_WARNING) {
+        return;
     }
 
     char buf[2048];
     vsnprintf(buf, sizeof(buf), fmt, vl);
 
-    // 去掉换行（FFmpeg 日志通常带 \n）
+    // 去掉末尾换行
     size_t len = strlen(buf);
     if (len > 0 && buf[len - 1] == '\n') {
         buf[len - 1] = '\0';
     }
 
-    // 这里就是你自己的处理逻辑
-    std::cout << buf << std::endl;
-    av_log_default_callback(ptr, level, fmt, vl);
-    //printf("[FFmpeg] %s\n");
+    auto logger = Logger::Get("ffmpeg");
+    auto spd_level = FFmpegLevelToSpd(level);
+
+    // 用 spdlog 的 level 控制输出
+    if (logger->should_log(spd_level)) {
+        logger->log(spd_level, "{}", buf);
+    }
+
+    // ❗是否保留 FFmpeg 默认输出（二选一）
+    // 一般建议关掉，否则会重复打印
+    // av_log_default_callback(ptr, level, fmt, vl);
 }
+
 
 void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
 {
@@ -259,11 +293,13 @@ public:
 
     
     AVFormatContext *m_outCtx = nullptr;
-
-    int mux(const std::set<std::string> files, bool autoCloseOutput = true)
+    std::set<std::string> m_files;
+    std::multimap<AVFormatContext *, AVStream *> inputStreams;
+    int Open(const std::set<std::string> files)
     {
+        m_files = files;
         int ret = 0;
-        std::multimap<AVFormatContext *, AVStream *> inputStreams = GetInputStreams(files);
+        inputStreams = GetInputStreams(m_files);
 
         // 构建输出文件
         char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
@@ -275,6 +311,28 @@ public:
             // 处理错误情况
             return -2;
         }
+        return ret;
+    }
+    void Close()
+    {
+        if (m_outCtx) {
+            int ret = av_write_trailer(m_outCtx);
+            if (ret != 0) {
+                char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+                av_strerror(ret, errMsg, 200);
+                av_log(NULL, AV_LOG_WARNING, "av_write_trailer error: ret=%d, msg=%s\n", ret, errMsg);
+            }
+            avio_close(m_outCtx->pb);
+            m_outCtx = nullptr;
+        }
+    }
+
+    int mux(bool autoCloseOutput = true)
+    {
+        int ret = 0;
+
+        Open(m_files);
+
         // 构建输出流， 记录映射关系
         std::map<AVFormatContext *, std::map<int, int>>
             streamIndexMap; // <inputCtx, <InputCtxStmIndex, outputCtxStmIdx>>
@@ -369,15 +427,9 @@ public:
 
         //return 0;
         // 写入文件尾部
-        ret = av_write_trailer(m_outCtx);
-        if (ret != 0) {
-            av_strerror(ret, errMsg, 200);
-            av_log(NULL, AV_LOG_WARNING, "av_write_trailer error: ret=%d, msg=%s\n", ret, errMsg);
-        }
         // 关闭文件
         if (autoCloseOutput) {
-            avio_close(m_outCtx->pb);
-            m_outCtx = nullptr;
+            Close();
         }
         for (size_t i = 0; i < ctsx.size(); i++) {
             AVFormatContext *ctx = ctsx[i];
@@ -391,26 +443,59 @@ public:
 };
 
 
+//extern "C"
+//{
+//#include <libavformat/avformat.h>
+//}
+//
+//#include "Logger.h"
 
+void DumpFormatContextDict(AVFormatContext *ctx)
+{
+    if (!ctx) {
+        LOG_ERROR("ffmpeg", "AVFormatContext is null");
+        return;
+    }
 
+    AVDictionary *dict = ctx->metadata;
+    if (!dict) {
+        LOG_WARN("ffmpeg", "AVFormatContext metadata is empty");
+        return;
+    }
 
-int main()
+    LOG_INFO("ffmpeg", "===== AVFormatContext Metadata =====");
+
+    AVDictionaryEntry *entry = nullptr;
+    while ((entry = av_dict_get(dict, "", entry, AV_DICT_IGNORE_SUFFIX))) {
+        if (entry->key && entry->value) {
+            LOG_INFO("ffmpeg", "{} = {}", entry->key, entry->value);
+        }
+        else if (entry->key) {
+            LOG_WARN("ffmpeg", "{} = (null)", entry->key);
+        }
+    }
+
+    LOG_INFO("ffmpeg", "====================================");
+}
+
+void GlobalInit()
 {
     Logger::Init();
-
-
-
     LOG_INFO("mux", "start muxing {}", 123);
     LOG_DEBUG("decode", "frame pts={}", 456);
-
-    // 只让 mux 打 INFO 以上
     Logger::SetLevel("mux", spdlog::level::info);
-
-    // decode 只打 ERROR
     Logger::SetLevel("decode", spdlog::level::err);
+    Logger::SetLevel("ffmpeg", spdlog::level::debug);
 
     LOG_DEBUG("mux", "不会打印");  // 被过滤
     LOG_ERROR("decode", "会打印"); // ✔
+    av_log_set_callback(my_ffmpeg_log_callback);
+}
+
+int main()
+{
+    GlobalInit();
+
 
     fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
     auto matches = BiliCache::CollectBiliFoldersStructured(root);
@@ -445,8 +530,28 @@ int main()
         //R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\c_469842584\120\audio.m4s)",
         //R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\c_469842584\120\video.m4s)",
     };
-    mux.mux(files, false);
-    AttachNs::write_attach(mux.m_outCtx, aimMatch.media_subdirs[0]);
 
+
+    mux.Open(files);
+    AttachNs::write_attach(mux.m_outCtx, aimMatch.media_subdirs[0]);
+    //DumpFormatContextDict(mux.m_outCtx);
+    std::vector<AttachedFile> f = AttachNs::ReadAttachments(mux.m_outCtx);
+    mux.mux(false);
+    mux.Close();
+    AVFormatContext *ctx = nullptr;
+    ctx = mux.m_outCtx;
+    ////int i = av_dict_count(mux.m_outCtx->);
+
+    //ctx = AvApiWrapper::_AvformatAllocOutputContext2(LR"(C:\Users\Administrator\Desktop\BiliBiliMux\bin\result.mp4)");
+    //// 写头（此时 metadata 被写入文件）
+    //avformat_write_header(ctx, nullptr);
+
+    //// 收尾
+    //av_write_trailer(ctx);
+    //avio_close(ctx->pb);
+    //avformat_free_context(ctx);
+    //ctx = AvApiWrapper::_AvformatAllocOutputContext2(LR"(C:\Users\Administrator\Desktop\BiliBiliMux\bin\result.mp4)");
+    DumpFormatContextDict(ctx);
+    return -1;
     return 0;
 }

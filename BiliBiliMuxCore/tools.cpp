@@ -37,10 +37,11 @@ static void print_av_error(int err)
     std::cerr << "FFmpeg error: " << Tools::AvErrorCode2Str(err) << "\n";
 }
 
-
-bool Tools::StringFromFile(const std::string &file, std::string &cotent)
+bool Tools::StringFromFile(const std::wstring &file, std::string &content)
 {
-    std::ifstream ifs(file, std::ios::in | std::ios::binary);
+    std::string fileU8 = Tools::wstring_to_utf8(file);
+    std::string fileLoc = Tools::Utf8ToLocal(fileU8);
+    std::ifstream ifs(fileLoc, std::ios::in | std::ios::binary);
     if (!ifs) {
         // ´ò¿ªÊ§°Ü
         return false;
@@ -51,7 +52,6 @@ bool Tools::StringFromFile(const std::string &file, std::string &cotent)
     std::streampos size = ifs.tellg();
     ifs.seekg(0, std::ios::beg);
 
-    std::string content;
     if (size > 0) {
         content.resize(static_cast<size_t>(size));
         ifs.read(&content[0], size);

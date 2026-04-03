@@ -23,7 +23,8 @@ private:
 
 namespace LogGroup
 {
-    constexpr const char* MUX = "mux";
+    constexpr const char *DEFAULT = "DEFAULT";
+    constexpr const char *MUX = "mux";
     constexpr const char* DECODE = "decode";
     constexpr const char* IO = "io";
 }

@@ -47,6 +47,7 @@ using namespace std;
 using namespace tbb::flow;
 
 #include "tools.h"
+#include "Logger.h"
 
 int AttachNs::AttachMain()
 {
@@ -217,7 +218,99 @@ end:
     return true;
 }
 
-// TODO ;; 
+
+std::vector<AttachedFile> AttachNs::ReadAttachments(AVFormatContext *ctx)
+{
+    std::vector<AttachedFile> attachments;
+
+    if (!ctx) {
+        LOG_ERROR("ffmpeg", "AVFormatContext is null");
+        return attachments;
+    }
+
+    for (unsigned int i = 0; i < ctx->nb_streams; ++i) {
+        AVStream *st = ctx->streams[i];
+        if (!st)
+            continue;
+
+        if (st->codecpar->codec_type != AVMEDIA_TYPE_ATTACHMENT)
+            continue;
+
+        // 读取文件名
+        AVDictionaryEntry *entry = av_dict_get(st->metadata, "filename", nullptr, 0);
+        std::string fileName = entry ? entry->value : "unknown";
+
+        // 读取内容
+        std::string content;
+        if (st->codecpar->extradata && st->codecpar->extradata_size > 0) {
+            content.assign((char *)st->codecpar->extradata, st->codecpar->extradata_size);
+        }
+        else {
+            LOG_WARN("ffmpeg", "Attachment stream {} has no extradata", fileName);
+        }
+
+        LOG_INFO("ffmpeg", "Read attachment: {} ({} bytes)", fileName, content.size());
+
+        attachments.push_back({fileName, content});
+    }
+
+    return attachments;
+}
+
+AVStream *AttachNs::MakeAttachStream(AVFormatContext *ctx, std::string fileName)
+{
+    AVStream *st = avformat_new_stream(ctx, nullptr);
+    st->codecpar->codec_type = AVMEDIA_TYPE_ATTACHMENT;
+    st->codecpar->codec_id = AV_CODEC_ID_NONE;
+    // 文件名
+    av_dict_set(&st->metadata, "filename", fileName.c_str(), 0);
+    return st;
+}
+
+std::string AttachNs::GetAttachStreamName(AVStream *st)
+{
+    AVDictionaryEntry *entry = av_dict_get(st->metadata, "filename", nullptr, 0);
+    if (entry == nullptr) {
+        return false;
+    }
+    std::string name = entry->value ? entry->value : "";
+    return name;
+}
+
+bool AttachNs::IsAttachStream(AVStream *st)
+{
+    std::string fileName;
+    if (st->codecpar->codec_type != AVMEDIA_TYPE_ATTACHMENT) {
+        return false;
+    }
+    if (st->codecpar->codec_id != AV_CODEC_ID_NONE) {
+        return false;
+    }
+    // 读取文件名
+    AVDictionaryEntry *entry = av_dict_get(st->metadata, "filename", nullptr, 0);
+    if (entry == nullptr) {
+        return false;
+    }
+
+    fileName = entry->value;
+    return false;
+}
+
+std::multimap<std::string, AVStream *> AttachNs::GetAllAttachStream(AVFormatContext *ctx)
+{
+    std::multimap<std::string, AVStream *> ret;
+    for (size_t i = 0; i < ctx->nb_streams; i++) {
+        AVStream *st = ctx->streams[i];
+        if (IsAttachStream(st) == false) {
+            continue;
+        }
+        std::string name = GetAttachStreamName(st);
+        ret.insert({name, st});
+    }
+
+    return ret;
+}
+
 bool AttachNs::write_attach(AVFormatContext *ctx, const MediaSubdir &media)
 {
     std::vector<std::wstring> files{
@@ -226,13 +319,34 @@ bool AttachNs::write_attach(AVFormatContext *ctx, const MediaSubdir &media)
         media.index.generic_wstring(),
     };
 
+    std::multimap<std::string, AVStream *> attStms = GetAllAttachStream(ctx);
+
     for (size_t i = 0; i < files.size(); i++) {
         std::wstring file = files[i];
-        std::string fileU8 = Tools::wstring_to_utf8(file);
+        //std::string fileU8 = Tools::wstring_to_utf8(file);
         std::string txt;
-        Tools::StringFromFile(fileU8, txt);
+        Tools::StringFromFile(file, txt);
         std::string fileNameU8 = fs::path(file).filename().generic_u8string();
-        av_dict_set(&ctx->metadata, fileNameU8.c_str(), txt.c_str(), 0);
+
+        // 文件内容
+        AVStream *st = nullptr;
+        int count = attStms.count(fileNameU8);
+        if(count > 0) {
+            LOG_WARN(LogGroup::DEFAULT, "Attachment {} already exists {} , using first one",
+                  fileNameU8, count);
+            st = attStms.find(fileNameU8)->second;
+        } else {
+            st = MakeAttachStream(ctx, fileNameU8);
+        }
+        st->codecpar->extradata_size = txt.size();
+        st->codecpar->extradata = (uint8_t *)av_malloc(txt.size());
+        memcpy(st->codecpar->extradata, txt.data(), txt.size());
+
+        LOG_DEBUG(LogGroup::DEFAULT, "---{} -- {}", fileNameU8, txt[0]);
+    }
+
+    if (ctx->metadata == nullptr) {
+        return false;
     }
     return false;
 }
