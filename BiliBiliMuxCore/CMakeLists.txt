@@ -32,6 +32,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 Add3rd_nlohmann_json(${PROJECT_NAME})
 Add3rd_TBB(${PROJECT_NAME})
 Add3rd_FFmpeg(${PROJECT_NAME})
+Add3rd_spdlog(${PROJECT_NAME})
 
 # 包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -52,6 +53,8 @@ target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/common.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ffmpegMsg.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ffmpegMsg.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/Logger.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/Logger.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/main.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ReadNode.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ReadNode.h"

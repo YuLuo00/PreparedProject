@@ -53,6 +53,7 @@ using namespace tbb::flow;
 #include "BiliCache.h"
 #include "common.h"
 #include "ffmpegMsg.h"
+#include "Logger.h"
 #include "ReadNode.h"
 #include "tools.h"
 
@@ -390,8 +391,27 @@ public:
 };
 
 
+
+
+
 int main()
 {
+    Logger::Init();
+
+
+
+    LOG_INFO("mux", "start muxing {}", 123);
+    LOG_DEBUG("decode", "frame pts={}", 456);
+
+    // 只让 mux 打 INFO 以上
+    Logger::SetLevel("mux", spdlog::level::info);
+
+    // decode 只打 ERROR
+    Logger::SetLevel("decode", spdlog::level::err);
+
+    LOG_DEBUG("mux", "不会打印");  // 被过滤
+    LOG_ERROR("decode", "会打印"); // ✔
+
     fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
     auto matches = BiliCache::CollectBiliFoldersStructured(root);
     Match aimMatch;
