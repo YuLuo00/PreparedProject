@@ -49,7 +49,7 @@ using namespace tbb::flow;
 #include "tools.h"
 #include "Logger.h"
 
-int AttachNs::AttachMain()
+int AttachInfo::AttachMain()
 {
     std::vector<std::string> files = {
         //R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\danmaku.xml)",
@@ -102,7 +102,7 @@ static void print_av_error(int err)
 }
 
 // keyName should be a short ASCII key, e.g. "my_blob"
-bool AttachNs::write_string_to_mp4_metadata(const std::string &in_filename,
+bool AttachInfo::write_string_to_mp4_metadata(const std::string &in_filename,
                                             const std::string &out_filename,
                                             const std::string &keyName,
                                             const std::string &value)
@@ -219,7 +219,7 @@ end:
 }
 
 
-std::vector<AttachedFile> AttachNs::ReadAttachments(AVFormatContext *ctx)
+std::vector<AttachedFile> AttachInfo::ReadAttachments(AVFormatContext *ctx)
 {
     std::vector<AttachedFile> attachments;
 
@@ -257,7 +257,7 @@ std::vector<AttachedFile> AttachNs::ReadAttachments(AVFormatContext *ctx)
     return attachments;
 }
 
-AVStream *AttachNs::MakeAttachStream(AVFormatContext *ctx, std::string fileName)
+AVStream *AttachInfo::MakeAttachStream(AVFormatContext *ctx, std::string fileName)
 {
     AVStream *st = avformat_new_stream(ctx, nullptr);
     st->codecpar->codec_type = AVMEDIA_TYPE_ATTACHMENT;
@@ -267,7 +267,7 @@ AVStream *AttachNs::MakeAttachStream(AVFormatContext *ctx, std::string fileName)
     return st;
 }
 
-std::string AttachNs::GetAttachStreamName(AVStream *st)
+std::string AttachInfo::GetAttachStreamName(AVStream *st)
 {
     AVDictionaryEntry *entry = av_dict_get(st->metadata, "filename", nullptr, 0);
     if (entry == nullptr) {
@@ -277,7 +277,7 @@ std::string AttachNs::GetAttachStreamName(AVStream *st)
     return name;
 }
 
-bool AttachNs::IsAttachStream(AVStream *st)
+bool AttachInfo::IsAttachStream(AVStream *st)
 {
     std::string fileName;
     if (st->codecpar->codec_type != AVMEDIA_TYPE_ATTACHMENT) {
@@ -296,7 +296,7 @@ bool AttachNs::IsAttachStream(AVStream *st)
     return false;
 }
 
-std::multimap<std::string, AVStream *> AttachNs::GetAllAttachStream(AVFormatContext *ctx)
+std::multimap<std::string, AVStream *> AttachInfo::GetAllAttachStream(AVFormatContext *ctx)
 {
     std::multimap<std::string, AVStream *> ret;
     for (size_t i = 0; i < ctx->nb_streams; i++) {
@@ -311,7 +311,7 @@ std::multimap<std::string, AVStream *> AttachNs::GetAllAttachStream(AVFormatCont
     return ret;
 }
 
-bool AttachNs::write_attach(AVFormatContext *ctx, const MediaSubdir &media)
+bool AttachInfo::write_attach(AVFormatContext *ctx, const MediaSubdir &media)
 {
     std::vector<std::wstring> files{
         media.match->danmaku_xml_path.generic_wstring(),

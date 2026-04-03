@@ -457,24 +457,23 @@ void DumpFormatContextDict(AVFormatContext *ctx)
         return;
     }
 
-    AVDictionary *dict = ctx->metadata;
-    if (!dict) {
-        LOG_WARN("ffmpeg", "AVFormatContext metadata is empty");
-        return;
-    }
-
+    std::multimap<std::string, AVStream *>  stms = AttachInfo::GetAllAttachStream(ctx);
+    // 遍历所有唯一的 key
     LOG_INFO("ffmpeg", "===== AVFormatContext Metadata =====");
-
-    AVDictionaryEntry *entry = nullptr;
-    while ((entry = av_dict_get(dict, "", entry, AV_DICT_IGNORE_SUFFIX))) {
-        if (entry->key && entry->value) {
-            LOG_INFO("ffmpeg", "{} = {}", entry->key, entry->value);
+    for (auto it = stms.begin(); it != stms.end(); ) {
+        std::string key = it->first;
+        auto range = stms.equal_range(key);
+        LOG_INFO("ffmpeg", "Key: {}", key);
+        // 遍历该 key 下的所有 value
+        for (auto jt = range.first; jt != range.second; ++jt) {
+            AVStream *stream = jt->second;
+            // 处理 stream，例如打印信息
+            stream->codecpar->extradata_size;
+            stream->codecpar->extradata;
+            LOG_INFO("ffmpeg", "  Stream: {}", (void*)stream);
         }
-        else if (entry->key) {
-            LOG_WARN("ffmpeg", "{} = (null)", entry->key);
-        }
+        it = range.second;
     }
-
     LOG_INFO("ffmpeg", "====================================");
 }
 
@@ -533,16 +532,16 @@ int main()
 
 
     mux.Open(files);
-    AttachNs::write_attach(mux.m_outCtx, aimMatch.media_subdirs[0]);
+    AttachInfo::write_attach(mux.m_outCtx, aimMatch.media_subdirs[0]);
     //DumpFormatContextDict(mux.m_outCtx);
-    std::vector<AttachedFile> f = AttachNs::ReadAttachments(mux.m_outCtx);
+    std::vector<AttachedFile> f = AttachInfo::ReadAttachments(mux.m_outCtx);
     mux.mux(false);
     mux.Close();
     AVFormatContext *ctx = nullptr;
     ctx = mux.m_outCtx;
     ////int i = av_dict_count(mux.m_outCtx->);
 
-    //ctx = AvApiWrapper::_AvformatAllocOutputContext2(LR"(C:\Users\Administrator\Desktop\BiliBiliMux\bin\result.mp4)");
+    ctx = AvApiWrapper::_AvformatAllocOutputContext2(LR"(C:\Users\Administrator\Desktop\BiliBiliMux\bin\result.mp4)");
     //// 写头（此时 metadata 被写入文件）
     //avformat_write_header(ctx, nullptr);
 

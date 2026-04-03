@@ -13,7 +13,7 @@ struct AttachedFile
 };
 
 
-class AttachNs
+class AttachInfo
 {
 public:
     static int AttachMain();
