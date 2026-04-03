@@ -77,20 +77,22 @@ std::vector<Match> BiliCache::CollectBiliFoldersStructured(const fs::path &root)
                         if (!entry.is_directory())
                             continue;
                         MediaSubdir ms;
+                        ms.match = &m;
                         if (collect_media_files(entry.path(), ms)) {
                             m.media_subdirs.push_back(std::move(ms));
                         }
                     }
+                    results.push_back(m);
                 }
                 catch (const fs::filesystem_error &) {
                     // 忽略无法访问的子项
                 }
 
-                if (!m.media_subdirs.empty()) {
-                    results.push_back(std::move(m));
-                    // 跳过该目录的子树，避免重复发现更深层的匹配
-                    it.disable_recursion_pending();
-                }
+                //if (!m.media_subdirs.empty()) {
+                //    results.push_back(std::move(m));
+                //    // 跳过该目录的子树，避免重复发现更深层的匹配
+                //    it.disable_recursion_pending();
+                //}
             }
             catch (const fs::filesystem_error &) {
                 // 忽略单个条目错误，继续扫描
@@ -122,7 +124,7 @@ int main2()
         //    std::cout << "      index: " << c.index.string() << "\n";
         //}
         std::string title = BiliCache::GetTitle(m);
-        std::string title_local = Utf8ToLocal(title);
+        std::string title_local = Tools::Utf8ToLocal(title);
         std::cout << title_local << std::endl;
         // 剪切到其他路径
         {
@@ -154,7 +156,7 @@ int main2()
     return 0;
 }
 
-std::string BiliCache::GetTitle(const std::string &entryPath)
+std::string BiliCache::GetTitle(const std::wstring &entryPath)
 {
     json js = Tools::LoadJsonFromFile(entryPath);
     std::string title = js.at("title").get<std::string>();
@@ -164,5 +166,5 @@ std::string BiliCache::GetTitle(const std::string &entryPath)
 
 std::string BiliCache::GetTitle(const Match &match)
 {
-    return GetTitle(match.entry_json_path.generic_string());
+    return GetTitle(match.entry_json_path.generic_wstring());
 }

@@ -14,7 +14,6 @@ namespace fs = std::filesystem;
 nlohmann::json;
 using json = nlohmann::json;
 
-std::string Utf8ToLocal(const std::string &utf8);
 
 namespace Tools
 {
@@ -39,9 +38,15 @@ namespace Tools
 
     json LoadJsonFromFile(const std::filesystem::path &path);
 
+    std::string sanitize_windows_filename(const std::string &input);
+
+    std::wstring utf8_to_wstring(const std::string &str);
+    std::string wstring_to_utf8(const std::wstring &wstr);
+    std::string Utf8ToLocal(const std::string &utf8);
+
+    std::wstring sanitize_windows_filename(const std::wstring &input);
+
 
     }
-
-
 
 

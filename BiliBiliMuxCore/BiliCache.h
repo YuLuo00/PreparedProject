@@ -4,11 +4,15 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <mutex>
 namespace fs = std::filesystem;
 
-// 单个媒体子目录信息：目录 + 三个文件的完整路径
+struct Match;
+    // 单个媒体子目录信息：目录 + 三个文件的完整路径
 struct MediaSubdir
 {
+    const Match const *match = nullptr;
+    //std::unique_ptr<Match> match = nullptr;
     fs::path dir;   // 子目录路径，例如 ...\1\80
     fs::path video; // 子目录/video.m4s
     fs::path audio; // 子目录/audio.m4s
@@ -16,18 +20,28 @@ struct MediaSubdir
 };
 
 // 匹配结果：父目录 + 单独字段存路径 + 所有匹配的媒体子目录
-struct Match
+class Match
 {
+public:
+    Match(){};
+    Match(const Match &other)
+    {
+        *this = other;
+        for (size_t i = 0; i < media_subdirs.size(); i++) {
+            this->media_subdirs[i].match = this;
+        }
+    }
     fs::path dir;                           // 符合条件的父目录，例如 ...\10723293\1
     fs::path entry_json_path;               // dir/entry.json 的完整路径（若存在）
     fs::path danmaku_xml_path;              // dir/danmaku.xml 的完整路径（若存在）
     std::vector<MediaSubdir> media_subdirs; // 所有符合条件的子目录
+    //std::vector<std::unique_ptr<MediaSubdir>> media_subdirs; // 所有符合条件的子目录
 };
 
 
 namespace BiliCache
 {
-std::string GetTitle(const std::string &entryPath);
+std::string GetTitle(const std::wstring &entryPath);
 std::string GetTitle(const Match &match);
 std::vector<Match> CollectBiliFoldersStructured(const fs::path &root);
 } // namespace BiliCache

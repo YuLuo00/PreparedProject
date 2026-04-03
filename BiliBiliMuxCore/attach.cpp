@@ -1,4 +1,6 @@
-﻿#define WIN32_LEAN_AND_MEAN
+﻿#include "attach.h"
+
+#define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
 
@@ -46,7 +48,7 @@ using namespace tbb::flow;
 
 #include "tools.h"
 
-int AttachMain()
+int AttachNs::AttachMain()
 {
     std::vector<std::string> files = {
         //R"(C:\Users\Administrator\Desktop\bili_zip_1\10723293\1\danmaku.xml)",
@@ -99,10 +101,10 @@ static void print_av_error(int err)
 }
 
 // keyName should be a short ASCII key, e.g. "my_blob"
-bool write_string_to_mp4_metadata(const std::string &in_filename,
-                                  const std::string &out_filename,
-                                  const std::string &keyName,
-                                  const std::string &value)
+bool AttachNs::write_string_to_mp4_metadata(const std::string &in_filename,
+                                            const std::string &out_filename,
+                                            const std::string &keyName,
+                                            const std::string &value)
 {
     //av_log_set_level(AV_LOG_QUIET);
 
@@ -215,4 +217,22 @@ end:
     return true;
 }
 
+// TODO ;; 
+bool AttachNs::write_attach(AVFormatContext *ctx, const MediaSubdir &media)
+{
+    std::vector<std::wstring> files{
+        media.match->danmaku_xml_path.generic_wstring(),
+        media.match->entry_json_path.generic_wstring(),
+        media.index.generic_wstring(),
+    };
 
+    for (size_t i = 0; i < files.size(); i++) {
+        std::wstring file = files[i];
+        std::string fileU8 = Tools::wstring_to_utf8(file);
+        std::string txt;
+        Tools::StringFromFile(fileU8, txt);
+        std::string fileNameU8 = fs::path(file).filename().generic_u8string();
+        av_dict_set(&ctx->metadata, fileNameU8.c_str(), txt.c_str(), 0);
+    }
+    return false;
+}

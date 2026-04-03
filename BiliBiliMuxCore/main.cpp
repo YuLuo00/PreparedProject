@@ -387,7 +387,21 @@ public:
 
 int main()
 {
-    //return main2();
+    fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
+    auto matches = BiliCache::CollectBiliFoldersStructured(root);
+    Match aimMatch;
+    for (const auto &m : matches) {
+        std::string title = BiliCache::GetTitle(m);
+        std::wstring titleWstr = Tools::utf8_to_wstring(title);
+        std::cout << Tools::Utf8ToLocal(title) << std::endl;
+        if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
+            aimMatch = m;
+            break;
+        }
+    }
+
+    std::cout << "Found " << matches.size() << " matching folders.\n";
+    return 0;
     
 
     MediaMux mux;

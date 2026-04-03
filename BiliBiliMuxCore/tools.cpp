@@ -16,6 +16,11 @@ extern "C"
 
 namespace fs = std::filesystem;
 
+#include <string>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "tools.h"
 using namespace Tools;
@@ -392,14 +397,91 @@ json Tools::LoadJsonFromFile(const std::filesystem::path &path)
     }
 }
 
+std::string Tools::sanitize_windows_filename(const std::string &input)
+{
+    std::string result = input;
 
-#include <string>
+    const std::string invalid_chars = "\\/:*?\"<>|";
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
+    for (char &c : result) {
+        // 替换非法字符
+        if (invalid_chars.find(c) != std::string::npos || static_cast<unsigned char>(c) < 32) {
+            c = '？';
+        }
+    }
 
-std::string Utf8ToLocal(const std::string &utf8)
+    return result;
+}
+
+std::wstring Tools::utf8_to_wstring(const std::string &str)
+{
+    if (str.empty())
+        return L"";
+
+    // 先计算需要的长度
+    int size_needed = MultiByteToWideChar(CP_UTF8, // 输入是 UTF-8
+                                          0,
+                                          str.data(),
+                                          (int)str.size(),
+                                          nullptr,
+                                          0);
+
+    if (size_needed <= 0) {
+        throw std::runtime_error("MultiByteToWideChar failed");
+    }
+
+    std::wstring result(size_needed, 0);
+
+    // 真正转换
+    MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), &result[0], size_needed);
+
+    return result;
+}
+
+std::string Tools::wstring_to_utf8(const std::wstring &wstr)
+{
+    if (wstr.empty())
+        return "";
+
+    // 先计算需要的长度
+    int size_needed = WideCharToMultiByte(CP_UTF8, // 输出 UTF-8
+                                          0,
+                                          wstr.data(),
+                                          (int)wstr.size(),
+                                          nullptr,
+                                          0,
+                                          nullptr,
+                                          nullptr);
+
+    if (size_needed <= 0) {
+        throw std::runtime_error("WideCharToMultiByte failed");
+    }
+
+    std::string result(size_needed, 0);
+
+    // 真正转换
+    WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(), &result[0], size_needed, nullptr, nullptr);
+
+    return result;
+}
+
+std::wstring Tools::sanitize_windows_filename(const std::wstring &input)
+{
+    std::wstring result = input;
+
+    const std::wstring invalid_chars = L"\\/～:*?\"<>|";
+
+    for (wchar_t &c : result) {
+        // 替换非法字符 + 控制字符
+        if (invalid_chars.find(c) != std::wstring::npos || c < 32) {
+            c = L'？';
+        }
+    }
+
+    return result;
+}
+
+std::string Tools::Utf8ToLocal(const std::string &utf8)
 {
 #ifdef _WIN32
     // UTF-8 → UTF-16
