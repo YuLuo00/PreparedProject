@@ -42,19 +42,21 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 # 源文件
 target_sources_group(${PROJECT_NAME} "src" PRIVATE
-    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/main.cpp"
-    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/attach.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/attach.cpp"
-    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/tools.h"
-    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/tools.cpp"
-    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliCache.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/attach.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/AvApiWrapper.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/AvApiWrapper.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliCache.cpp"
-    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ffmpegMsg.h"
-    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ffmpegMsg.cpp"
-    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ReadNode.h"
-    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ReadNode.cpp"
-    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/common.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliCache.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/common.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/common.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ffmpegMsg.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ffmpegMsg.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/main.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ReadNode.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ReadNode.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/tools.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/tools.h"
     # BiliBiliMuxCore\main.cpp
 )
 

@@ -49,11 +49,12 @@ using namespace std;
 using namespace tbb::flow;
 
 #include "attach.h"
-#include "tools.h"
+#include "AvApiWrapper.h"
 #include "BiliCache.h"
-#include "ffmpegMsg.h"
 #include "common.h"
+#include "ffmpegMsg.h"
 #include "ReadNode.h"
+#include "tools.h"
 
 
 std::mutex ffmpeg_log_mutex;
@@ -255,6 +256,7 @@ public:
         return result;
     }
 
+
     int mux(const std::set<std::string> files)
     {
         int ret = 0;
@@ -383,26 +385,29 @@ public:
     }
 };
 
-#include "BiliCache.h"
 
 int main()
 {
-    fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
-    auto matches = BiliCache::CollectBiliFoldersStructured(root);
-    Match aimMatch;
-    for (const auto &m : matches) {
-        std::string title = BiliCache::GetTitle(m);
-        std::wstring titleWstr = Tools::utf8_to_wstring(title);
-        std::cout << Tools::Utf8ToLocal(title) << std::endl;
-        if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
-            aimMatch = m;
-            break;
-        }
-    }
+    //fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
+    //auto matches = BiliCache::CollectBiliFoldersStructured(root);
+    //Match aimMatch;
+    //for (const auto &m : matches) {
+    //    std::string title = BiliCache::GetTitle(m);
+    //    std::wstring titleWstr = Tools::utf8_to_wstring(title);
+    //    std::cout << Tools::Utf8ToLocal(title) << std::endl;
+    //    if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
+    //        aimMatch = m;
+    //        break;
+    //    }
+    //}
 
-    std::cout << "Found " << matches.size() << " matching folders.\n";
-    return 0;
-    
+    //std::cout << "Found " << matches.size() << " matching folders.\n";
+
+    ////AvApiWrapper::_AvformatAllocOutputContext2()
+
+    //return 0;
+    //
+
 
     MediaMux mux;
     //av_log_set_callback(my_ffmpeg_log_callback);
