@@ -256,16 +256,17 @@ public:
         return result;
     }
 
+    
+    AVFormatContext *m_outCtx = nullptr;
 
-    int mux(const std::set<std::string> files)
+    int mux(const std::set<std::string> files, bool autoCloseOutput = true)
     {
         int ret = 0;
         std::multimap<AVFormatContext *, AVStream *> inputStreams = GetInputStreams(files);
 
         // 构建输出文件
-        AVFormatContext *outCtx = nullptr;
         char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
-        int error = avformat_alloc_output_context2(&outCtx, nullptr, nullptr, "result.mp4");
+        int error = avformat_alloc_output_context2(&m_outCtx, nullptr, nullptr, "result.mp4");
         if (error < 0) {
             // 输出错误代码及错误信息
             av_make_error_string(errMsg, AV_ERROR_MAX_STRING_SIZE, error);
@@ -280,7 +281,7 @@ public:
             AVFormatContext *inCtx = p.first;
             AVStream *inputStream = p.second;
             // 复制到输出流
-            AVStream *newStream = avformat_new_stream(outCtx, NULL);
+            AVStream *newStream = avformat_new_stream(m_outCtx, NULL);
             remux_copy_stream_info(inputStream, newStream);
             // 记录流映射
             if (streamIndexMap[inCtx].count(inputStream->index)) {
@@ -290,8 +291,8 @@ public:
         }
 
         // 打开文件,写入文件头
-        avio_open(&outCtx->pb, "result.mp4", AVIO_FLAG_WRITE);
-        ret = avformat_write_header(outCtx, NULL);
+        avio_open(&m_outCtx->pb, "result.mp4", AVIO_FLAG_WRITE);
+        ret = avformat_write_header(m_outCtx, NULL);
         if (ret != 0) {
             return -2;
         }
@@ -354,7 +355,7 @@ public:
             // deal 节点
             function_node<PktsPtr> deal(g, unlimited, [&](PktsPtr pktsPtr) {
                 PacketBatchQueue &pkts = *pktsPtr;
-                DealPkts(outCtx, pkts);
+                DealPkts(m_outCtx, pkts);
             });
             make_edge(start, deal);
 
@@ -367,13 +368,16 @@ public:
 
         //return 0;
         // 写入文件尾部
-        ret = av_write_trailer(outCtx);
+        ret = av_write_trailer(m_outCtx);
         if (ret != 0) {
             av_strerror(ret, errMsg, 200);
             av_log(NULL, AV_LOG_WARNING, "av_write_trailer error: ret=%d, msg=%s\n", ret, errMsg);
         }
         // 关闭文件
-        avio_close(outCtx->pb);
+        if (autoCloseOutput) {
+            avio_close(m_outCtx->pb);
+            m_outCtx = nullptr;
+        }
         for (size_t i = 0; i < ctsx.size(); i++) {
             AVFormatContext *ctx = ctsx[i];
             //avio_close(ctx->pb);
@@ -388,20 +392,20 @@ public:
 
 int main()
 {
-    //fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
-    //auto matches = BiliCache::CollectBiliFoldersStructured(root);
-    //Match aimMatch;
-    //for (const auto &m : matches) {
-    //    std::string title = BiliCache::GetTitle(m);
-    //    std::wstring titleWstr = Tools::utf8_to_wstring(title);
-    //    std::cout << Tools::Utf8ToLocal(title) << std::endl;
-    //    if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
-    //        aimMatch = m;
-    //        break;
-    //    }
-    //}
+    fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
+    auto matches = BiliCache::CollectBiliFoldersStructured(root);
+    Match aimMatch;
+    for (const auto &m : matches) {
+        std::string title = BiliCache::GetTitle(m);
+        std::wstring titleWstr = Tools::utf8_to_wstring(title);
+        std::cout << Tools::Utf8ToLocal(title) << std::endl;
+        if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
+            aimMatch = m;
+            break;
+        }
+    }
 
-    //std::cout << "Found " << matches.size() << " matching folders.\n";
+    std::cout << "Found " << matches.size() << " matching folders.\n";
 
     ////AvApiWrapper::_AvformatAllocOutputContext2()
 
@@ -421,7 +425,8 @@ int main()
         //R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\c_469842584\120\audio.m4s)",
         //R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\c_469842584\120\video.m4s)",
     };
-    mux.mux(files);
+    mux.mux(files, false);
+    AttachNs::write_attach(mux.m_outCtx, aimMatch.media_subdirs[0]);
 
     return 0;
 }
