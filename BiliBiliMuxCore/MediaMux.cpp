@@ -11,7 +11,12 @@
 #include <thread>
 #include <vector>
 
-#include <libavutil/mem.h>
+#include <filesystem>
+
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/imgutils.h>
+#include <libswscale/swscale.h>
 
 #include "Logger.h"
 #include "ReadNode.h"
@@ -199,6 +204,18 @@ int MediaMux::mux(bool autoCloseOutput)
         streamIndexMap[inCtx][inputStream->index] = newStream->index;
     }
 
+    // 特殊处理attached_pic流（封面）
+    for (unsigned int i = 0; i < m_outCtx->nb_streams; i++) {
+        AVStream *stream = m_outCtx->streams[i];
+        if (stream->disposition & AV_DISPOSITION_ATTACHED_PIC) {
+            // 对于attached_pic流，确保编解码器参数正确
+            if (stream->attached_pic.size > 0) {
+                // attached_pic已经设置，直接使用
+                LOG_INFO(LogGroup::MUX, "Attached picture stream found, size: {}", stream->attached_pic.size);
+            }
+        }
+    }
+
     avio_open(&m_outCtx->pb, m_outputFile.c_str(), AVIO_FLAG_WRITE);
 
     AVDictionary *muxOpts = nullptr;
@@ -269,5 +286,89 @@ int MediaMux::mux(bool autoCloseOutput)
     }
 
     LOG_INFO(LogGroup::MUX, "All done!");
+    return 0;
+}
+
+int MediaMux::EmbedCover(const std::filesystem::path &coverPath)
+{
+    if (!m_outCtx) {
+        LOG_ERROR(LogGroup::MUX, "Output context is null, cannot embed cover");
+        return -1;
+    }
+
+    // 打开封面图片
+    AVFormatContext *coverCtx = nullptr;
+    if (avformat_open_input(&coverCtx, coverPath.string().c_str(), nullptr, nullptr) != 0) {
+        LOG_ERROR(LogGroup::MUX, "Failed to open cover image: {}", coverPath.string());
+        return -2;
+    }
+
+    if (avformat_find_stream_info(coverCtx, nullptr) < 0) {
+        LOG_ERROR(LogGroup::MUX, "Failed to find stream info for cover image");
+        avformat_close_input(&coverCtx);
+        return -3;
+    }
+
+    // 查找图片流
+    AVStream *coverStream = nullptr;
+    for (unsigned int i = 0; i < coverCtx->nb_streams; i++) {
+        if (coverCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            coverStream = coverCtx->streams[i];
+            break;
+        }
+    }
+
+    if (!coverStream) {
+        LOG_ERROR(LogGroup::MUX, "No video stream in cover image");
+        avformat_close_input(&coverCtx);
+        return -4;
+    }
+
+    // 创建新的图片流用于封面
+    AVStream *coverOutStream = avformat_new_stream(m_outCtx, nullptr);
+    if (!coverOutStream) {
+        LOG_ERROR(LogGroup::MUX, "Failed to create cover stream");
+        avformat_close_input(&coverCtx);
+        return -5;
+    }
+
+    // 复制编解码器参数
+    if (avcodec_parameters_copy(coverOutStream->codecpar, coverStream->codecpar) < 0) {
+        LOG_ERROR(LogGroup::MUX, "Failed to copy codec parameters for cover stream");
+        avformat_close_input(&coverCtx);
+        return -6;
+    }
+
+    // 设置流属性
+    coverOutStream->codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
+    coverOutStream->codecpar->codec_id = coverStream->codecpar->codec_id;
+    coverOutStream->disposition = AV_DISPOSITION_ATTACHED_PIC;
+    coverOutStream->time_base = {1, 1};
+
+    // 读取封面帧
+    AVPacket *pkt = av_packet_alloc();
+    if (av_read_frame(coverCtx, pkt) < 0) {
+        LOG_ERROR(LogGroup::MUX, "Failed to read cover frame");
+        av_packet_free(&pkt);
+        avformat_close_input(&coverCtx);
+        return -7;
+    }
+
+    // 设置包的流索引
+    pkt->stream_index = coverOutStream->index;
+
+    // 将封面数据复制到流的attached_pic
+    av_packet_unref(&coverOutStream->attached_pic);
+    if (av_packet_ref(&coverOutStream->attached_pic, pkt) < 0) {
+        LOG_ERROR(LogGroup::MUX, "Failed to copy cover packet to attached_pic");
+        av_packet_free(&pkt);
+        avformat_close_input(&coverCtx);
+        return -8;
+    }
+
+    av_packet_free(&pkt);
+    avformat_close_input(&coverCtx);
+
+    LOG_INFO(LogGroup::MUX, "Cover embedded successfully as attached picture stream");
     return 0;
 }

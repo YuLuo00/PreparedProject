@@ -316,6 +316,34 @@ int mainPipeline(const MediaSubdir &sub)
         return ret;
     }
 
+    // 在混流之前下载并嵌入封面
+    if (!mediaInfo.cover.empty()) {
+        LOG_INFO(LogGroup::MUX, "开始下载封面...");
+        BiliApiCache apiCache;
+        // 设置缓存根目录为工作目录下的 cache/bilibili_api
+        BiliApiCache::Options cacheOptions;
+        cacheOptions.cache_root = fs::current_path() / "cache" / "bilibili_api";
+        apiCache.SetOptions(cacheOptions);
+
+        std::string coverUrlUtf8 = Tools::wstring_to_utf8(mediaInfo.cover);
+        fs::path coverPath;
+        std::string errMsg;
+
+        if (apiCache.DownloadCoverToCache(coverUrlUtf8, coverPath, &errMsg, 1000)) {
+            // 将封面嵌入到MP4文件中
+            int embedRet = mux.EmbedCover(coverPath);
+            if (embedRet == 0) {
+                LOG_INFO(LogGroup::MUX, "封面已准备嵌入到MP4文件");
+            } else {
+                LOG_ERROR(LogGroup::MUX, "准备嵌入封面失败: {}", embedRet);
+            }
+        } else {
+            LOG_ERROR(LogGroup::MUX, "下载封面失败: {}", errMsg);
+        }
+    } else {
+        LOG_WARN(LogGroup::MUX, "没有封面信息，跳过封面嵌入");
+    }
+
     ret = mux.mux();
     if (ret != 0) {
         LOG_ERROR(LogGroup::MUX, "混流失败: {}", ret);
@@ -423,7 +451,7 @@ int main_test()
 int main()
 {
     GlobalInit();
-    return main_test();
+    //return main_test();
     LOG_INFO(LogGroup::DEFAULT, "--------------------------------------run begin-----------------------------------");
 
     fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
