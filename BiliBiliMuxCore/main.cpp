@@ -350,7 +350,13 @@ public:
 
         // 打开文件,写入文件头
         avio_open(&m_outCtx->pb, "result.mp4", AVIO_FLAG_WRITE);
-        ret = avformat_write_header(m_outCtx, NULL);
+
+        AVDictionary *muxOpts = nullptr;
+        av_dict_set(&muxOpts, "movflags", "use_metadata_tags", 0);
+        ret = avformat_write_header(m_outCtx, &muxOpts);
+        av_dict_free(&muxOpts);
+
+
         if (ret != 0) {
             return -2;
         }
@@ -509,6 +515,7 @@ int main()
     mux.Open(files);
     write_mediainfo_to_avformat(mux.m_outCtx, infos[0]);
     mux.mux(false);
+    print_avformat_metadata(mux.m_outCtx);
     mux.Close();
 
     
