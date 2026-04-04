@@ -49,7 +49,8 @@ public:
     bool HasCoverCache(const std::string& coverUrl) const;
     bool DownloadCoverToCache(const std::string& coverUrl,
                               std::filesystem::path& outPath,
-                              std::string* errMsg = nullptr);
+                              std::string* errMsg = nullptr,
+                              int delayAfterDownloadMs = 0);
 
 private:
     bool EnsureCacheDirectory(const std::filesystem::path &dir, std::string *errMsg) const;

@@ -4,6 +4,8 @@
 #include <fstream>
 #include <sstream>
 #include <utility>
+#include <thread>
+#include <chrono>
 
 #include <nlohmann/json.hpp>
 
@@ -437,7 +439,8 @@ bool BiliApiCache::HasCoverCache(const std::string& coverUrl) const
 
 bool BiliApiCache::DownloadCoverToCache(const std::string& coverUrl,
                                         std::filesystem::path& outPath,
-                                        std::string* errMsg)
+                                        std::string* errMsg,
+                                        int delayAfterDownloadMs)
 {
     const std::filesystem::path cachePath = BuildCoverCachePath(coverUrl);
     outPath = cachePath;
@@ -462,5 +465,12 @@ bool BiliApiCache::DownloadCoverToCache(const std::string& coverUrl,
     }
     
     LOG_INFO(LogGroup::IO, "Cover downloaded and cached: {}", PathToUtf8(cachePath));
+    
+    // Add delay after download if specified
+    if (delayAfterDownloadMs > 0) {
+        LOG_DEBUG(LogGroup::IO, "Delaying {}ms after download to prevent rate limiting", delayAfterDownloadMs);
+        std::this_thread::sleep_for(std::chrono::milliseconds(delayAfterDownloadMs));
+    }
+    
     return true;
 }

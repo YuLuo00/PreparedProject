@@ -258,6 +258,7 @@ void GlobalInit()
     Logger::SetLevel(LogGroup::MUX, spdlog::level::info);
     Logger::SetLevel(LogGroup::DECODE, spdlog::level::err);
     Logger::SetLevel(LogGroup::FFMPEG, spdlog::level::debug);
+    Logger::SetLevel(LogGroup::IO, spdlog::level::debug);
 
     LOG_DEBUG(LogGroup::MUX, "不会打印");  // 被过滤
     LOG_ERROR(LogGroup::DECODE, "会打印"); // ✔
@@ -407,12 +408,11 @@ int main_test()
         fs::path cachedPath;
         std::string errMsg;
 
-        if (apiCache.DownloadCoverToCache(coverUrlUtf8, cachedPath, &errMsg)) {
+        if (apiCache.DownloadCoverToCache(coverUrlUtf8, cachedPath, &errMsg, 500)) {
             LOG_INFO(LogGroup::IO, "Cover ready at: {}", cachedPath.string());
         } else {
             LOG_ERROR(LogGroup::IO, "Failed to get cover {}: {}", coverUrlUtf8, errMsg);
         }
-        Sleep(500); // 延迟以避免率限制
     }
 
     LOG_INFO(LogGroup::IO, "--------------------------------------main_test end-----------------------------------");
