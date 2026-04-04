@@ -180,13 +180,13 @@ macro(Add3rd_FFmpeg ProjectName)
 endmacro()
 
 
-macro(Add3rd_TBB ProjectName)
-    set(TBB_DIR "${ProjectRootDir}/ThirdParty/tbb/installed/x64-windows/share/tbb//")
-    message("TBB_DIR == ${TBB_DIR}")
+macro(Add3rd_CURL ProjectName)
+    set(CURL_DIR "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/share/curl/")
+    message("CURL_DIR == ${CURL_DIR}")
 
-    find_package(TBB CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE TBB::tbb)
+    find_package(CURL CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE CURL::libcurl)
     
-    Add_Interface_Imported_Location(TBB::tbb)
-    Add_Imported_Location(TBB::tbb)
+    Add_Interface_Imported_Location(CURL::libcurl)
+    Add_Imported_Location(CURL::libcurl)
 endmacro()
