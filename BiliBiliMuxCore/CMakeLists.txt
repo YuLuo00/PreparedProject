@@ -25,6 +25,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 #     )
 # endif()
 
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /utf-8)
+endif()
+
 
 
 # 三方库
