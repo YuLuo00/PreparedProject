@@ -1,5 +1,6 @@
 ﻿#include "attach.h"
 #include <map>
+#include "BiliCache.h"
 #include "Logger.h"
 
 namespace
@@ -246,6 +247,50 @@ bool parse_index_json(const json &j, MediaInfo &out)
     }
 }
 
+bool loadSubdir2MediaInfo(const MediaSubdir &sub, MediaInfo &out)
+{
+    out = {};
+
+    if (sub.match == nullptr) {
+        LOG_ERROR(LogGroup::IO, "MediaSubdir.match 为空，无法提取 metadata");
+        return false;
+    }
+    if (sub.match->entry_json_path.empty()) {
+        LOG_ERROR(LogGroup::IO, "entry.json 路径为空，无法提取 metadata");
+        return false;
+    }
+    if (sub.index.empty()) {
+        LOG_ERROR(LogGroup::IO, "index.json 路径为空，无法提取 metadata");
+        return false;
+    }
+
+    json entryJson;
+    if (!load_json_file(sub.match->entry_json_path.wstring(), entryJson)) {
+        LOG_ERROR(LogGroup::IO,
+                  "读取 entry.json 失败: {}",
+                  LOGUTF8(sub.match->entry_json_path.filename().wstring()));
+        return false;
+    }
+    if (!parse_entry_json(entryJson, out)) {
+        LOG_ERROR(LogGroup::IO,
+                  "解析 entry.json 失败: {}",
+                  LOGUTF8(sub.match->entry_json_path.filename().wstring()));
+        return false;
+    }
+
+    json indexJson;
+    if (!load_json_file(sub.index.wstring(), indexJson)) {
+        LOG_ERROR(LogGroup::IO, "读取 index.json 失败: {}", LOGUTF8(sub.index.filename().wstring()));
+        return false;
+    }
+    if (!parse_index_json(indexJson, out)) {
+        LOG_ERROR(LogGroup::IO, "解析 index.json 失败: {}", LOGUTF8(sub.index.filename().wstring()));
+        return false;
+    }
+
+    return true;
+}
+
 int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaInfo &info)
 {
     if (!fmt)
@@ -304,6 +349,16 @@ int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaInfo &info)
     }
 
     return 0;
+}
+
+int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaSubdir &sub)
+{
+    MediaInfo info;
+    if (!loadSubdir2MediaInfo(sub, info)) {
+        return AVERROR(EINVAL);
+    }
+
+    return write_mediainfo_to_avformat(fmt, info);
 }
 
 int read_mediainfo_from_avformat(const AVFormatContext *fmt, MediaInfo &out)

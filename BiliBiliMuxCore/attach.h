@@ -23,6 +23,8 @@ using json = nlohmann::json;
 
 #include "tools.h"
 
+struct MediaSubdir;
+
 struct EntryItem
 {
     std::wstring md5;
@@ -51,9 +53,17 @@ bool parse_entry_json(const json &j, MediaInfo &out);
 // 解析 index.json（包含 video/audio 数组）
 bool parse_index_json(const json &j, MediaInfo &out);
 
+// 从单个 MediaSubdir 提取 MediaInfo。
+// 顶层字段来自 sub.match->entry_json_path，音视频条目只读取当前 sub.index。
+bool loadSubdir2MediaInfo(const MediaSubdir &sub, MediaInfo &out);
+
 // 把 MediaInfo 写入 AVFormatContext 的 metadata，并为每个条目创建 AVStream 并写入流级 metadata
 // 注意：创建流时我们至少设置 codecpar->codec_type，避免某些 muxer 在写入时丢弃“空流”。
 int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaInfo &info);
+
+// 直接从 MediaSubdir 提取并写入 metadata。
+// subdir 相关字段只会写当前 sub.index 对应的那一路。
+int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaSubdir &sub);
 
 // 从 AVFormatContext 的 metadata 读取 MediaInfo。
 // 读取格式与 write_mediainfo_to_avformat 写入的 key 保持一致。

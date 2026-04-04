@@ -85,13 +85,11 @@ bool IsReservedWindowsDeviceName(const std::wstring &name)
     std::wstring baseName = dotPos == std::wstring::npos ? trimmed : trimmed.substr(0, dotPos);
     baseName = Tools::tolower_wstring(baseName);
 
-    static const std::array<const wchar_t *, 29> reservedNames = {
-        L"con",  L"prn",  L"aux",  L"nul",
-        L"com1", L"com2", L"com3", L"com4", L"com5", L"com6", L"com7", L"com8", L"com9",
-        L"com\xb9", L"com\xb2", L"com\xb3",
-        L"lpt1", L"lpt2", L"lpt3", L"lpt4", L"lpt5", L"lpt6", L"lpt7", L"lpt8", L"lpt9",
-        L"lpt\xb9", L"lpt\xb2", L"lpt\xb3"
-    };
+    static const std::array reservedNames = {L"con",  L"prn",       L"aux",       L"nul",       L"com1", L"com2",
+                                                 L"com3", L"com4",      L"com5",      L"com6",      L"com7", L"com8",
+                                                 L"com9", L"com\u00B9", L"com\u00B2", L"com\u00B3", L"lpt1", L"lpt2",
+                                                 L"lpt3", L"lpt4",      L"lpt5",      L"lpt6",      L"lpt7", L"lpt8",
+                                                 L"lpt9", L"lpt\u00B9", L"lpt\u00B2", L"lpt\u00B3"};
 
     for (const wchar_t *reserved : reservedNames) {
         if (baseName == reserved) {

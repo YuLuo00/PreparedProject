@@ -137,25 +137,15 @@ int mainPipeline(const MediaSubdir &sub)
         LOG_ERROR(LogGroup::MUX, "sub.match 为空，无法提取 mediainfo");
         return -1;
     }
-    if (match->entry_json_path.empty()) {
-        LOG_ERROR(LogGroup::MUX, "match->entry_json_path 为空，无法提取 mediainfo");
+    if (sub.audio.empty() || sub.video.empty()) {
+        LOG_ERROR(LogGroup::MUX, "MediaSubdir 缺少 audio/video，无法混流");
         return -2;
-    }
-    if (sub.audio.empty() || sub.video.empty() || sub.index.empty()) {
-        LOG_ERROR(LogGroup::MUX, "MediaSubdir 缺少 audio/video/index，无法混流");
-        return -2;
-    }
-
-    if (match->media_subdirs.size() > 1) {
-        LOG_WARN(LogGroup::MUX,
-                 "发现 {} 个媒体子目录，当前使用第一个: {}",
-                 match->media_subdirs.size(),
-                 LOGUTF8(sub.dir.filename().wstring()));
     }
 
     MediaInfo mediaInfo;
-    loadFile2MediaInfo(match->entry_json_path.generic_wstring(), mediaInfo);
-    loadFile2MediaInfo(sub.index.generic_wstring(), mediaInfo);
+    if (!loadSubdir2MediaInfo(sub, mediaInfo)) {
+        return -3;
+    }
 
     std::wstring title = mediaInfo.title;
     if (title.empty()) {
@@ -166,7 +156,7 @@ int mainPipeline(const MediaSubdir &sub)
     }
 
     const std::wstring safeTitle = Tools::sanitize_windows_filename(title);
-    const fs::path outputDir = match->dir.empty() ? fs::current_path() : match->dir;
+    const fs::path outputDir = sub.dir.empty() ? fs::current_path() : sub.dir;
     const fs::path outputPath = outputDir / (safeTitle + L".mp4");
     const std::set<std::string> files = {
         Tools::wstring_to_utf8(sub.audio.wstring()),
@@ -184,7 +174,7 @@ int mainPipeline(const MediaSubdir &sub)
         return ret;
     }
 
-    ret = write_mediainfo_to_avformat(mux.m_outCtx, mediaInfo);
+    ret = write_mediainfo_to_avformat(mux.m_outCtx, sub);
     if (ret != 0) {
         LOG_ERROR(LogGroup::MUX, "写入 metadata 失败: {}", ret);
         mux.Close();
@@ -213,12 +203,16 @@ int main()
         std::string title = BiliCache::GetTitle(m);
         std::wstring titleWstr = Tools::utf8_to_wstring(title);
         LOG_INFO(LogGroup::IO, "{}", LOGUTF8(title));
-        if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
-            if (!m.media_subdirs.empty()) {
-                aimSub = m.media_subdirs.front();
-            }
-            //break;
+        for (size_t i = 0; i < m.media_subdirs.size(); i++) {
+            MediaSubdir sub = m.media_subdirs[i];
+            mainPipeline(sub);
         }
+        //if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
+        //    if (!m.media_subdirs.empty()) {
+        //        aimSub = m.media_subdirs.front();
+        //    }
+        //    //break;
+        //}
     }
 
     LOG_INFO(LogGroup::IO, "Found {} matching folders.", matches.size());
@@ -228,5 +222,6 @@ int main()
         return -1;
     }
 
+        return -1;
     return mainPipeline(aimSub);
 }
