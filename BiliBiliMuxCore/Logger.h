@@ -33,10 +33,10 @@ namespace LogGroup
 // 初始化
 #define LOG_INIT() Logger::Init()
 // 自动获取 logger
-#define LOG_TRACE(group, ...) Logger::Get(group)->trace(__VA_ARGS__)
-#define LOG_DEBUG(group, ...) Logger::Get(group)->debug(__VA_ARGS__)
-#define LOG_INFO(group, ...)  Logger::Get(group)->info(__VA_ARGS__)
-#define LOG_WARN(group, ...)  Logger::Get(group)->warn(__VA_ARGS__)
-#define LOG_ERROR(group, ...) Logger::Get(group)->error(__VA_ARGS__)
-#define LOG_CRITICAL(group, ...) Logger::Get(group)->critical(__VA_ARGS__)
+#define LOG_TRACE(group, ...) SPDLOG_LOGGER_CALL(Logger::Get(group), spdlog::level::trace, __VA_ARGS__)
+#define LOG_DEBUG(group, ...) SPDLOG_LOGGER_CALL(Logger::Get(group), spdlog::level::debug, __VA_ARGS__)
+#define LOG_INFO(group, ...)  SPDLOG_LOGGER_CALL(Logger::Get(group), spdlog::level::info, __VA_ARGS__)
+#define LOG_WARN(group, ...)  SPDLOG_LOGGER_CALL(Logger::Get(group), spdlog::level::warn, __VA_ARGS__)
+#define LOG_ERROR(group, ...) SPDLOG_LOGGER_CALL(Logger::Get(group), spdlog::level::err, __VA_ARGS__)
+#define LOG_CRITICAL(group, ...) SPDLOG_LOGGER_CALL(Logger::Get(group), spdlog::level::critical, __VA_ARGS__)
 #define LOGINFO(...) LOG_INFO(LogGroup::DEFAULT, __VA_ARGS__)

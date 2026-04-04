@@ -15,6 +15,9 @@ void Logger::Init()
     auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
         "logs/app.log", 1024 * 1024 * 5, 3);
 
+    console_sink->set_pattern("[%P][%t] [%^%l%$][%n] %v");
+    file_sink->set_pattern("%Y:%m:%d %H:%M:%S [%s:%#] [%P][%t] [%^%l%$][%n] %v");
+
     g_sinks = { console_sink, file_sink };
 }
 
@@ -29,9 +32,6 @@ std::shared_ptr<spdlog::logger> Logger::Get(const std::string& group)
 
     // 创建新的 group logger
     auto logger = std::make_shared<spdlog::logger>(group, g_sinks.begin(), g_sinks.end());
-
-    // 格式：yyyy::mm::dd hh::mm::ss [level][group] 内容
-    logger->set_pattern("%Y::%m::%d %H::%M::%S [%P][%t] [%^%l%$][%n] %v");
 
     logger->set_level(spdlog::level::trace); // 默认全开
     logger->flush_on(spdlog::level::err);
