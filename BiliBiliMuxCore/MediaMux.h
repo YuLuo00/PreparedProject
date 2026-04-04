@@ -1,0 +1,26 @@
+﻿#pragma once
+
+#include <map>
+#include <set>
+#include <string>
+
+#include "common.h"
+
+class MediaMux
+{
+public:
+    MediaMux() = default;
+
+    static std::multimap<AVFormatContext *, AVStream *> GetInputStreams(const std::set<std::string> &files,
+                                                                        std::set<AVMediaType> types = {});
+    static std::multimap<AVFormatContext *, AVStream *> GetInputStreams(const std::string &file,
+                                                                        std::set<AVMediaType> types = {});
+
+    int Open(const std::set<std::string> files);
+    void Close();
+    int mux(bool autoCloseOutput = true);
+
+    AVFormatContext *m_outCtx = nullptr;
+    std::set<std::string> m_files;
+    std::multimap<AVFormatContext *, AVStream *> inputStreams;
+};
