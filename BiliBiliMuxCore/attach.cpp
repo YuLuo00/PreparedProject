@@ -1,6 +1,130 @@
-﻿#include "attach.h"
+#include "attach.h"
+#include <map>
 
-// 解析 entry.json（包含 owner_id, avid, cover, title）
+namespace
+{
+std::wstring JsonStringToWString(const json &j, const char *key)
+{
+    if (!j.contains(key)) {
+        return {};
+    }
+    return Tools::utf8_to_wstring(j.at(key).get<std::string>());
+}
+
+void SetMetadataWString(AVDictionary **metadata, const char *key, const std::wstring &value)
+{
+    if (!metadata || value.empty()) {
+        return;
+    }
+
+    std::string utf8 = Tools::wstring_to_utf8(value);
+    av_dict_set(metadata, key, utf8.c_str(), 0);
+}
+
+std::wstring GetMetadataWString(const AVDictionary *metadata, const char *key)
+{
+    if (!metadata) {
+        return {};
+    }
+
+    const AVDictionaryEntry *entry = av_dict_get(metadata, key, nullptr, 0);
+    if (!entry || !entry->value) {
+        return {};
+    }
+
+    return Tools::utf8_to_wstring(entry->value);
+}
+
+bool TryParseInt(const char *text, int &out)
+{
+    if (!text) {
+        return false;
+    }
+
+    try {
+        size_t pos = 0;
+        int value = std::stoi(text, &pos);
+        if (pos != std::string(text).size()) {
+            return false;
+        }
+        out = value;
+        return true;
+    }
+    catch (...) {
+        return false;
+    }
+}
+
+void GetMetadataInt(const AVDictionary *metadata, const char *key, int &out)
+{
+    if (!metadata) {
+        return;
+    }
+
+    const AVDictionaryEntry *entry = av_dict_get(metadata, key, nullptr, 0);
+    if (!entry || !entry->value) {
+        return;
+    }
+
+    TryParseInt(entry->value, out);
+}
+
+bool ParseIndexedMetadataKey(const char *key, const char *prefix, size_t &index, std::string &field)
+{
+    if (!key || !prefix) {
+        return false;
+    }
+
+    const std::string keyText(key);
+    const std::string prefixText(prefix);
+
+    if (keyText.rfind(prefixText, 0) != 0) {
+        return false;
+    }
+
+    const size_t indexBegin = prefixText.size();
+    const size_t fieldSep = keyText.find('.', indexBegin);
+    if (fieldSep == std::string::npos || fieldSep == indexBegin) {
+        return false;
+    }
+
+    try {
+        size_t pos = 0;
+        index = static_cast<size_t>(std::stoull(keyText.substr(indexBegin, fieldSep - indexBegin), &pos));
+        if (pos != fieldSep - indexBegin) {
+            return false;
+        }
+    }
+    catch (...) {
+        return false;
+    }
+
+    field = keyText.substr(fieldSep + 1);
+    return !field.empty();
+}
+
+void ApplyEntryField(EntryItem &item, const std::string &field, const char *value)
+{
+    if (!value) {
+        return;
+    }
+
+    if (field == "md5") {
+        item.md5 = Tools::utf8_to_wstring(value);
+        return;
+    }
+
+    if (field == "base_url") {
+        item.base_url = Tools::utf8_to_wstring(value);
+        return;
+    }
+
+    if (field == "id") {
+        TryParseInt(value, item.id);
+    }
+}
+} // namespace
+
 bool parse_entry_json(const json &j, MediaInfo &out)
 {
     try {
@@ -8,11 +132,8 @@ bool parse_entry_json(const json &j, MediaInfo &out)
             out.owner_id = j.at("owner_id").get<int>();
         if (j.contains("avid"))
             out.avid = j.at("avid").get<int>();
-        if (j.contains("cover"))
-            out.cover = j.at("cover").get<std::string>();
-        if (j.contains("title"))
-            out.title = j.at("title").get<std::string>();
-        // page_data 里也可能有部分信息（可选）
+        out.cover = JsonStringToWString(j, "cover");
+        out.title = JsonStringToWString(j, "title");
         return true;
     }
     catch (const std::exception &e) {
@@ -21,7 +142,6 @@ bool parse_entry_json(const json &j, MediaInfo &out)
     }
 }
 
-// 解析 index.json（包含 video/audio 数组）
 bool parse_index_json(const json &j, MediaInfo &out)
 {
     try {
@@ -29,26 +149,28 @@ bool parse_index_json(const json &j, MediaInfo &out)
             for (const auto &v : j["video"]) {
                 EntryItem it;
                 if (v.contains("md5"))
-                    it.md5 = v.at("md5").get<std::string>();
+                    it.md5 = Tools::utf8_to_wstring(v.at("md5").get<std::string>());
                 if (v.contains("base_url"))
-                    it.base_url = v.at("base_url").get<std::string>();
+                    it.base_url = Tools::utf8_to_wstring(v.at("base_url").get<std::string>());
                 if (v.contains("id"))
                     it.id = v.at("id").get<int>();
                 out.videos.push_back(std::move(it));
             }
         }
+
         if (j.contains("audio") && j["audio"].is_array()) {
             for (const auto &a : j["audio"]) {
                 EntryItem it;
                 if (a.contains("md5"))
-                    it.md5 = a.at("md5").get<std::string>();
+                    it.md5 = Tools::utf8_to_wstring(a.at("md5").get<std::string>());
                 if (a.contains("base_url"))
-                    it.base_url = a.at("base_url").get<std::string>();
+                    it.base_url = Tools::utf8_to_wstring(a.at("base_url").get<std::string>());
                 if (a.contains("id"))
                     it.id = a.at("id").get<int>();
                 out.audios.push_back(std::move(it));
             }
         }
+
         return true;
     }
     catch (const std::exception &e) {
@@ -57,21 +179,13 @@ bool parse_index_json(const json &j, MediaInfo &out)
     }
 }
 
-// 把 MediaInfo 写入 AVFormatContext 的 metadata，并为每个条目创建 AVStream 并写入流级 metadata
-// 注意：创建流时我们至少设置 codecpar->codec_type，避免某些 muxer 在写入时丢弃“空流”。
-// 假设已包含 nlohmann::json, ffmpeg headers, MediaInfo/EntryItem 定义与 parse 函数
-// 只展示修改后的 write_mediainfo_to_avformat 函数
-
 int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaInfo &info)
 {
     if (!fmt)
         return AVERROR(EINVAL);
 
-    // 全局 metadata：基础字段
-    if (!info.title.empty())
-        av_dict_set(&fmt->metadata, "title", info.title.c_str(), 0);
-    if (!info.cover.empty())
-        av_dict_set(&fmt->metadata, "cover", info.cover.c_str(), 0);
+    SetMetadataWString(&fmt->metadata, "title", info.title);
+    SetMetadataWString(&fmt->metadata, "cover", info.cover);
 
     {
         char buf[64];
@@ -81,19 +195,19 @@ int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaInfo &info)
         av_dict_set(&fmt->metadata, "avid", buf, 0);
     }
 
-    // 把 video 列表写成带索引的键：video.N.md5, video.N.base_url, video.N.id
     for (size_t i = 0; i < info.videos.size(); ++i) {
         const EntryItem &it = info.videos[i];
         char key[128];
 
         if (!it.md5.empty()) {
             snprintf(key, sizeof(key), "video.%zu.md5", i);
-            av_dict_set(&fmt->metadata, key, it.md5.c_str(), 0);
+            SetMetadataWString(&fmt->metadata, key, it.md5);
         }
         if (!it.base_url.empty()) {
             snprintf(key, sizeof(key), "video.%zu.base_url", i);
-            av_dict_set(&fmt->metadata, key, it.base_url.c_str(), 0);
+            SetMetadataWString(&fmt->metadata, key, it.base_url);
         }
+
         snprintf(key, sizeof(key), "video.%zu.id", i);
         {
             char val[32];
@@ -102,19 +216,19 @@ int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaInfo &info)
         }
     }
 
-    // 把 audio 列表写成带索引的键：audio.N.md5, audio.N.base_url, audio.N.id
     for (size_t i = 0; i < info.audios.size(); ++i) {
         const EntryItem &it = info.audios[i];
         char key[128];
 
         if (!it.md5.empty()) {
             snprintf(key, sizeof(key), "audio.%zu.md5", i);
-            av_dict_set(&fmt->metadata, key, it.md5.c_str(), 0);
+            SetMetadataWString(&fmt->metadata, key, it.md5);
         }
         if (!it.base_url.empty()) {
             snprintf(key, sizeof(key), "audio.%zu.base_url", i);
-            av_dict_set(&fmt->metadata, key, it.base_url.c_str(), 0);
+            SetMetadataWString(&fmt->metadata, key, it.base_url);
         }
+
         snprintf(key, sizeof(key), "audio.%zu.id", i);
         {
             char val[32];
@@ -126,13 +240,74 @@ int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaInfo &info)
     return 0;
 }
 
-// 辅助：从文件加载 json
-// 辅助：从文件加载 json
+int read_mediainfo_from_avformat(const AVFormatContext *fmt, MediaInfo &out)
+{
+    if (!fmt) {
+        return AVERROR(EINVAL);
+    }
+
+    out = {};
+    out.title = GetMetadataWString(fmt->metadata, "title");
+    out.cover = GetMetadataWString(fmt->metadata, "cover");
+    GetMetadataInt(fmt->metadata, "owner_id", out.owner_id);
+    GetMetadataInt(fmt->metadata, "avid", out.avid);
+
+    std::map<size_t, EntryItem> videoEntries;
+    std::map<size_t, EntryItem> audioEntries;
+
+    const AVDictionaryEntry *entry = nullptr;
+    while ((entry = av_dict_get(fmt->metadata, "", entry, AV_DICT_IGNORE_SUFFIX)) != nullptr) {
+        size_t index = 0;
+        std::string field;
+
+        if (ParseIndexedMetadataKey(entry->key, "video.", index, field)) {
+            ApplyEntryField(videoEntries[index], field, entry->value);
+            continue;
+        }
+
+        if (ParseIndexedMetadataKey(entry->key, "audio.", index, field)) {
+            ApplyEntryField(audioEntries[index], field, entry->value);
+        }
+    }
+
+    out.videos.reserve(videoEntries.size());
+    for (auto &kv : videoEntries) {
+        out.videos.push_back(std::move(kv.second));
+    }
+
+    out.audios.reserve(audioEntries.size());
+    for (auto &kv : audioEntries) {
+        out.audios.push_back(std::move(kv.second));
+    }
+
+    return 0;
+}
+
+void print_avformat_metadata(const AVFormatContext *fmt)
+{
+    if (!fmt) {
+        std::cout << "[fmt metadata] fmt == nullptr" << std::endl;
+        return;
+    }
+
+    const int count = av_dict_count(fmt->metadata);
+    std::cout << "[fmt metadata] count = " << count << std::endl;
+    if (!fmt->metadata || count == 0) {
+        return;
+    }
+
+    const AVDictionaryEntry *entry = nullptr;
+    while ((entry = av_dict_get(fmt->metadata, "", entry, AV_DICT_IGNORE_SUFFIX)) != nullptr) {
+        std::cout << entry->key << " = " << (entry->value ? entry->value : "") << std::endl;
+    }
+}
+
 bool load_json_file(const std::wstring &path, json &out)
 {
-    std::ifstream ifs(path);
+    std::ifstream ifs{fs::path(path)};
     if (!ifs.is_open())
         return false;
+
     try {
         ifs >> out;
         return true;
@@ -141,62 +316,3 @@ bool load_json_file(const std::wstring &path, json &out)
         return false;
     }
 }
-
-
-//// 示例主流程（演示如何使用）
-//int main_example(const char *entry_path, const char *index_path, const char *out_filename)
-//{
-//    json jentry, jindex;
-//    //if (!load_json_file(entry_path, jentry)) {
-//    //    std::cerr << "failed load entry.json\n";
-//    //    return -1;
-//    //}
-//    //if (!load_json_file(index_path, jindex)) {
-//    //    std::cerr << "failed load index.json\n";
-//    //    return -1;
-//    //}
-//
-//    MediaInfo info;
-//    if (!parse_entry_json(jentry, info))
-//        return -1;
-//    if (!parse_index_json(jindex, info))
-//        return -1;
-//
-//    avformat_network_init();
-//
-//    AVFormatContext *oc = nullptr;
-//    avformat_alloc_output_context2(&oc, nullptr, nullptr, out_filename);
-//    if (!oc) {
-//        std::cerr << "failed alloc output context\n";
-//        return -1;
-//    }
-//
-//    // 把 metadata 写入上下文并创建流
-//    if (write_mediainfo_to_avformat(oc, info) < 0) {
-//        avformat_free_context(oc);
-//        return -1;
-//    }
-//
-//    // 打开输出（如果需要真正写文件）
-//    if (!(oc->oformat->flags & AVFMT_NOFILE)) {
-//        if (avio_open(&oc->pb, out_filename, AVIO_FLAG_WRITE) < 0) {
-//            std::cerr << "failed open output file\n";
-//            avformat_free_context(oc);
-//            return -1;
-//        }
-//    }
-//
-//    // 写头（注意：有些 muxer 可能会丢弃没有 packet 的流）
-//    if (avformat_write_header(oc, nullptr) < 0) {
-//        std::cerr << "write header failed\n";
-//    }
-//
-//    // 如果你需要确保流不会被丢弃，可以写入占位 packet（见之前讨论）
-//    av_write_trailer(oc);
-//
-//    if (!(oc->oformat->flags & AVFMT_NOFILE))
-//        avio_closep(&oc->pb);
-//    avformat_free_context(oc);
-//    avformat_network_deinit();
-//    return 0;
-//}

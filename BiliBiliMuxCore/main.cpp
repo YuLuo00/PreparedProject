@@ -239,7 +239,7 @@ class MediaMux
 {
 public:
     MediaMux(){};
-    std::multimap<AVFormatContext *, AVStream *> GetInputStreams(const std::set<std::string> &files,
+    static std::multimap<AVFormatContext *, AVStream *> GetInputStreams(const std::set<std::string> &files,
                                                                  std::set<AVMediaType> types = {})
     {
         std::multimap<AVFormatContext *, AVStream *> result;
@@ -255,7 +255,7 @@ public:
         return result;
     }
 
-    std::multimap<AVFormatContext *, AVStream *> GetInputStreams(const std::string &file,
+    static std::multimap<AVFormatContext *, AVStream *> GetInputStreams(const std::string &file,
                                                                  std::set<AVMediaType> types = {})
     {
         std::multimap<AVFormatContext *, AVStream *> result;
@@ -507,13 +507,20 @@ int main()
 
 
     mux.Open(files);
-
+    write_mediainfo_to_avformat(mux.m_outCtx, infos[0]);
     mux.mux(false);
     mux.Close();
+
+    
     AVFormatContext *ctx = nullptr;
     ctx = mux.m_outCtx;
     ////int i = av_dict_count(mux.m_outCtx->);
 
+    std::multimap<AVFormatContext *, AVStream *> ii = MediaMux::GetInputStreams("result.mp4");
+    ctx = ii.begin()->first;
+    MediaInfo media;
+    read_mediainfo_from_avformat(ctx, media);
+    print_avformat_metadata(ctx);
     return -1;
     return 0;
 }

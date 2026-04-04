@@ -24,8 +24,8 @@ using json = nlohmann::json;
 
 struct EntryItem
 {
-    std::string md5;
-    std::string base_url;
+    std::wstring md5;
+    std::wstring base_url;
     int id = 0;
 };
 
@@ -33,8 +33,8 @@ struct MediaInfo
 {
     int owner_id = 0;
     int avid = 0;
-    std::string cover;
-    std::string title;
+    std::wstring cover;
+    std::wstring title;
     std::vector<EntryItem> videos;
     std::vector<EntryItem> audios;
 };
@@ -48,6 +48,13 @@ bool parse_index_json(const json &j, MediaInfo &out);
 // 把 MediaInfo 写入 AVFormatContext 的 metadata，并为每个条目创建 AVStream 并写入流级 metadata
 // 注意：创建流时我们至少设置 codecpar->codec_type，避免某些 muxer 在写入时丢弃“空流”。
 int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaInfo &info);
+
+// 从 AVFormatContext 的 metadata 读取 MediaInfo。
+// 读取格式与 write_mediainfo_to_avformat 写入的 key 保持一致。
+int read_mediainfo_from_avformat(const AVFormatContext *fmt, MediaInfo &out);
+
+// 打印 AVFormatContext 自身的文件级 metadata（不包含 stream metadata）。
+void print_avformat_metadata(const AVFormatContext *fmt);
 
 // 辅助：从文件加载 json
 // 辅助：从文件加载 json
