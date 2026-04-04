@@ -14,6 +14,7 @@
 #include <atomic>
 #include <filesystem>
 #include <vector>
+#include <array>
 
 namespace fs = std::filesystem;
 
@@ -21,6 +22,10 @@ namespace fs = std::filesystem;
 
 #ifdef _WIN32
 #include <windows.h>
+#include <ShlObj.h>
+#if defined(_MSC_VER)
+#pragma comment(lib, "Shell32.lib")
+#endif
 #endif
 
 #include "tools.h"
@@ -29,6 +34,106 @@ using namespace Tools;
 namespace
 {
 std::atomic<bool> g_logUtf8ToLocalEnabled{true};
+
+#ifdef _WIN32
+bool IsTrailingSpaceOrDot(wchar_t ch)
+{
+    return ch == L' ' || ch == L'.';
+}
+
+void TrimTrailingSpacesAndDots(std::wstring &text)
+{
+    while (!text.empty() && IsTrailingSpaceOrDot(text.back())) {
+        text.pop_back();
+    }
+}
+
+void ReplaceInvalidFilenameChars(std::wstring &text)
+{
+    static constexpr std::array<wchar_t, 9> invalidChars = {
+        L'\\', L'/', L':', L'*', L'?', L'"', L'<', L'>', L'|'
+    };
+
+    for (wchar_t &ch : text) {
+        if (ch == 0 || ch < 32) {
+            ch = L'_';
+            continue;
+        }
+
+        for (wchar_t invalid : invalidChars) {
+            if (ch == invalid) {
+                ch = L'_';
+                break;
+            }
+        }
+    }
+}
+
+bool IsReservedWindowsDeviceName(const std::wstring &name)
+{
+    if (name.empty()) {
+        return false;
+    }
+
+    std::wstring trimmed = name;
+    TrimTrailingSpacesAndDots(trimmed);
+    if (trimmed.empty()) {
+        return false;
+    }
+
+    const size_t dotPos = trimmed.find(L'.');
+    std::wstring baseName = dotPos == std::wstring::npos ? trimmed : trimmed.substr(0, dotPos);
+    baseName = Tools::tolower_wstring(baseName);
+
+    static const std::array<const wchar_t *, 29> reservedNames = {
+        L"con",  L"prn",  L"aux",  L"nul",
+        L"com1", L"com2", L"com3", L"com4", L"com5", L"com6", L"com7", L"com8", L"com9",
+        L"com\xb9", L"com\xb2", L"com\xb3",
+        L"lpt1", L"lpt2", L"lpt3", L"lpt4", L"lpt5", L"lpt6", L"lpt7", L"lpt8", L"lpt9",
+        L"lpt\xb9", L"lpt\xb2", L"lpt\xb3"
+    };
+
+    for (const wchar_t *reserved : reservedNames) {
+        if (baseName == reserved) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void DisarmReservedWindowsDeviceName(std::wstring &text)
+{
+    if (!IsReservedWindowsDeviceName(text)) {
+        return;
+    }
+
+    const size_t dotPos = text.find(L'.');
+    if (dotPos == std::wstring::npos) {
+        text += L'_';
+        return;
+    }
+
+    text.insert(dotPos, 1, L'_');
+}
+
+std::wstring CleanupFilenameWithWindowsApi(const std::wstring &input)
+{
+    if (input.empty() || input.size() >= MAX_PATH) {
+        return input;
+    }
+
+    std::vector<wchar_t> buffer(MAX_PATH, L'\0');
+    input.copy(buffer.data(), input.size());
+    buffer[input.size()] = L'\0';
+
+    const int cleanupResult = ::PathCleanupSpec(nullptr, buffer.data());
+    if ((cleanupResult & PCS_FATAL) != 0) {
+        return input;
+    }
+
+    return std::wstring(buffer.data());
+}
+#endif
 }
 
 std::string Tools::AvErrorCode2Str(int errCode)
@@ -405,18 +510,39 @@ json Tools::LoadJsonFromFile(const std::filesystem::path &path)
 
 std::string Tools::sanitize_windows_filename(const std::string &input)
 {
-    std::string result = input;
-
-    const std::string invalid_chars = "\\/:*?\"<>|";
-
-    for (char &c : result) {
-        // 替换非法字符
-        if (invalid_chars.find(c) != std::string::npos || static_cast<unsigned char>(c) < 32) {
-            c = '？';
-        }
+    try {
+        return wstring_to_utf8(sanitize_windows_filename(utf8_to_wstring(input)));
     }
+    catch (...) {
+        std::string result = input;
+        static constexpr std::array<char, 9> invalidChars = {
+            '\\', '/', ':', '*', '?', '"', '<', '>', '|'
+        };
 
-    return result;
+        for (char &ch : result) {
+            if (static_cast<unsigned char>(ch) < 32) {
+                ch = '_';
+                continue;
+            }
+
+            for (char invalid : invalidChars) {
+                if (ch == invalid) {
+                    ch = '_';
+                    break;
+                }
+            }
+        }
+
+        while (!result.empty() && (result.back() == ' ' || result.back() == '.')) {
+            result.pop_back();
+        }
+
+        if (result.empty() || result == "." || result == "..") {
+            result = "_";
+        }
+
+        return result;
+    }
 }
 
 std::wstring Tools::utf8_to_wstring(const std::string &str)
@@ -473,18 +599,35 @@ std::string Tools::wstring_to_utf8(const std::wstring &wstr)
 
 std::wstring Tools::sanitize_windows_filename(const std::wstring &input)
 {
+#ifdef _WIN32
     std::wstring result = input;
+    ReplaceInvalidFilenameChars(result);
+    result = CleanupFilenameWithWindowsApi(result);
+    ReplaceInvalidFilenameChars(result);
+    TrimTrailingSpacesAndDots(result);
 
-    const std::wstring invalid_chars = L"\\/～:*?\"<>|";
-
-    for (wchar_t &c : result) {
-        // 替换非法字符 + 控制字符
-        if (invalid_chars.find(c) != std::wstring::npos || c < 32) {
-            c = L'？';
-        }
+    if (result == L"." || result == L"..") {
+        result += L'_';
     }
 
+    if (result.empty()) {
+        result = L"_";
+    }
+
+    DisarmReservedWindowsDeviceName(result);
     return result;
+#else
+    std::wstring result = input;
+    for (wchar_t &ch : result) {
+        if (ch == 0 || ch < 32 || ch == L'/') {
+            ch = L'_';
+        }
+    }
+    if (result.empty()) {
+        result = L"_";
+    }
+    return result;
+#endif
 }
 
 std::string Tools::Utf8ToLocal(const std::string &utf8)
