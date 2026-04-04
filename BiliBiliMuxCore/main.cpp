@@ -443,39 +443,7 @@ public:
 };
 
 
-//extern "C"
-//{
-//#include <libavformat/avformat.h>
-//}
-//
-//#include "Logger.h"
 
-void DumpFormatContextDict(AVFormatContext *ctx)
-{
-    if (!ctx) {
-        LOG_ERROR("ffmpeg", "AVFormatContext is null");
-        return;
-    }
-
-    std::multimap<std::string, AVStream *>  stms = AttachInfo::GetAllAttachStream(ctx);
-    // 遍历所有唯一的 key
-    LOG_INFO("ffmpeg", "===== AVFormatContext Metadata =====");
-    for (auto it = stms.begin(); it != stms.end(); ) {
-        std::string key = it->first;
-        auto range = stms.equal_range(key);
-        LOG_INFO("ffmpeg", "Key: {}", key);
-        // 遍历该 key 下的所有 value
-        for (auto jt = range.first; jt != range.second; ++jt) {
-            AVStream *stream = jt->second;
-            // 处理 stream，例如打印信息
-            stream->codecpar->extradata_size;
-            stream->codecpar->extradata;
-            LOG_INFO("ffmpeg", "  Stream: {}", (void*)stream);
-        }
-        it = range.second;
-    }
-    LOG_INFO("ffmpeg", "====================================");
-}
 
 void GlobalInit()
 {
@@ -532,25 +500,13 @@ int main()
 
 
     mux.Open(files);
-    AttachInfo::write_attach(mux.m_outCtx, aimMatch.media_subdirs[0]);
-    //DumpFormatContextDict(mux.m_outCtx);
-    std::vector<AttachedFile> f = AttachInfo::ReadAttachments(mux.m_outCtx);
+
     mux.mux(false);
     mux.Close();
     AVFormatContext *ctx = nullptr;
     ctx = mux.m_outCtx;
     ////int i = av_dict_count(mux.m_outCtx->);
 
-    ctx = AvApiWrapper::_AvformatAllocOutputContext2(LR"(C:\Users\Administrator\Desktop\BiliBiliMux\bin\result.mp4)");
-    //// 写头（此时 metadata 被写入文件）
-    //avformat_write_header(ctx, nullptr);
-
-    //// 收尾
-    //av_write_trailer(ctx);
-    //avio_close(ctx->pb);
-    //avformat_free_context(ctx);
-    //ctx = AvApiWrapper::_AvformatAllocOutputContext2(LR"(C:\Users\Administrator\Desktop\BiliBiliMux\bin\result.mp4)");
-    DumpFormatContextDict(ctx);
     return -1;
     return 0;
 }
