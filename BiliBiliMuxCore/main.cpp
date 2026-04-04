@@ -467,7 +467,7 @@ void GlobalInit()
 int main()
 {
     GlobalInit();
-
+    LOG_INFO(LogGroup::DEFAULT, "--------------------------------------run begin-----------------------------------");
 
     fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
     auto matches = BiliCache::CollectBiliFoldersStructured(root);
