@@ -53,6 +53,27 @@ namespace Tools
     std::string Utf8ToLocal(const std::string &utf8);
 
     std::wstring sanitize_windows_filename(const std::wstring &input);
+    inline std::wstring tolower_wstring(const std::wstring &s, const std::locale &loc = std::locale())
+    {
+        std::wstring out;
+        out.reserve(s.size());
+        const std::ctype<wchar_t> &ct = std::use_facet<std::ctype<wchar_t>>(loc);
+        for (wchar_t wc : s)
+            out.push_back(ct.tolower(wc));
+        return out;
+    }
+
+ inline bool iequals_wstring(const std::wstring &a, const std::wstring &b, const std::locale &loc = std::locale())
+    {
+        if (a.size() != b.size())
+            return false;
+        const std::ctype<wchar_t> &ct = std::use_facet<std::ctype<wchar_t>>(loc);
+        for (size_t i = 0; i < a.size(); ++i) {
+            if (ct.tolower(a[i]) != ct.tolower(b[i]))
+                return false;
+        }
+        return true;
+    }
 
 
     }

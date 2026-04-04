@@ -466,14 +466,22 @@ int main()
     fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
     auto matches = BiliCache::CollectBiliFoldersStructured(root);
     Match aimMatch;
+    std::vector<MediaInfo> infos;
     for (const auto &m : matches) {
         std::string title = BiliCache::GetTitle(m);
         std::wstring titleWstr = Tools::utf8_to_wstring(title);
         std::cout << Tools::Utf8ToLocal(title) << std::endl;
         if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
             aimMatch = m;
-            break;
+            //break;
         }
+        for (const MediaSubdir &sub : m.media_subdirs) {
+            MediaInfo mediaInfo;
+            loadFile2MediaInfo(m.entry_json_path.generic_wstring(), mediaInfo);
+            loadFile2MediaInfo(sub.index.generic_wstring(), mediaInfo);
+            infos.push_back(mediaInfo);
+        }
+        
     }
 
     std::cout << "Found " << matches.size() << " matching folders.\n";
