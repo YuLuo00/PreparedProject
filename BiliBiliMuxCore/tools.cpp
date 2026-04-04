@@ -666,9 +666,14 @@ bool Tools::IsLogUtf8ToLocalEnabled()
 
 std::string Tools::LogUtf8(const std::string &utf8)
 {
+#ifdef LOGUTF8_Local
     if (IsLogUtf8ToLocalEnabled()) {
         return Utf8ToLocal(utf8);
     }
+#else
+
+#endif // LOGUTF8_Local
+
     return utf8;
 }
 

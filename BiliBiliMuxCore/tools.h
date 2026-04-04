@@ -19,6 +19,10 @@ nlohmann::json;
 using json = nlohmann::json;
 
 
+#define LOGUTF8(text) Tools::LogUtf8(text)
+//#define LOGUTF8_Local
+
+
 namespace Tools
 {
     std::string AvErrorCode2Str(int errCode);
@@ -54,6 +58,7 @@ namespace Tools
     std::string Utf8ToLocal(const std::string &utf8);
     void SetLogUtf8ToLocalEnabled(bool enabled);
     bool IsLogUtf8ToLocalEnabled();
+
     std::string LogUtf8(const std::string &utf8);
     inline std::string LogUtf8(const char *utf8)
     {
@@ -93,6 +98,4 @@ namespace Tools
 
 
     }
-
-#define LOGUTF8(text) Tools::LogUtf8(text)
 
