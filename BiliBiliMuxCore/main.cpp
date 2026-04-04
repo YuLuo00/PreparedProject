@@ -331,7 +331,6 @@ public:
     {
         int ret = 0;
 
-        Open(m_files);
 
         // 构建输出流， 记录映射关系
         std::map<AVFormatContext *, std::map<int, int>>
