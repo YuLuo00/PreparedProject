@@ -21,6 +21,26 @@ void SetMetadataWString(AVDictionary **metadata, const char *key, const std::wst
     av_dict_set(metadata, key, utf8.c_str(), 0);
 }
 
+void SetMetadataInt(AVDictionary **metadata, const char *key, int value)
+{
+    if (!metadata) {
+        return;
+    }
+
+    const std::string text = std::to_string(value);
+    av_dict_set(metadata, key, text.c_str(), 0);
+}
+
+void SetMetadataInt64(AVDictionary **metadata, const char *key, int64_t value)
+{
+    if (!metadata) {
+        return;
+    }
+
+    const std::string text = std::to_string(value);
+    av_dict_set(metadata, key, text.c_str(), 0);
+}
+
 std::wstring GetMetadataWString(const AVDictionary *metadata, const char *key)
 {
     if (!metadata) {
@@ -55,6 +75,27 @@ bool TryParseInt(const char *text, int &out)
     }
 }
 
+bool TryParseInt64(const char *text, int64_t &out)
+{
+    if (!text) {
+        return false;
+    }
+
+    try {
+        const std::string textStr(text);
+        size_t pos = 0;
+        int64_t value = std::stoll(textStr, &pos);
+        if (pos != textStr.size()) {
+            return false;
+        }
+        out = value;
+        return true;
+    }
+    catch (...) {
+        return false;
+    }
+}
+
 void GetMetadataInt(const AVDictionary *metadata, const char *key, int &out)
 {
     if (!metadata) {
@@ -67,6 +108,20 @@ void GetMetadataInt(const AVDictionary *metadata, const char *key, int &out)
     }
 
     TryParseInt(entry->value, out);
+}
+
+void GetMetadataInt64(const AVDictionary *metadata, const char *key, int64_t &out)
+{
+    if (!metadata) {
+        return;
+    }
+
+    const AVDictionaryEntry *entry = av_dict_get(metadata, key, nullptr, 0);
+    if (!entry || !entry->value) {
+        return;
+    }
+
+    TryParseInt64(entry->value, out);
 }
 
 bool ParseIndexedMetadataKey(const char *key, const char *prefix, size_t &index, std::string &field)
@@ -132,8 +187,19 @@ bool parse_entry_json(const json &j, MediaInfo &out)
             out.owner_id = j.at("owner_id").get<int>();
         if (j.contains("avid"))
             out.avid = j.at("avid").get<int>();
+        out.bvid = JsonStringToWString(j, "bvid");
         out.cover = JsonStringToWString(j, "cover");
         out.title = JsonStringToWString(j, "title");
+
+        if (j.contains("page_data") && j.at("page_data").is_object()) {
+            const json &pageData = j.at("page_data");
+            if (pageData.contains("cid"))
+                out.cid = pageData.at("cid").get<int64_t>();
+            if (pageData.contains("page"))
+                out.page = pageData.at("page").get<int>();
+            out.download_title = JsonStringToWString(pageData, "download_title");
+            out.download_subtitle = JsonStringToWString(pageData, "download_subtitle");
+        }
         return true;
     }
     catch (const std::exception &e) {
@@ -186,14 +252,13 @@ int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaInfo &info)
 
     SetMetadataWString(&fmt->metadata, "title", info.title);
     SetMetadataWString(&fmt->metadata, "cover", info.cover);
-
-    {
-        char buf[64];
-        snprintf(buf, sizeof(buf), "%d", info.owner_id);
-        av_dict_set(&fmt->metadata, "owner_id", buf, 0);
-        snprintf(buf, sizeof(buf), "%d", info.avid);
-        av_dict_set(&fmt->metadata, "avid", buf, 0);
-    }
+    SetMetadataWString(&fmt->metadata, "bvid", info.bvid);
+    SetMetadataWString(&fmt->metadata, "download_subtitle", info.download_subtitle);
+    SetMetadataWString(&fmt->metadata, "download_title", info.download_title);
+    SetMetadataInt(&fmt->metadata, "owner_id", info.owner_id);
+    SetMetadataInt(&fmt->metadata, "avid", info.avid);
+    SetMetadataInt64(&fmt->metadata, "cid", info.cid);
+    SetMetadataInt(&fmt->metadata, "page", info.page);
 
     for (size_t i = 0; i < info.videos.size(); ++i) {
         const EntryItem &it = info.videos[i];
@@ -249,8 +314,13 @@ int read_mediainfo_from_avformat(const AVFormatContext *fmt, MediaInfo &out)
     out = {};
     out.title = GetMetadataWString(fmt->metadata, "title");
     out.cover = GetMetadataWString(fmt->metadata, "cover");
+    out.bvid = GetMetadataWString(fmt->metadata, "bvid");
+    out.download_subtitle = GetMetadataWString(fmt->metadata, "download_subtitle");
+    out.download_title = GetMetadataWString(fmt->metadata, "download_title");
     GetMetadataInt(fmt->metadata, "owner_id", out.owner_id);
     GetMetadataInt(fmt->metadata, "avid", out.avid);
+    GetMetadataInt64(fmt->metadata, "cid", out.cid);
+    GetMetadataInt(fmt->metadata, "page", out.page);
 
     std::map<size_t, EntryItem> videoEntries;
     std::map<size_t, EntryItem> audioEntries;
