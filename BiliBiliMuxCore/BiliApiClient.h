@@ -72,7 +72,7 @@ public:
                        HttpResponse &outResponse,
                        std::string *errMsg = nullptr) const;
 
-    // Download MediaInfo.cover and save it to the specified file.
+    // Download MediaInfo.cover and save it to the specified file path.
     bool DownloadCoverToFile(const MediaInfo &mediaInfo,
                              const std::filesystem::path &outputPath,
                              std::string *errMsg = nullptr) const;

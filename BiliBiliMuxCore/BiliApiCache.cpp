@@ -402,3 +402,65 @@ bool BiliApiCache::EnsureCacheDirectory(const std::filesystem::path &dir, std::s
         return false;
     }
 }
+
+// Cover cache methods
+std::filesystem::path BiliApiCache::BuildCoverCachePath(const std::string& coverUrl) const
+{
+    std::hash<std::string> hasher;
+    std::string hashStr = std::to_string(hasher(coverUrl));
+    
+    // Try to guess extension from URL
+    std::string ext = ".jpg"; // default
+    size_t dotPos = coverUrl.find_last_of('.');
+    if (dotPos != std::string::npos) {
+        std::string urlExt = coverUrl.substr(dotPos);
+        // Only allow safe extensions
+        if (urlExt == ".jpg" || urlExt == ".jpeg" || urlExt == ".png" || 
+            urlExt == ".webp" || urlExt == ".gif" || urlExt == ".bmp") {
+            ext = urlExt;
+        }
+    }
+    
+    return m_options.cache_root / "covers" / (hashStr + ext);
+}
+
+bool BiliApiCache::HasCoverCache(const std::string& coverUrl) const
+{
+    try {
+        const std::filesystem::path cachePath = BuildCoverCachePath(coverUrl);
+        return std::filesystem::exists(cachePath) && std::filesystem::is_regular_file(cachePath);
+    }
+    catch (...) {
+        return false;
+    }
+}
+
+bool BiliApiCache::DownloadCoverToCache(const std::string& coverUrl,
+                                        std::filesystem::path& outPath,
+                                        std::string* errMsg)
+{
+    const std::filesystem::path cachePath = BuildCoverCachePath(coverUrl);
+    outPath = cachePath;
+    
+    // Check if already cached
+    if (HasCoverCache(coverUrl)) {
+        LOG_INFO(LogGroup::IO, "Cover already cached: {}", PathToUtf8(cachePath));
+        return true;
+    }
+    
+    // Ensure cache directory exists
+    if (!EnsureCacheDirectory(cachePath.parent_path(), errMsg)) {
+        return false;
+    }
+    
+    // Create a temporary MediaInfo to use DownloadCoverToFile
+    MediaInfo tempMediaInfo;
+    tempMediaInfo.cover = Tools::utf8_to_wstring(coverUrl);
+    
+    if (!m_client.DownloadCoverToFile(tempMediaInfo, cachePath, errMsg)) {
+        return false;
+    }
+    
+    LOG_INFO(LogGroup::IO, "Cover downloaded and cached: {}", PathToUtf8(cachePath));
+    return true;
+}

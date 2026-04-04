@@ -502,7 +502,17 @@ bool BiliApiClient::HttpGetBinary(const std::string &url, HttpResponse &outRespo
     curl_slist *headers = nullptr;
     headers = curl_slist_append(headers, "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36");
     headers = curl_slist_append(headers, "Referer: https://www.bilibili.com/");
-    headers = curl_slist_append(headers, "Accept: */*");
+    headers = curl_slist_append(headers, "Accept: application/json, text/plain, */*");
+    headers = curl_slist_append(headers, "Accept-Language: zh-CN,zh;q=0.9,en;q=0.8");
+    headers = curl_slist_append(headers, "Accept-Encoding: gzip, deflate, br");
+    headers = curl_slist_append(headers, "DNT: 1");
+    headers = curl_slist_append(headers, "Connection: keep-alive");
+    headers = curl_slist_append(headers, "Upgrade-Insecure-Requests: 1");
+    headers = curl_slist_append(headers, "Sec-Fetch-Dest: empty");
+    headers = curl_slist_append(headers, "Sec-Fetch-Mode: cors");
+    headers = curl_slist_append(headers, "Sec-Fetch-Site: same-site");
+    headers = curl_slist_append(headers, "Cache-Control: no-cache");
+    headers = curl_slist_append(headers, "Pragma: no-cache");
 
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer.data());
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -511,10 +521,14 @@ bool BiliApiClient::HttpGetBinary(const std::string &url, HttpResponse &outRespo
     curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, m_options.connect_timeout_ms);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, m_options.request_timeout_ms);
-    curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
+    curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "gzip, deflate, br");
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &WriteToVector);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &outResponse.body);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36");
 
     const CURLcode performCode = curl_easy_perform(curl);
     if (performCode != CURLE_OK) {

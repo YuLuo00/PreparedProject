@@ -23,6 +23,7 @@ extern "C"
 
 #include <atomic>
 #include <filesystem>
+#include <functional>  // std::hash
 #include <map>
 #include <mutex>
 #include <queue>
@@ -50,6 +51,8 @@ using namespace tbb::flow;
 
 #include "attach.h"
 #include "AvApiWrapper.h"
+#include "BiliApiCache.h"
+#include "BiliApiClient.h"
 #include "BiliCache.h"
 #include "common.h"
 #include "ffmpegMsg.h"
@@ -57,6 +60,137 @@ using namespace tbb::flow;
 #include "MediaMux.h"
 #include "ReadNode.h"
 #include "tools.h"
+
+#include <algorithm>
+#include <vector>
+
+
+std::string ToLowerAscii(std::string text)
+{
+    std::transform(text.begin(), text.end(), text.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    return text;
+}
+
+std::string TrimQueryAndFragment(const std::string &url)
+{
+    size_t end = url.find_first_of("?#");
+    if (end == std::string::npos) {
+        end = url.size();
+    }
+    return url.substr(0, end);
+}
+
+bool IsSafeExtension(const std::string &ext)
+{
+    static const std::vector<std::string> safeExts = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff", ".tif"};
+    return std::find(safeExts.begin(), safeExts.end(), ext) != safeExts.end();
+}
+
+std::string GuessExtensionFromUrl(const std::string &url)
+{
+    const std::string cleanUrl = TrimQueryAndFragment(url);
+    const size_t slashPos = cleanUrl.find_last_of('/');
+    const size_t dotPos = cleanUrl.find_last_of('.');
+    if (dotPos == std::string::npos) {
+        return {};
+    }
+    if (slashPos != std::string::npos && dotPos < slashPos) {
+        return {};
+    }
+
+    std::string ext = ToLowerAscii(cleanUrl.substr(dotPos));
+    if (!IsSafeExtension(ext)) {
+        return {};
+    }
+
+    return ext;
+}
+
+std::string GuessExtensionFromContentType(const std::string &contentType)
+{
+    const std::string lowerType = ToLowerAscii(contentType);
+    if (lowerType.find("image/jpeg") != std::string::npos || lowerType.find("image/jpg") != std::string::npos) {
+        return ".jpg";
+    }
+    if (lowerType.find("image/png") != std::string::npos) {
+        return ".png";
+    }
+    if (lowerType.find("image/webp") != std::string::npos) {
+        return ".webp";
+    }
+    if (lowerType.find("image/gif") != std::string::npos) {
+        return ".gif";
+    }
+    if (lowerType.find("image/bmp") != std::string::npos) {
+        return ".bmp";
+    }
+    if (lowerType.find("image/tiff") != std::string::npos) {
+        return ".tiff";
+    }
+    return {};
+}
+
+std::string BuildCoverBaseName(const MediaInfo &mediaInfo)
+{
+    if (!mediaInfo.download_title.empty()) {
+        return Tools::wstring_to_utf8(mediaInfo.download_title);
+    }
+    if (!mediaInfo.title.empty()) {
+        return Tools::wstring_to_utf8(mediaInfo.title);
+    }
+    if (!mediaInfo.bvid.empty()) {
+        return Tools::wstring_to_utf8(mediaInfo.bvid);
+    }
+    if (mediaInfo.avid > 0) {
+        return "av" + std::to_string(mediaInfo.avid);
+    }
+    return {};
+}
+
+std::string GenerateUniqueCoverName(const std::string& coverUrl)
+{
+    // 从URL中提取文件名部分
+    size_t lastSlash = coverUrl.find_last_of('/');
+    if (lastSlash != std::string::npos) {
+        std::string filename = coverUrl.substr(lastSlash + 1);
+        // 移除查询参数
+        size_t questionMark = filename.find('?');
+        if (questionMark != std::string::npos) {
+            filename = filename.substr(0, questionMark);
+        }
+        return filename;
+    }
+    // 如果无法从URL提取，使用哈希值作为文件名
+    std::hash<std::string> hasher;
+    return "cover_" + std::to_string(hasher(coverUrl)) + ".jpg";
+}
+
+std::filesystem::path BuildCoverFilePathImpl(const MediaInfo &mediaInfo,
+                                             const std::filesystem::path &outputDir,
+                                             const std::string &preferredExt)
+{
+    std::string baseNameStr = BuildCoverBaseName(mediaInfo);
+    std::wstring baseName = Tools::sanitize_windows_filename(Tools::utf8_to_wstring(baseNameStr));
+    if (baseName.empty()) {
+        baseName = L"cover";
+    }
+
+    std::string ext = preferredExt;
+    if (ext.empty()) {
+        try {
+            ext = GuessExtensionFromUrl(Tools::wstring_to_utf8(mediaInfo.cover));
+        }
+        catch (...) {
+            ext.clear();
+        }
+    }
+    if (ext.empty()) {
+        ext = ".jpg";
+    }
+
+    const std::string fileNameUtf8 = Tools::wstring_to_utf8(baseName) + "_cover" + ext;
+    return outputDir / std::filesystem::path(fileNameUtf8);
+}
 
 
 #include <mutex>
@@ -235,6 +369,53 @@ int main_test()
     for (const auto &cover : coverSet) {
         LOG_INFO(LogGroup::IO, "cover={}", LOGUTF8(cover));
     }
+
+    // 测试前三个 owner_id 和 cover
+    LOG_INFO(LogGroup::IO, "--------------------------------------Testing API calls-----------------------------------");
+
+    BiliApiCache apiCache;
+    // 设置缓存根目录为工作目录下的 cache/bilibili_api
+    BiliApiCache::Options cacheOptions;
+    cacheOptions.cache_root = fs::current_path() / "cache" / "bilibili_api";
+    apiCache.SetOptions(cacheOptions);
+
+    // 获取前三个 owner_id 进行测试 - 暂时注释掉
+    /*
+    auto ownerIdIt = ownerIdSet.begin();
+    for (int i = 0; i < 3 && ownerIdIt != ownerIdSet.end(); ++i, ++ownerIdIt) {
+        int ownerId = *ownerIdIt;
+        LOG_INFO(LogGroup::IO, "Testing owner_id: {}", ownerId);
+
+        BiliApiClient::AuthorInfo authorInfo;
+        std::string errMsg;
+        if (apiClient.GetAuthorInfo(ownerId, authorInfo, &errMsg)) {
+            LOG_INFO(LogGroup::IO, "Successfully got author info for owner_id {}: name={}", ownerId, LOGUTF8(authorInfo.name));
+        } else {
+            LOG_ERROR(LogGroup::IO, "Failed to get author info for owner_id {}: {}", ownerId, errMsg);
+        }
+        Sleep(5000); // 增加到5秒延迟
+    }
+    */
+
+
+    auto coverIt = coverSet.begin();
+    for (int i = 0;  coverIt != coverSet.end(); ++i, ++coverIt) {
+        const std::wstring& coverUrl = *coverIt;
+        LOG_INFO(LogGroup::IO, "Testing cover: {}", LOGUTF8(coverUrl));
+
+        std::string coverUrlUtf8 = Tools::wstring_to_utf8(coverUrl);
+        fs::path cachedPath;
+        std::string errMsg;
+
+        if (apiCache.DownloadCoverToCache(coverUrlUtf8, cachedPath, &errMsg)) {
+            LOG_INFO(LogGroup::IO, "Cover ready at: {}", cachedPath.string());
+        } else {
+            LOG_ERROR(LogGroup::IO, "Failed to get cover {}: {}", coverUrlUtf8, errMsg);
+        }
+        Sleep(500); // 延迟以避免率限制
+    }
+
+    LOG_INFO(LogGroup::IO, "--------------------------------------main_test end-----------------------------------");
 
     return 0;
 }
