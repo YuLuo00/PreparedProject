@@ -69,6 +69,7 @@ target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/MediaMux.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ReadNode.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ReadNode.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/test.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/tools.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/tools.h"
     # BiliBiliMuxCore\main.cpp

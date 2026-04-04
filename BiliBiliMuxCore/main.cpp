@@ -448,11 +448,18 @@ int main_test()
     return 0;
 }
 
+extern int add_cover_to_video(const char* output_filename, const char* input_filename, const char* image_filename);
+
 int main()
 {
     GlobalInit();
     //return main_test();
     LOG_INFO(LogGroup::DEFAULT, "--------------------------------------run begin-----------------------------------");
+
+
+    return add_cover_to_video(R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\cover.mp4)",
+        R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\【小巫】不行啊♥不故作欢笑是不行的.mp4)",
+        R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\【小巫】不行啊♥不故作欢笑是不行的_cover.jpg)");
 
     fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
     auto matches = BiliCache::CollectBiliFoldersStructured(root);
@@ -463,14 +470,14 @@ int main()
         LOG_INFO(LogGroup::IO, "{}", LOGUTF8(title));
         for (size_t i = 0; i < m.media_subdirs.size(); i++) {
             MediaSubdir sub = m.media_subdirs[i];
-            mainPipeline(sub);
+            //mainPipeline(sub);
         }
-        //if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
-        //    if (!m.media_subdirs.empty()) {
-        //        aimSub = m.media_subdirs.front();
-        //    }
-        //    //break;
-        //}
+        if (titleWstr == LR"(【小巫】不行啊♥不故作欢笑是不行的)") {
+            if (!m.media_subdirs.empty()) {
+                aimSub = m.media_subdirs.front();
+            }
+            break;
+        }
     }
 
     LOG_INFO(LogGroup::IO, "Found {} matching folders.", matches.size());
@@ -480,6 +487,6 @@ int main()
         return -1;
     }
 
-        return -1;
+        //return -1;
     return mainPipeline(aimSub);
 }
