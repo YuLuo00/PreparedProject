@@ -12,3 +12,4 @@ obj
 /build
 /.clang-format
 /.vs
+/out/build/x64-Debug

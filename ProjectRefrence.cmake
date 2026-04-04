@@ -179,3 +179,14 @@ macro(Add3rd_FFmpeg ProjectName)
     )
 endmacro()
 
+
+macro(Add3rd_TBB ProjectName)
+    set(TBB_DIR "${ProjectRootDir}/ThirdParty/tbb/installed/x64-windows/share/tbb//")
+    message("TBB_DIR == ${TBB_DIR}")
+
+    find_package(TBB CONFIG REQUIRED)
+    target_link_libraries(${ProjectName} PRIVATE TBB::tbb)
+    
+    Add_Interface_Imported_Location(TBB::tbb)
+    Add_Imported_Location(TBB::tbb)
+endmacro()
