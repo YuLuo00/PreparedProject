@@ -476,7 +476,7 @@ int main()
     for (const auto &m : matches) {
         std::string title = BiliCache::GetTitle(m);
         std::wstring titleWstr = Tools::utf8_to_wstring(title);
-        LOGINFO("{}", Tools::Utf8ToLocal(title));
+        LOGINFO("{}", LOGUTF8(title));
         if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
             aimMatch = m;
             //break;

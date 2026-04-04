@@ -125,8 +125,7 @@ int main2()
         //    std::cout << "      index: " << c.index.string() << "\n";
         //}
         std::string title = BiliCache::GetTitle(m);
-        std::string title_local = Tools::Utf8ToLocal(title);
-        LOGINFO("{}", title_local);
+        LOGINFO("{}", LOGUTF8(title));
         // 剪切到其他路径
         {
             //auto dirName = m.dir.filename();

@@ -51,6 +51,17 @@ namespace Tools
     std::wstring utf8_to_wstring(const std::string &str);
     std::string wstring_to_utf8(const std::wstring &wstr);
     std::string Utf8ToLocal(const std::string &utf8);
+    void SetLogUtf8ToLocalEnabled(bool enabled);
+    bool IsLogUtf8ToLocalEnabled();
+    std::string LogUtf8(const std::string &utf8);
+    inline std::string LogUtf8(const char *utf8)
+    {
+        return LogUtf8(utf8 ? std::string(utf8) : std::string());
+    }
+    inline std::string LogUtf8(const std::wstring &text)
+    {
+        return LogUtf8(wstring_to_utf8(text));
+    }
 
     std::wstring sanitize_windows_filename(const std::wstring &input);
     inline std::wstring tolower_wstring(const std::wstring &s, const std::locale &loc = std::locale())
@@ -78,4 +89,5 @@ namespace Tools
 
     }
 
+#define LOGUTF8(text) Tools::LogUtf8(text)
 

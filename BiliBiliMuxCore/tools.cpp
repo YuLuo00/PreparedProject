@@ -11,6 +11,7 @@
 #include <streambuf>
 #include <sstream>
 #include <string>
+#include <atomic>
 #include <filesystem>
 #include <vector>
 
@@ -24,6 +25,11 @@ namespace fs = std::filesystem;
 
 #include "tools.h"
 using namespace Tools;
+
+namespace
+{
+std::atomic<bool> g_logUtf8ToLocalEnabled{true};
+}
 
 std::string Tools::AvErrorCode2Str(int errCode)
 {
@@ -505,6 +511,24 @@ std::string Tools::Utf8ToLocal(const std::string &utf8)
     // Linux/macOS 默认 UTF-8，不需要转换
     return utf8;
 #endif
+}
+
+void Tools::SetLogUtf8ToLocalEnabled(bool enabled)
+{
+    g_logUtf8ToLocalEnabled.store(enabled, std::memory_order_relaxed);
+}
+
+bool Tools::IsLogUtf8ToLocalEnabled()
+{
+    return g_logUtf8ToLocalEnabled.load(std::memory_order_relaxed);
+}
+
+std::string Tools::LogUtf8(const std::string &utf8)
+{
+    if (IsLogUtf8ToLocalEnabled()) {
+        return Utf8ToLocal(utf8);
+    }
+    return utf8;
 }
 
 
