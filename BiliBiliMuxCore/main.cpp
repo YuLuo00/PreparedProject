@@ -191,9 +191,49 @@ int mainPipeline(const MediaSubdir &sub)
     return 0;
 }
 
+int main_test()
+{
+    LOG_INFO(LogGroup::DEFAULT, "--------------------------------------main_test begin-----------------------------------");
+
+    fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
+    auto matches = BiliCache::CollectBiliFoldersStructured(root);
+    std::set<std::pair<int, std::wstring>> ownerCoverSet;
+
+    for (const auto &m : matches) {
+        std::string title = BiliCache::GetTitle(m);
+        LOG_INFO(LogGroup::IO, "{}", LOGUTF8(title));
+
+        for (size_t i = 0; i < m.media_subdirs.size(); ++i) {
+            const MediaSubdir &sub = m.media_subdirs[i];
+
+            MediaInfo mediaInfo;
+            if (!loadSubdir2MediaInfo(sub, mediaInfo)) {
+                LOG_WARN(LogGroup::IO, "读取 MediaInfo 失败，跳过当前条目");
+                continue;
+            }
+
+            if (mediaInfo.owner_id <= 0 && mediaInfo.cover.empty()) {
+                continue;
+            }
+
+            ownerCoverSet.insert({ mediaInfo.owner_id, mediaInfo.cover });
+        }
+    }
+
+    LOG_INFO(LogGroup::IO, "Found {} matching folders.", matches.size());
+    LOG_INFO(LogGroup::IO, "Collected {} unique owner-cover pairs.", ownerCoverSet.size());
+
+    for (const auto &item : ownerCoverSet) {
+        LOG_INFO(LogGroup::IO, "owner_id={}, cover={}", item.first, LOGUTF8(item.second));
+    }
+
+    return 0;
+}
+
 int main()
 {
     GlobalInit();
+    return main_test();
     LOG_INFO(LogGroup::DEFAULT, "--------------------------------------run begin-----------------------------------");
 
     fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";

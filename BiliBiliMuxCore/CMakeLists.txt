@@ -37,6 +37,7 @@ Add3rd_nlohmann_json(${PROJECT_NAME})
 Add3rd_TBB(${PROJECT_NAME})
 Add3rd_FFmpeg(${PROJECT_NAME})
 Add3rd_spdlog(${PROJECT_NAME})
+Add3rd_CURL(${PROJECT_NAME})
 
 # 包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -51,6 +52,10 @@ target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/attach.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/AvApiWrapper.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/AvApiWrapper.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliApiClient.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliApiClient.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliApiCache.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliApiCache.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliCache.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliCache.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/common.cpp"
