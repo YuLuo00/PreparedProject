@@ -51,6 +51,7 @@ using namespace std;
 using namespace tbb::flow;
 
 #include "ffmpegMsg.h"
+#include "Logger.h"
 
 
 int ReadNode::ReadPackets(AVFormatContext *inCtx,
@@ -60,10 +61,7 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
 {
     SetThreadDescription(GetCurrentThread(), L"read ");
     m_inCtx = inCtx;
-    std::ostringstream oss;
-    oss << " >>>>>>>>>> Thread for Read" << std::this_thread::get_id();
-    std::string idStr = oss.str();
-    std::cout << idStr << std::endl;
+    LOG_INFO(LogGroup::MUX, "{}  >>>>>>>>>> Thread for Read  {}", ::GetCurrentThreadId(), inCtx->url);
 
     set<int> dtsDedupCheck;
     map<int, int> streamsIdx; // <输入流流序号，输出流流序号>
@@ -164,5 +162,6 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
     //pktBatches[0].m_pkts.push_back(g_EOSPacket);
     //pktsRead.push(pktBatches[0]);
 
+    LOG_INFO(LogGroup::MUX, " >>>>>>>>>> Finish for Read  {}", inCtx->url);
     return 0;
 };
