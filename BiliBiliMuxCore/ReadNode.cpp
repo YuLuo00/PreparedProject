@@ -105,24 +105,24 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
         try {
             i++;
             if (i > 12791) {
-                LOGINFO("-------{}", i);
+                LOG_DEBUG(LogGroup::MUX, "-------{}", i);
             }
             ret = av_read_frame(inCtx, avPacket);
             if (ret == AVERROR_EOF) {
-                LOGINFO("读取文件结束");
+                LOG_INFO(LogGroup::MUX, "读取文件结束");
                 av_packet_free(&avPacket);
                 break;
             }
             if (ret < 0) {
                 char errbuf[256];
                 av_strerror(ret, errbuf, sizeof(errbuf));
-                LOGINFO("读取数据包错误: {}", errbuf);
+                LOG_ERROR(LogGroup::MUX, "读取数据包错误: {}", errbuf);
 
                 av_packet_free(&avPacket);
                 break;
             }
             if (avPacket->dts < 0) {
-                LOGINFO("解码时间戳小于0");
+                LOG_WARN(LogGroup::MUX, "解码时间戳小于0");
             }
             PacketsBatch &pktBatch = pktBatches[avPacket->stream_index];
             pktBatch.m_pkts.push_back(avPacket);
@@ -148,7 +148,7 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
             }
         }
         catch (...) {
-            LOGINFO("触发了异常");
+            LOG_ERROR(LogGroup::MUX, "触发了异常");
         }
     }
     for (size_t i = 0; i < pktBatches.size(); i++) {

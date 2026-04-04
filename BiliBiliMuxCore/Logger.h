@@ -27,6 +27,7 @@ namespace LogGroup
     constexpr const char *MUX = "mux";
     constexpr const char* DECODE = "decode";
     constexpr const char* IO = "io";
+    constexpr const char* FFMPEG = "ffmpeg";
 }
 
 

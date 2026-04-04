@@ -12,7 +12,7 @@ AVFormatContext *AvApiWrapper::_AvformatAllocOutputContext2(const std::wstring &
         // 输出错误代码及错误信息
         av_make_error_string(errMsg, AV_ERROR_MAX_STRING_SIZE, error);
         *err = errMsg;
-        LOGINFO("Failed to allocate output format context: {}", errMsg);
+        LOG_ERROR(LogGroup::IO, "Failed to allocate output format context: {}", errMsg);
         // 处理错误情况
     }
     return outCtx;

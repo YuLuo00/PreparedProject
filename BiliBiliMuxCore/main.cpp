@@ -104,7 +104,7 @@ void my_ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vl)
         buf[len - 1] = '\0';
     }
 
-    auto logger = Logger::Get("ffmpeg");
+    auto logger = Logger::Get(LogGroup::FFMPEG);
     auto spd_level = FFmpegLevelToSpd(level);
 
     // 用 spdlog 的 level 控制输出
@@ -119,14 +119,14 @@ void my_ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vl)
 void GlobalInit()
 {
     Logger::Init();
-    LOG_INFO("mux", "start muxing {}", 123);
-    LOG_DEBUG("decode", "frame pts={}", 456);
-    Logger::SetLevel("mux", spdlog::level::info);
-    Logger::SetLevel("decode", spdlog::level::err);
-    Logger::SetLevel("ffmpeg", spdlog::level::debug);
+    LOG_INFO(LogGroup::MUX, "start muxing {}", 123);
+    LOG_DEBUG(LogGroup::DECODE, "frame pts={}", 456);
+    Logger::SetLevel(LogGroup::MUX, spdlog::level::info);
+    Logger::SetLevel(LogGroup::DECODE, spdlog::level::err);
+    Logger::SetLevel(LogGroup::FFMPEG, spdlog::level::debug);
 
-    LOG_DEBUG("mux", "不会打印");  // 被过滤
-    LOG_ERROR("decode", "会打印"); // ✔
+    LOG_DEBUG(LogGroup::MUX, "不会打印");  // 被过滤
+    LOG_ERROR(LogGroup::DECODE, "会打印"); // ✔
     av_log_set_callback(my_ffmpeg_log_callback);
 }
 
@@ -134,22 +134,23 @@ int mainPipeline(const MediaSubdir &sub)
 {
     const Match *match = sub.match;
     if (match == nullptr) {
-        LOGINFO("sub.match 为空，无法提取 mediainfo");
+        LOG_ERROR(LogGroup::MUX, "sub.match 为空，无法提取 mediainfo");
         return -1;
     }
     if (match->entry_json_path.empty()) {
-        LOGINFO("match->entry_json_path 为空，无法提取 mediainfo");
+        LOG_ERROR(LogGroup::MUX, "match->entry_json_path 为空，无法提取 mediainfo");
         return -2;
     }
     if (sub.audio.empty() || sub.video.empty() || sub.index.empty()) {
-        LOGINFO("MediaSubdir 缺少 audio/video/index，无法混流");
+        LOG_ERROR(LogGroup::MUX, "MediaSubdir 缺少 audio/video/index，无法混流");
         return -2;
     }
 
     if (match->media_subdirs.size() > 1) {
-        LOGINFO("发现 {} 个媒体子目录，当前使用第一个: {}",
-                match->media_subdirs.size(),
-                LOGUTF8(sub.dir.filename().wstring()));
+        LOG_WARN(LogGroup::MUX,
+                 "发现 {} 个媒体子目录，当前使用第一个: {}",
+                 match->media_subdirs.size(),
+                 LOGUTF8(sub.dir.filename().wstring()));
     }
 
     MediaInfo mediaInfo;
@@ -172,8 +173,8 @@ int mainPipeline(const MediaSubdir &sub)
         Tools::wstring_to_utf8(sub.video.wstring()),
     };
 
-    LOGINFO("开始混流: {}", LOGUTF8(title));
-    LOGINFO("输出文件: {}", LOGUTF8(outputPath.filename().wstring()));
+    LOG_INFO(LogGroup::MUX, "开始混流: {}", LOGUTF8(title));
+    LOG_INFO(LogGroup::MUX, "输出文件: {}", LOGUTF8(outputPath.filename().wstring()));
 
     MediaMux mux;
     std::wstring outputPathU8 = outputPath.wstring();
@@ -185,18 +186,18 @@ int mainPipeline(const MediaSubdir &sub)
 
     ret = write_mediainfo_to_avformat(mux.m_outCtx, mediaInfo);
     if (ret != 0) {
-        LOGINFO("写入 metadata 失败: {}", ret);
+        LOG_ERROR(LogGroup::MUX, "写入 metadata 失败: {}", ret);
         mux.Close();
         return ret;
     }
 
     ret = mux.mux();
     if (ret != 0) {
-        LOGINFO("混流失败: {}", ret);
+        LOG_ERROR(LogGroup::MUX, "混流失败: {}", ret);
         return ret;
     }
 
-    LOGINFO("混流完成: {}", LOGUTF8(outputPath.filename().wstring()));
+    LOG_INFO(LogGroup::MUX, "混流完成: {}", LOGUTF8(outputPath.filename().wstring()));
     return 0;
 }
 
@@ -211,7 +212,7 @@ int main()
     for (const auto &m : matches) {
         std::string title = BiliCache::GetTitle(m);
         std::wstring titleWstr = Tools::utf8_to_wstring(title);
-        LOGINFO("{}", LOGUTF8(title));
+        LOG_INFO(LogGroup::IO, "{}", LOGUTF8(title));
         if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
             if (!m.media_subdirs.empty()) {
                 aimSub = m.media_subdirs.front();
@@ -220,10 +221,10 @@ int main()
         }
     }
 
-    LOGINFO("Found {} matching folders.", matches.size());
+    LOG_INFO(LogGroup::IO, "Found {} matching folders.", matches.size());
 
     if (aimSub.match == nullptr) {
-        LOGINFO("没有找到目标 MediaSubdir");
+        LOG_ERROR(LogGroup::MUX, "没有找到目标 MediaSubdir");
         return -1;
     }
 

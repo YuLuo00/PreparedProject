@@ -357,19 +357,19 @@ int read_mediainfo_from_avformat(const AVFormatContext *fmt, MediaInfo &out)
 void print_avformat_metadata(const AVFormatContext *fmt)
 {
     if (!fmt) {
-        LOGINFO("[fmt metadata] fmt == nullptr");
+        LOG_WARN(LogGroup::IO, "[fmt metadata] fmt == nullptr");
         return;
     }
 
     const int count = av_dict_count(fmt->metadata);
-    LOGINFO("[fmt metadata] count = {}", count);
+    LOG_INFO(LogGroup::IO, "[fmt metadata] count = {}", count);
     if (!fmt->metadata || count == 0) {
         return;
     }
 
     const AVDictionaryEntry *entry = nullptr;
     while ((entry = av_dict_get(fmt->metadata, "", entry, AV_DICT_IGNORE_SUFFIX)) != nullptr) {
-        LOGINFO("{} = {}", entry->key, (entry->value ? entry->value : ""));
+        LOG_INFO(LogGroup::IO, "{} = {}", entry->key, (entry->value ? entry->value : ""));
     }
 }
 

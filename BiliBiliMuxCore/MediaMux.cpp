@@ -23,7 +23,7 @@ void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
     SetThreadDescription(GetCurrentThread(), L"deal ");
     std::ostringstream oss;
     oss << " >>>>>>>>>> Thread for Deal" << std::this_thread::get_id();
-    LOGINFO("{}", oss.str());
+    LOG_INFO(LogGroup::MUX, "{}", oss.str());
 
     bool finished = false;
     PacketsBatch pktBatch;
@@ -38,7 +38,7 @@ void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
             pkt->stream_index = pktBatch.m_outCtxStmIdx;
             const int ret = av_interleaved_write_frame(outCtx, pkt);
             if (ret != 0) {
-                LOGINFO("严重错误，数据包写入失败");
+                LOG_ERROR(LogGroup::MUX, "严重错误，数据包写入失败");
             }
         }
     }
@@ -130,7 +130,7 @@ std::multimap<AVFormatContext *, AVStream *> MediaMux::GetInputStreams(const std
     AVFormatContext *inCtx = nullptr;
     int ret = avformat_open_input(&inCtx, file.c_str(), nullptr, nullptr);
     if (inCtx == nullptr) {
-        LOGINFO("严重错误，open失败");
+        LOG_ERROR(LogGroup::IO, "严重错误，open失败");
         av_strerror(ret, errors, sizeof(errors));
         av_log(nullptr, AV_LOG_WARNING, "error, ret=%d, msg=%s\n", ret, errors);
         return result;
@@ -164,7 +164,7 @@ int MediaMux::Open(const std::set<std::string> files, const std::string &outputF
     const int error = avformat_alloc_output_context2(&m_outCtx, nullptr, nullptr, m_outputFile.c_str());
     if (error < 0) {
         av_make_error_string(errMsg, AV_ERROR_MAX_STRING_SIZE, error);
-        LOGINFO("Failed to allocate output format context: {}", errMsg);
+        LOG_ERROR(LogGroup::MUX, "Failed to allocate output format context: {}", errMsg);
         return -2;
     }
 
@@ -212,7 +212,7 @@ int MediaMux::mux(bool autoCloseOutput)
     std::vector<AVFormatContext *> ctsx;
     for (auto it = inputStreams.begin(); it != inputStreams.end(); it = inputStreams.upper_bound(it->first)) {
         AVFormatContext *inCtx = it->first;
-        LOGINFO("inCtx = {}", static_cast<const void *>(inCtx));
+        LOG_INFO(LogGroup::MUX, "inCtx = {}", static_cast<const void *>(inCtx));
         ctsx.push_back(inCtx);
     }
 
@@ -268,6 +268,6 @@ int MediaMux::mux(bool autoCloseOutput)
         avformat_close_input(&ctx);
     }
 
-    LOGINFO("All done!");
+    LOG_INFO(LogGroup::MUX, "All done!");
     return 0;
 }

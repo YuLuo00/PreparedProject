@@ -125,7 +125,7 @@ int main2()
         //    std::cout << "      index: " << c.index.string() << "\n";
         //}
         std::string title = BiliCache::GetTitle(m);
-        LOGINFO("{}", LOGUTF8(title));
+        LOG_INFO(LogGroup::IO, "{}", LOGUTF8(title));
         // 剪切到其他路径
         {
             //auto dirName = m.dir.filename();
@@ -152,7 +152,7 @@ int main2()
         }
         //continue;
     }
-    LOGINFO("Found {} matching folders.", matches.size());
+    LOG_INFO(LogGroup::IO, "Found {} matching folders.", matches.size());
     return 0;
 }
 
