@@ -123,7 +123,7 @@ void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
     std::ostringstream oss;
     oss << " >>>>>>>>>> Thread for Deal" << std::this_thread::get_id();
     std::string idStr = oss.str();
-    std::cout << idStr << std::endl;
+    LOGINFO("{}", idStr);
 
     bool finished = false;
     PacketsBatch pktBatch;
@@ -146,7 +146,7 @@ void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
             pkt->stream_index = pktBatch.m_outCtxStmIdx;
             int ret = av_interleaved_write_frame(outCtx, pkt);
             if (0 != ret) {
-                std::cout << "严重错误，数据包写入失败" << std::endl;
+                LOGINFO("严重错误，数据包写入失败");
             }
         }
     }
@@ -265,7 +265,7 @@ public:
         int ret = 0;
         ret = avformat_open_input(&inCtx, file.c_str(), NULL, NULL);
         if (inCtx == nullptr) {
-            std::cout << "严重错误，open失败" << std::endl;
+            LOGINFO("严重错误，open失败");
             av_strerror(ret, errors, strlen(errors));
             av_log(NULL, AV_LOG_WARNING, "error, ret=%d, msg=%s\n", ret, errors);
             return result;
@@ -307,7 +307,7 @@ public:
         if (error < 0) {
             // 输出错误代码及错误信息
             av_make_error_string(errMsg, AV_ERROR_MAX_STRING_SIZE, error);
-            std::cout << "Failed to allocate output format context: " << errMsg << std::endl;
+            LOGINFO("Failed to allocate output format context: {}", errMsg);
             // 处理错误情况
             return -2;
         }
@@ -371,7 +371,7 @@ public:
         for (auto it = inputStreams.begin(); it != inputStreams.end(); it = inputStreams.upper_bound(it->first)) {
             AVFormatContext *inCtx = it->first;
             // 处理这个 key
-            std::cout << "inCtx = " << inCtx << std::endl;
+            LOGINFO("inCtx = {}", static_cast<const void *>(inCtx));
             auto range = inputStreams.equal_range(inCtx);
             ctsx.push_back(inCtx);
 
@@ -442,7 +442,7 @@ public:
             avformat_close_input(&ctx);
         }
 
-        std::cout << "All done!" << std::endl;
+        LOGINFO("All done!");
         return 0;
     }
 };
@@ -476,7 +476,7 @@ int main()
     for (const auto &m : matches) {
         std::string title = BiliCache::GetTitle(m);
         std::wstring titleWstr = Tools::utf8_to_wstring(title);
-        std::cout << Tools::Utf8ToLocal(title) << std::endl;
+        LOGINFO("{}", Tools::Utf8ToLocal(title));
         if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
             aimMatch = m;
             //break;
@@ -490,7 +490,7 @@ int main()
         
     }
 
-    std::cout << "Found " << matches.size() << " matching folders.\n";
+    LOGINFO("Found {} matching folders.", matches.size());
 
     ////AvApiWrapper::_AvformatAllocOutputContext2()
 

@@ -39,3 +39,4 @@ namespace LogGroup
 #define LOG_WARN(group, ...)  Logger::Get(group)->warn(__VA_ARGS__)
 #define LOG_ERROR(group, ...) Logger::Get(group)->error(__VA_ARGS__)
 #define LOG_CRITICAL(group, ...) Logger::Get(group)->critical(__VA_ARGS__)
+#define LOGINFO(...) LOG_INFO(LogGroup::DEFAULT, __VA_ARGS__)

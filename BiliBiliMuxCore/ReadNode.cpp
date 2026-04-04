@@ -105,24 +105,24 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
         try {
             i++;
             if (i > 12791) {
-                std::cout << "-------" << i << std::endl;
+                LOGINFO("-------{}", i);
             }
             ret = av_read_frame(inCtx, avPacket);
             if (ret == AVERROR_EOF) {
-                std::cout << "读取文件结束" << std::endl;
+                LOGINFO("读取文件结束");
                 av_packet_free(&avPacket);
                 break;
             }
             if (ret < 0) {
                 char errbuf[256];
                 av_strerror(ret, errbuf, sizeof(errbuf));
-                std::cout << "读取数据包错误: " << errbuf << std::endl;
+                LOGINFO("读取数据包错误: {}", errbuf);
 
                 av_packet_free(&avPacket);
                 break;
             }
             if (avPacket->dts < 0) {
-                std::cout << "解码时间戳小于0" << std::endl;
+                LOGINFO("解码时间戳小于0");
             }
             PacketsBatch &pktBatch = pktBatches[avPacket->stream_index];
             pktBatch.m_pkts.push_back(avPacket);
@@ -148,7 +148,7 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
             }
         }
         catch (...) {
-            std::cout << "触发了异常" << std::endl;
+            LOGINFO("触发了异常");
         }
     }
     for (size_t i = 0; i < pktBatches.size(); i++) {

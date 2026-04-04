@@ -1,5 +1,6 @@
 ﻿#include "attach.h"
 #include <map>
+#include "Logger.h"
 
 namespace
 {
@@ -356,19 +357,19 @@ int read_mediainfo_from_avformat(const AVFormatContext *fmt, MediaInfo &out)
 void print_avformat_metadata(const AVFormatContext *fmt)
 {
     if (!fmt) {
-        std::cout << "[fmt metadata] fmt == nullptr" << std::endl;
+        LOGINFO("[fmt metadata] fmt == nullptr");
         return;
     }
 
     const int count = av_dict_count(fmt->metadata);
-    std::cout << "[fmt metadata] count = " << count << std::endl;
+    LOGINFO("[fmt metadata] count = {}", count);
     if (!fmt->metadata || count == 0) {
         return;
     }
 
     const AVDictionaryEntry *entry = nullptr;
     while ((entry = av_dict_get(fmt->metadata, "", entry, AV_DICT_IGNORE_SUFFIX)) != nullptr) {
-        std::cout << entry->key << " = " << (entry->value ? entry->value : "") << std::endl;
+        LOGINFO("{} = {}", entry->key, (entry->value ? entry->value : ""));
     }
 }
 

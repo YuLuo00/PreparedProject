@@ -1,5 +1,7 @@
 ﻿#include "AvApiWrapper.h"
 
+#include "Logger.h"
+
 AVFormatContext *AvApiWrapper::_AvformatAllocOutputContext2(const std::wstring &file, std::string *err)
 {
     std::string fileU8 = Tools::wstring_to_utf8(file);
@@ -10,7 +12,7 @@ AVFormatContext *AvApiWrapper::_AvformatAllocOutputContext2(const std::wstring &
         // 输出错误代码及错误信息
         av_make_error_string(errMsg, AV_ERROR_MAX_STRING_SIZE, error);
         *err = errMsg;
-        std::cout << "Failed to allocate output format context: " << errMsg << std::endl;
+        LOGINFO("Failed to allocate output format context: {}", errMsg);
         // 处理错误情况
     }
     return outCtx;

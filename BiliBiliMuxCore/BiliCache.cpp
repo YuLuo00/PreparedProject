@@ -4,6 +4,7 @@
 using js = nlohmann::json;
 
 #include "tools.h"
+#include "Logger.h"
 
 
 // compile: g++ -std=c++17 collect_structured_paths.cpp -o collect_structured_paths
@@ -125,7 +126,7 @@ int main2()
         //}
         std::string title = BiliCache::GetTitle(m);
         std::string title_local = Tools::Utf8ToLocal(title);
-        std::cout << title_local << std::endl;
+        LOGINFO("{}", title_local);
         // 剪切到其他路径
         {
             //auto dirName = m.dir.filename();
@@ -152,7 +153,7 @@ int main2()
         }
         //continue;
     }
-    std::cout << "Found " << matches.size() << " matching folders.\n";
+    LOGINFO("Found {} matching folders.", matches.size());
     return 0;
 }
 
