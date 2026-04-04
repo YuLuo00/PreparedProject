@@ -90,4 +90,5 @@ namespace Tools
     }
 
 #define LOGUTF8(text) Tools::LogUtf8(text)
+#define LOGUTF8(text) text
 
