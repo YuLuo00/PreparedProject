@@ -197,7 +197,8 @@ int main_test()
 
     fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
     auto matches = BiliCache::CollectBiliFoldersStructured(root);
-    std::set<std::pair<int, std::wstring>> ownerCoverSet;
+    std::set<int> ownerIdSet;
+    std::set<std::wstring> coverSet;
 
     for (const auto &m : matches) {
         std::string title = BiliCache::GetTitle(m);
@@ -212,19 +213,27 @@ int main_test()
                 continue;
             }
 
-            if (mediaInfo.owner_id <= 0 && mediaInfo.cover.empty()) {
-                continue;
+            if (mediaInfo.owner_id > 0) {
+                ownerIdSet.insert(mediaInfo.owner_id);
             }
-
-            ownerCoverSet.insert({ mediaInfo.owner_id, mediaInfo.cover });
+            if (!mediaInfo.cover.empty()) {
+                coverSet.insert(mediaInfo.cover);
+            }
         }
     }
 
     LOG_INFO(LogGroup::IO, "Found {} matching folders.", matches.size());
-    LOG_INFO(LogGroup::IO, "Collected {} unique owner-cover pairs.", ownerCoverSet.size());
+    LOG_INFO(LogGroup::IO, "Collected {} unique owner IDs.", ownerIdSet.size());
+    LOG_INFO(LogGroup::IO, "Collected {} unique covers.", coverSet.size());
 
-    for (const auto &item : ownerCoverSet) {
-        LOG_INFO(LogGroup::IO, "owner_id={}, cover={}", item.first, LOGUTF8(item.second));
+    LOG_INFO(LogGroup::IO, "Owner IDs:");
+    for (const auto &ownerId : ownerIdSet) {
+        LOG_INFO(LogGroup::IO, "owner_id={}", ownerId);
+    }
+
+    LOG_INFO(LogGroup::IO, "Covers:");
+    for (const auto &cover : coverSet) {
+        LOG_INFO(LogGroup::IO, "cover={}", LOGUTF8(cover));
     }
 
     return 0;
