@@ -154,13 +154,14 @@ std::multimap<AVFormatContext *, AVStream *> MediaMux::GetInputStreams(const std
     return result;
 }
 
-int MediaMux::Open(const std::set<std::string> files)
+int MediaMux::Open(const std::set<std::string> files, const std::string &outputFile)
 {
     m_files = files;
+    m_outputFile = outputFile.empty() ? "result.mp4" : outputFile;
     inputStreams = GetInputStreams(m_files);
 
     char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
-    const int error = avformat_alloc_output_context2(&m_outCtx, nullptr, nullptr, "result.mp4");
+    const int error = avformat_alloc_output_context2(&m_outCtx, nullptr, nullptr, m_outputFile.c_str());
     if (error < 0) {
         av_make_error_string(errMsg, AV_ERROR_MAX_STRING_SIZE, error);
         LOGINFO("Failed to allocate output format context: {}", errMsg);
@@ -198,7 +199,7 @@ int MediaMux::mux(bool autoCloseOutput)
         streamIndexMap[inCtx][inputStream->index] = newStream->index;
     }
 
-    avio_open(&m_outCtx->pb, "result.mp4", AVIO_FLAG_WRITE);
+    avio_open(&m_outCtx->pb, m_outputFile.c_str(), AVIO_FLAG_WRITE);
 
     AVDictionary *muxOpts = nullptr;
     av_dict_set(&muxOpts, "movflags", "use_metadata_tags", 0);

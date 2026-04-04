@@ -16,11 +16,12 @@ public:
     static std::multimap<AVFormatContext *, AVStream *> GetInputStreams(const std::string &file,
                                                                         std::set<AVMediaType> types = {});
 
-    int Open(const std::set<std::string> files);
+    int Open(const std::set<std::string> files, const std::string &outputFile = "result.mp4");
     void Close();
     int mux(bool autoCloseOutput = true);
 
     AVFormatContext *m_outCtx = nullptr;
     std::set<std::string> m_files;
+    std::string m_outputFile = "result.mp4";
     std::multimap<AVFormatContext *, AVStream *> inputStreams;
 };

@@ -10,6 +10,7 @@
 #include <vector>
 #include <filesystem>
 #include <vector>
+#include <xstring>
 namespace fs = std::filesystem;
 
 
@@ -62,6 +63,10 @@ namespace Tools
     {
         return LogUtf8(wstring_to_utf8(text));
     }
+    inline std::string LogUtf8(const wchar_t *text)
+    {
+        return LogUtf8(text ? std::wstring(text) : std::wstring());
+    }
 
     std::wstring sanitize_windows_filename(const std::wstring &input);
     inline std::wstring tolower_wstring(const std::wstring &s, const std::locale &loc = std::locale())
@@ -90,5 +95,4 @@ namespace Tools
     }
 
 #define LOGUTF8(text) Tools::LogUtf8(text)
-#define LOGUTF8(text) text
 

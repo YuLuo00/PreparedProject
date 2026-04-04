@@ -11,3 +11,4 @@ obj
 /.vscode
 /build
 /.clang-format
+/.vs

@@ -130,6 +130,76 @@ void GlobalInit()
     av_log_set_callback(my_ffmpeg_log_callback);
 }
 
+int mainPipeline(const MediaSubdir &sub)
+{
+    const Match *match = sub.match;
+    if (match == nullptr) {
+        LOGINFO("sub.match 为空，无法提取 mediainfo");
+        return -1;
+    }
+    if (match->entry_json_path.empty()) {
+        LOGINFO("match->entry_json_path 为空，无法提取 mediainfo");
+        return -2;
+    }
+    if (sub.audio.empty() || sub.video.empty() || sub.index.empty()) {
+        LOGINFO("MediaSubdir 缺少 audio/video/index，无法混流");
+        return -2;
+    }
+
+    if (match->media_subdirs.size() > 1) {
+        LOGINFO("发现 {} 个媒体子目录，当前使用第一个: {}",
+                match->media_subdirs.size(),
+                LOGUTF8(sub.dir.filename().wstring()));
+    }
+
+    MediaInfo mediaInfo;
+    loadFile2MediaInfo(match->entry_json_path.generic_wstring(), mediaInfo);
+    loadFile2MediaInfo(sub.index.generic_wstring(), mediaInfo);
+
+    std::wstring title = mediaInfo.title;
+    if (title.empty()) {
+        title = match->dir.filename().wstring();
+    }
+    if (title.empty()) {
+        title = L"output";
+    }
+
+    const std::wstring safeTitle = Tools::sanitize_windows_filename(title);
+    const fs::path outputDir = match->dir.empty() ? fs::current_path() : match->dir;
+    const fs::path outputPath = outputDir / (safeTitle + L".mp4");
+    const std::set<std::string> files = {
+        Tools::wstring_to_utf8(sub.audio.wstring()),
+        Tools::wstring_to_utf8(sub.video.wstring()),
+    };
+
+    LOGINFO("开始混流: {}", LOGUTF8(title));
+    LOGINFO("输出文件: {}", LOGUTF8(outputPath.filename().wstring()));
+
+    MediaMux mux;
+    std::wstring outputPathU8 = outputPath.wstring();
+    std::string opU8 = Tools::wstring_to_utf8(outputPathU8);
+    int ret = mux.Open(files, opU8);
+    if (ret != 0) {
+        return ret;
+    }
+
+    ret = write_mediainfo_to_avformat(mux.m_outCtx, mediaInfo);
+    if (ret != 0) {
+        LOGINFO("写入 metadata 失败: {}", ret);
+        mux.Close();
+        return ret;
+    }
+
+    ret = mux.mux();
+    if (ret != 0) {
+        LOGINFO("混流失败: {}", ret);
+        return ret;
+    }
+
+    LOGINFO("混流完成: {}", LOGUTF8(outputPath.filename().wstring()));
+    return 0;
+}
+
 int main()
 {
     GlobalInit();
@@ -137,63 +207,25 @@ int main()
 
     fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
     auto matches = BiliCache::CollectBiliFoldersStructured(root);
-    Match aimMatch;
-    std::vector<MediaInfo> infos;
+    MediaSubdir aimSub;
     for (const auto &m : matches) {
         std::string title = BiliCache::GetTitle(m);
         std::wstring titleWstr = Tools::utf8_to_wstring(title);
         LOGINFO("{}", LOGUTF8(title));
         if (titleWstr == LR"(夏日再见∪人见人爱小海豚~)") {
-            aimMatch = m;
+            if (!m.media_subdirs.empty()) {
+                aimSub = m.media_subdirs.front();
+            }
             //break;
         }
-        for (const MediaSubdir &sub : m.media_subdirs) {
-            MediaInfo mediaInfo;
-            loadFile2MediaInfo(m.entry_json_path.generic_wstring(), mediaInfo);
-            loadFile2MediaInfo(sub.index.generic_wstring(), mediaInfo);
-            infos.push_back(mediaInfo);
-        }
-        
     }
 
     LOGINFO("Found {} matching folders.", matches.size());
 
-    ////AvApiWrapper::_AvformatAllocOutputContext2()
+    if (aimSub.match == nullptr) {
+        LOGINFO("没有找到目标 MediaSubdir");
+        return -1;
+    }
 
-    //return 0;
-    //
-
-
-    MediaMux mux;
-    //av_log_set_callback(my_ffmpeg_log_callback);
-    //av_log_set_level(AV_LOG_VERBOSE); // 或 AV_LOG_DEBUG
-
-    
-    const std::set<std::string> files = {
-        R"(C:\Users\Administrator\Desktop\bili_zip_1\00\285915854\1\120\audio.m4s)",
-        R"(C:\Users\Administrator\Desktop\bili_zip_1\00\285915854\1\120\video.m4s)",
-
-        //R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\c_469842584\120\audio.m4s)",
-        //R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\c_469842584\120\video.m4s)",
-    };
-
-
-    mux.Open(files);
-    write_mediainfo_to_avformat(mux.m_outCtx, infos[0]);
-    mux.mux(false);
-    print_avformat_metadata(mux.m_outCtx);
-    mux.Close();
-
-    
-    AVFormatContext *ctx = nullptr;
-    ctx = mux.m_outCtx;
-    ////int i = av_dict_count(mux.m_outCtx->);
-
-    std::multimap<AVFormatContext *, AVStream *> ii = MediaMux::GetInputStreams("result.mp4");
-    ctx = ii.begin()->first;
-    MediaInfo media;
-    read_mediainfo_from_avformat(ctx, media);
-    print_avformat_metadata(ctx);
-    return -1;
-    return 0;
+    return mainPipeline(aimSub);
 }
