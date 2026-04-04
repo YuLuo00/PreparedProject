@@ -1,4 +1,4 @@
-#include "AvApiWrapper.h"
+ï»¿#include "AvApiWrapper.h"
 
 AVFormatContext *AvApiWrapper::_AvformatAllocOutputContext2(const std::wstring &file, std::string *err)
 {
@@ -7,11 +7,11 @@ AVFormatContext *AvApiWrapper::_AvformatAllocOutputContext2(const std::wstring &
     char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
     int error = avformat_alloc_output_context2(&outCtx, nullptr, nullptr, fileU8.c_str());
     if (error < 0) {
-        // Êä³ö´íÎó´úÂë¼°´íÎóÐÅÏ¢
+        // è¾“å‡ºé”™è¯¯ä»£ç åŠé”™è¯¯ä¿¡æ¯
         av_make_error_string(errMsg, AV_ERROR_MAX_STRING_SIZE, error);
         *err = errMsg;
         std::cout << "Failed to allocate output format context: " << errMsg << std::endl;
-        // ´¦Àí´íÎóÇé¿ö
+        // å¤„ç†é”™è¯¯æƒ…å†µ
     }
     return outCtx;
 }

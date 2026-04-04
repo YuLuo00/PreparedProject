@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <cstdarg>
 #include <cstdio>
 #include <map>
@@ -12,7 +12,7 @@ extern "C"
 }
 
 // =======================
-// È«¾Ö¾²Ì¬Êı¾İ
+// å…¨å±€é™æ€æ•°æ®
 // =======================
 class FFmpegLogScope
 {
@@ -23,10 +23,10 @@ public:
     static inline std::map<std::thread::id, int> most_hight_level_map;
     static inline std::mutex level_mutex;
 
-    // ÊÇ·ñÕıÔÚ²¶»ñ
+    // æ˜¯å¦æ­£åœ¨æ•è·
     static inline thread_local bool capturing = false;
 
-    // ±£´æÔ­Ê¼»Øµ÷
+    // ä¿å­˜åŸå§‹å›è°ƒ
     static inline void (*default_callback)(void *, int, const char *, va_list) = nullptr;
 
 public:
@@ -34,7 +34,7 @@ public:
 
     ~FFmpegLogScope();
 
-    // »ñÈ¡µ±Ç°Ïß³ÌµÄÈÕÖ¾
+    // è·å–å½“å‰çº¿ç¨‹çš„æ—¥å¿—
     static std::string get_log()
     {
         std::lock_guard<std::mutex> lock(map_mutex);
@@ -48,6 +48,6 @@ public:
     }
 
 private:
-    // FFmpeg ÈÕÖ¾»Øµ÷
+    // FFmpeg æ—¥å¿—å›è°ƒ
     static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vl);
 };

@@ -1,51 +1,51 @@
-#include "ffmpegMsg.h"
+ï»¿#include "ffmpegMsg.h"
 
 FFmpegLogScope::FFmpegLogScope()
 {
     std::lock_guard<std::mutex> lock(map_mutex);
 
-    // ±£´æÄ¬ÈÏ»Øµ÷£¨Ö»±£´æÒ»´Î£©
+    // ä¿å­˜é»˜è®¤å›è°ƒï¼ˆåªä¿å­˜ä¸€æ¬¡ï¼‰
     if (!default_callback) {
         default_callback = av_log_default_callback;
     }
 
-    // Çå¿Õµ±Ç°Ïß³ÌµÄ buffer
+    // æ¸…ç©ºå½“å‰çº¿ç¨‹çš„ buffer
     log_map[std::this_thread::get_id()].clear();
     most_hight_level_map[std::this_thread::get_id()] = AV_LOG_TRACE;
 
-    // ¿ªÊ¼²¶»ñ
+    // å¼€å§‹æ•è·
     capturing = true;
 
-    // ÉèÖÃÎÒÃÇµÄ»Øµ÷
+    // è®¾ç½®æˆ‘ä»¬çš„å›è°ƒ
     av_log_set_callback(ffmpeg_log_callback);
 }
 
 FFmpegLogScope::~FFmpegLogScope()
 {
-    // Í£Ö¹²¶»ñ
+    // åœæ­¢æ•è·
     capturing = false;
 
-    // »Ö¸´Ä¬ÈÏ»Øµ÷
+    // æ¢å¤é»˜è®¤å›è°ƒ
     av_log_set_callback(default_callback);
 }
 
-// FFmpeg ÈÕÖ¾»Øµ÷
+// FFmpeg æ—¥å¿—å›è°ƒ
 void FFmpegLogScope::ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vl)
 {
-    // ÏÈµ÷ÓÃÄ¬ÈÏ»Øµ÷£¬ÈÃ FFmpeg Õı³£´òÓ¡
+    // å…ˆè°ƒç”¨é»˜è®¤å›è°ƒï¼Œè®© FFmpeg æ­£å¸¸æ‰“å°
     if (default_callback) {
         default_callback(ptr, level, fmt, vl);
     }
 
-    // Èç¹ûµ±Ç°Ïß³ÌÃ»ÓĞ¿ªÆô²¶»ñ£¬Ôò²»¼ÇÂ¼
+    // å¦‚æœå½“å‰çº¿ç¨‹æ²¡æœ‰å¼€å¯æ•è·ï¼Œåˆ™ä¸è®°å½•
     if (!capturing)
         return;
 
-    // ¸ñÊ½»¯ÈÕÖ¾
+    // æ ¼å¼åŒ–æ—¥å¿—
     char buf[2048];
     vsnprintf(buf, sizeof(buf), fmt, vl);
 
-    // Ğ´Èë map
+    // å†™å…¥ map
     {
         std::lock_guard<std::mutex> lock(map_mutex);
         log_map[std::this_thread::get_id()] += buf;

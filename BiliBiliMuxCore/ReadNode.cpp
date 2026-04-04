@@ -1,4 +1,4 @@
-#include "ReadNode.h"
+Ôªø#include "ReadNode.h"
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -64,7 +64,7 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
     LOG_INFO(LogGroup::MUX, "{}  >>>>>>>>>> Thread for Read  {}", ::GetCurrentThreadId(), inCtx->url);
 
     set<int> dtsDedupCheck;
-    map<int, int> streamsIdx; // < ‰»Î¡˜¡˜–Ú∫≈£¨ ‰≥ˆ¡˜¡˜–Ú∫≈>
+    map<int, int> streamsIdx; // <ËæìÂÖ•ÊµÅÊµÅÂ∫èÂè∑ÔºåËæìÂá∫ÊµÅÊµÅÂ∫èÂè∑>
     char errors[1024];
     int ret = 0;
 
@@ -81,14 +81,14 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
         pktBatches[i].m_outCtxStmIdx = streamIndexMap.at(inCtx).at(i);
     }
 
-    // ∂¡»°“ª∂Œ ˝æ›∞¸
+    // ËØªÂèñ‰∏ÄÊÆµÊï∞ÊçÆÂåÖ
     AVPacket *avPacket = nullptr;
     int i = 0;
     while (true) {
         //FFmpegLogScope *ffmpegLog = new FFmpegLogScope();
 
         //auto guard = std::shared_ptr<void>((void *)0x01, [&](void *) {
-        //    // ≤ª delete ffmpegLog£¨÷ª◊ˆƒ„µƒ ’Œ≤¬ﬂº≠
+        //    // ‰∏ç delete ffmpegLogÔºåÂè™ÂÅö‰Ω†ÁöÑÊî∂Â∞æÈÄªËæë
         //    int level = FFmpegLogScope::get_level();
         //    std::string log = FFmpegLogScope::get_log();
         //    this->m_errorLevel.store(std::min(level, this->m_errorLevel.load()));
@@ -96,12 +96,12 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
         //        //std::cout << "some error happened" << std::endl;
         //    this->m_log.append(log);
         //    }
-        //    delete ffmpegLog; // »Áπ˚ƒ„œÎ delete£¨“≤ø…“‘∑≈’‚¿Ô
+        //    delete ffmpegLog; // Â¶ÇÊûú‰Ω†ÊÉ≥ deleteÔºå‰πüÂèØ‰ª•ÊîæËøôÈáå
         //});
 
         avPacket = av_packet_alloc();
         int ret = 0;
-        // ∂¡»°
+        // ËØªÂèñ
         try {
             i++;
             if (i > 12791) {
@@ -109,20 +109,20 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
             }
             ret = av_read_frame(inCtx, avPacket);
             if (ret == AVERROR_EOF) {
-                std::cout << "∂¡»°Œƒº˛Ω· ¯" << std::endl;
+                std::cout << "ËØªÂèñÊñá‰ª∂ÁªìÊùü" << std::endl;
                 av_packet_free(&avPacket);
                 break;
             }
             if (ret < 0) {
                 char errbuf[256];
                 av_strerror(ret, errbuf, sizeof(errbuf));
-                std::cout << "∂¡»° ˝æ›∞¸¥ÌŒÛ: " << errbuf << std::endl;
+                std::cout << "ËØªÂèñÊï∞ÊçÆÂåÖÈîôËØØ: " << errbuf << std::endl;
 
                 av_packet_free(&avPacket);
                 break;
             }
             if (avPacket->dts < 0) {
-                std::cout << "Ω‚¬Î ±º‰¥¡–°”⁄0" << std::endl;
+                std::cout << "Ëß£Á†ÅÊó∂Èó¥Êà≥Â∞è‰∫é0" << std::endl;
             }
             PacketsBatch &pktBatch = pktBatches[avPacket->stream_index];
             pktBatch.m_pkts.push_back(avPacket);
@@ -138,7 +138,7 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
                         pktBatch.m_pkts.clear();
                     }
                     else {
-                        //std::cout << "µ»¥˝I÷°" << std::endl;
+                        //std::cout << "Á≠âÂæÖIÂ∏ß" << std::endl;
                     }
                 }
                 else {
@@ -148,7 +148,7 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
             }
         }
         catch (...) {
-            std::cout << "¥•∑¢¡À“Ï≥£" << std::endl;
+            std::cout << "Ëß¶Âèë‰∫ÜÂºÇÂ∏∏" << std::endl;
         }
     }
     for (size_t i = 0; i < pktBatches.size(); i++) {

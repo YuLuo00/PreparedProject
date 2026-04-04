@@ -1,4 +1,4 @@
-extern "C"
+ï»¿extern "C"
 {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
@@ -43,11 +43,11 @@ bool Tools::StringFromFile(const std::wstring &file, std::string &content)
     std::string fileLoc = Tools::Utf8ToLocal(fileU8);
     std::ifstream ifs(fileLoc, std::ios::in | std::ios::binary);
     if (!ifs) {
-        // ´ò¿ªÊ§°Ü
+        // æ‰“å¼€å¤±è´¥
         return false;
     }
 
-    // »ñÈ¡ÎÄ¼ş´óĞ¡²¢Ò»´ÎĞÔ·ÖÅä
+    // è·å–æ–‡ä»¶å¤§å°å¹¶ä¸€æ¬¡æ€§åˆ†é…
     ifs.seekg(0, std::ios::end);
     std::streampos size = ifs.tellg();
     ifs.seekg(0, std::ios::beg);
@@ -55,14 +55,14 @@ bool Tools::StringFromFile(const std::wstring &file, std::string &content)
     if (size > 0) {
         content.resize(static_cast<size_t>(size));
         ifs.read(&content[0], size);
-        // Èç¹û¶ÁÈ¡Ê§°Ü£¨ÀıÈçÖĞÍ¾³ö´í£©£¬¿ÉÒÔ¸ù¾İĞèÒª´¦Àí£º
+        // å¦‚æœè¯»å–å¤±è´¥ï¼ˆä¾‹å¦‚ä¸­é€”å‡ºé”™ï¼‰ï¼Œå¯ä»¥æ ¹æ®éœ€è¦å¤„ç†ï¼š
         if (!ifs) {
-            // ¶ÁÈ¡²»ÍêÕû£¬·µ»ØÒÑ¶Á²¿·Ö»ò¿Õ×Ö·û´®£»ÕâÀï·µ»ØÒÑ¶Á²¿·Ö
+            // è¯»å–ä¸å®Œæ•´ï¼Œè¿”å›å·²è¯»éƒ¨åˆ†æˆ–ç©ºå­—ç¬¦ä¸²ï¼›è¿™é‡Œè¿”å›å·²è¯»éƒ¨åˆ†
             content.resize(static_cast<size_t>(ifs.gcount()));
         }
     }
     else {
-        // ÎÄ¼ş´óĞ¡Îª0»ò tellg ²»Ö§³Ö£¨ÀıÈçÄ³Ğ©Á÷£©£¬ÍË»Øµ½Á÷Ê½¶ÁÈ¡
+        // æ–‡ä»¶å¤§å°ä¸º0æˆ– tellg ä¸æ”¯æŒï¼ˆä¾‹å¦‚æŸäº›æµï¼‰ï¼Œé€€å›åˆ°æµå¼è¯»å–
         std::ostringstream ss;
         ss << ifs.rdbuf();
         content = ss.str();
@@ -71,9 +71,9 @@ bool Tools::StringFromFile(const std::wstring &file, std::string &content)
     return true;
 }
 
-// ¶ÁÈ¡ÎÄ±¾ÎÄ¼şµ½ outText£¬·µ»Ø true ±íÊ¾³É¹¦¡£
-// Èç¹û errMsg ²»Îª¿ÕÇÒ·¢Éú´íÎó£¬»áĞ´Èë´íÎóÃèÊö¡£
-// »áÈ¥³ı UTF-8 BOM£¨Èç¹û´æÔÚ£©²¢°Ñ CRLF ×ªÎª LF¡£
+// è¯»å–æ–‡æœ¬æ–‡ä»¶åˆ° outTextï¼Œè¿”å› true è¡¨ç¤ºæˆåŠŸã€‚
+// å¦‚æœ errMsg ä¸ä¸ºç©ºä¸”å‘ç”Ÿé”™è¯¯ï¼Œä¼šå†™å…¥é”™è¯¯æè¿°ã€‚
+// ä¼šå»é™¤ UTF-8 BOMï¼ˆå¦‚æœå­˜åœ¨ï¼‰å¹¶æŠŠ CRLF è½¬ä¸º LFã€‚
 bool Tools::TextFromFile(const std::string &path, std::string &outText, std::string *errMsg)
 {
     outText.clear();
@@ -84,7 +84,7 @@ bool Tools::TextFromFile(const std::string &path, std::string &outText, std::str
         return false;
     }
 
-    // ¶ÁÈ¡È«²¿ÄÚÈİ
+    // è¯»å–å…¨éƒ¨å†…å®¹
     ifs.seekg(0, std::ios::end);
     std::streampos sz = ifs.tellg();
     ifs.seekg(0, std::ios::beg);
@@ -93,31 +93,31 @@ bool Tools::TextFromFile(const std::string &path, std::string &outText, std::str
         outText.resize(static_cast<size_t>(sz));
         ifs.read(&outText[0], sz);
         if (!ifs) {
-            // ¶ÁÈ¡¿ÉÄÜ²»ÍêÕû£¬±£ÁôÒÑ¶Á²¿·Ö
+            // è¯»å–å¯èƒ½ä¸å®Œæ•´ï¼Œä¿ç•™å·²è¯»éƒ¨åˆ†
             outText.resize(static_cast<size_t>(ifs.gcount()));
         }
     }
     else {
-        // ÎÄ¼şÎª¿Õ»ò tellg ²»Ö§³Ö£¬ÍË»Øµ½Á÷Ê½¶ÁÈ¡
+        // æ–‡ä»¶ä¸ºç©ºæˆ– tellg ä¸æ”¯æŒï¼Œé€€å›åˆ°æµå¼è¯»å–
         std::ostringstream ss;
         ss << ifs.rdbuf();
         outText = ss.str();
     }
 
-    // È¥³ı UTF-8 BOM£¨0xEF 0xBB 0xBF£©
+    // å»é™¤ UTF-8 BOMï¼ˆ0xEF 0xBB 0xBFï¼‰
     if (outText.size() >= 3 && static_cast<unsigned char>(outText[0]) == 0xEF &&
         static_cast<unsigned char>(outText[1]) == 0xBB && static_cast<unsigned char>(outText[2]) == 0xBF) {
         outText.erase(0, 3);
     }
 
-    //// ¹æ·¶»¯ CRLF -> LF£¨Ö»ÔÚĞèÒªÊ±×öÌæ»»£©
-    //// Èç¹ûÎÄ¼şºÜ´óÇÒµ£ĞÄĞÔÄÜ£¬¿É¸ÄÎª°´¿é´¦Àí
+    //// è§„èŒƒåŒ– CRLF -> LFï¼ˆåªåœ¨éœ€è¦æ—¶åšæ›¿æ¢ï¼‰
+    //// å¦‚æœæ–‡ä»¶å¾ˆå¤§ä¸”æ‹…å¿ƒæ€§èƒ½ï¼Œå¯æ”¹ä¸ºæŒ‰å—å¤„ç†
     //std::string::size_type pos = 0;
     //while ((pos = outText.find("\r\n", pos)) != std::string::npos) {
     //    outText.replace(pos, 2, "\n");
-    //    pos += 1; // Ìø¹ı¸ÕÌæ»»µÄ '\n'
+    //    pos += 1; // è·³è¿‡åˆšæ›¿æ¢çš„ '\n'
     //}
-    //// ¿ÉÑ¡£º°Ñ¹ÂÁ¢µÄ '\r' Ò²Ìæ»»Îª '\n'
+    //// å¯é€‰ï¼šæŠŠå­¤ç«‹çš„ '\r' ä¹Ÿæ›¿æ¢ä¸º '\n'
     //pos = 0;
     //while ((pos = outText.find('\r', pos)) != std::string::npos) {
     //    outText[pos] = '\n';
@@ -127,7 +127,7 @@ bool Tools::TextFromFile(const std::string &path, std::string &outText, std::str
     return true;
 }
 
-// ¼òµ¥°ü×°£ºÊ§°Ü·µ»Ø¿Õ×Ö·û´®£¨ÎŞ·¨Çø·Ö¿ÕÎÄ¼şÓëÊ§°Ü£©
+// ç®€å•åŒ…è£…ï¼šå¤±è´¥è¿”å›ç©ºå­—ç¬¦ä¸²ï¼ˆæ— æ³•åŒºåˆ†ç©ºæ–‡ä»¶ä¸å¤±è´¥ï¼‰
 std::string Tools::TextFromFile(const std::string &path)
 {
     std::string out;
@@ -144,7 +144,7 @@ bool Tools::ParseJsonSafe(const std::string &s, nlohmann::json &out, std::string
     }
     catch (const nlohmann::json::parse_error &e) {
         if (err)
-            *err = e.what(); // °üº¬´íÎóÎ»ÖÃµÈĞÅÏ¢
+            *err = e.what(); // åŒ…å«é”™è¯¯ä½ç½®ç­‰ä¿¡æ¯
         return false;
     }
     catch (const std::exception &e) {
@@ -154,7 +154,7 @@ bool Tools::ParseJsonSafe(const std::string &s, nlohmann::json &out, std::string
     }
 }
 
-// ·µ»Ø true ±íÊ¾ÎÄ¼şÊÇºÏ·¨µÄ UTF-8£¨ÔÊĞí¿ÉÑ¡ BOM£©
+// è¿”å› true è¡¨ç¤ºæ–‡ä»¶æ˜¯åˆæ³•çš„ UTF-8ï¼ˆå…è®¸å¯é€‰ BOMï¼‰
 bool Tools::IsUtf8File(const std::string &path, bool allow_bom)
 {
     const size_t BUF_SIZE = 64 * 1024;
@@ -165,20 +165,20 @@ bool Tools::IsUtf8File(const std::string &path, bool allow_bom)
     std::vector<unsigned char> buf;
     buf.reserve(BUF_SIZE);
 
-    // ÓÃÓÚ¿ç¿é±£´æÎ´Íê³ÉµÄÆğÊ¼×Ö½Ú
+    // ç”¨äºè·¨å—ä¿å­˜æœªå®Œæˆçš„èµ·å§‹å­—èŠ‚
     std::vector<unsigned char> pending;
 
-    // ¶ÁÈ¡µÚÒ»¸ö¿é£¬¼ì²é BOM£¨Èç¹ûÔÊĞí£©
+    // è¯»å–ç¬¬ä¸€ä¸ªå—ï¼Œæ£€æŸ¥ BOMï¼ˆå¦‚æœå…è®¸ï¼‰
     ifs.seekg(0, std::ios::beg);
 
     while (true) {
         buf.clear();
-        // ÏÈ°Ñ pending ¿½±´µ½ buf ¿ªÍ·
+        // å…ˆæŠŠ pending æ‹·è´åˆ° buf å¼€å¤´
         for (unsigned char c : pending)
             buf.push_back(c);
         pending.clear();
 
-        // ¶ÁÈë¸ü¶à×Ö½ÚÌîÂú buf
+        // è¯»å…¥æ›´å¤šå­—èŠ‚å¡«æ»¡ buf
         size_t need = BUF_SIZE;
         std::vector<char> tmp(need);
         ifs.read(tmp.data(), static_cast<std::streamsize>(need));
@@ -188,15 +188,15 @@ bool Tools::IsUtf8File(const std::string &path, bool allow_bom)
         }
 
         if (buf.empty())
-            break; // ÎÄ¼şÎª¿Õ»ò¶ÁÍê
+            break; // æ–‡ä»¶ä¸ºç©ºæˆ–è¯»å®Œ
 
         size_t i = 0;
-        // Èç¹ûÊÇÎÄ¼ş¿ªÍ·²¢ÔÊĞí BOM£¬¼ì²é²¢Ìø¹ı BOM
+        // å¦‚æœæ˜¯æ–‡ä»¶å¼€å¤´å¹¶å…è®¸ BOMï¼Œæ£€æŸ¥å¹¶è·³è¿‡ BOM
         static bool checked_bom = false;
         if (!checked_bom) {
             checked_bom = true;
             if (allow_bom && buf.size() >= 3 && buf[0] == 0xEF && buf[1] == 0xBB && buf[2] == 0xBF) {
-                i = 3; // Ìø¹ı BOM
+                i = 3; // è·³è¿‡ BOM
             }
         }
 
@@ -209,19 +209,19 @@ bool Tools::IsUtf8File(const std::string &path, bool allow_bom)
                 continue;
             }
 
-            // ¶à×Ö½ÚÆğÊ¼×Ö½ÚÅĞ¶Ï
+            // å¤šå­—èŠ‚èµ·å§‹å­—èŠ‚åˆ¤æ–­
             if ((c & 0xE0) == 0xC0) {
-                // 2 ×Ö½ÚĞòÁĞ: 110xxxxx 10xxxxxx
-                // ½ûÖ¹ 0xC0,0xC1£¨¹ı³¤±àÂë£©
+                // 2 å­—èŠ‚åºåˆ—: 110xxxxx 10xxxxxx
+                // ç¦æ­¢ 0xC0,0xC1ï¼ˆè¿‡é•¿ç¼–ç ï¼‰
                 if (c == 0xC0 || c == 0xC1)
                     return false;
                 size_t need_cont = 1;
                 if (i + need_cont >= buf.size()) {
-                    // ²»×ã£¬±£´æÊ£Óàµ½ pending ²¢Ìø³ö¶ÁÈ¡ÏÂÒ»¿é
+                    // ä¸è¶³ï¼Œä¿å­˜å‰©ä½™åˆ° pending å¹¶è·³å‡ºè¯»å–ä¸‹ä¸€å—
                     pending.insert(pending.end(), buf.begin() + i, buf.end());
                     goto read_next_chunk;
                 }
-                // ¼ì²é continuation bytes
+                // æ£€æŸ¥ continuation bytes
                 for (size_t k = 1; k <= need_cont; ++k) {
                     unsigned char cc = buf[i + k];
                     if ((cc & 0xC0) != 0x80)
@@ -231,21 +231,21 @@ bool Tools::IsUtf8File(const std::string &path, bool allow_bom)
                 continue;
             }
             else if ((c & 0xF0) == 0xE0) {
-                // 3 ×Ö½ÚĞòÁĞ: 1110xxxx 10xxxxxx 10xxxxxx
+                // 3 å­—èŠ‚åºåˆ—: 1110xxxx 10xxxxxx 10xxxxxx
                 size_t need_cont = 2;
                 if (i + need_cont >= buf.size()) {
                     pending.insert(pending.end(), buf.begin() + i, buf.end());
                     goto read_next_chunk;
                 }
                 unsigned char c1 = buf[i + 1];
-                // ÌØÊâ¼ì²é±ÜÃâ¹ı³¤»ò surrogate
+                // ç‰¹æ®Šæ£€æŸ¥é¿å…è¿‡é•¿æˆ– surrogate
                 if (c == 0xE0) {
                     if (c1 < 0xA0 || c1 > 0xBF)
                         return false;
                 }
                 else if (c == 0xED) {
                     if (c1 < 0x80 || c1 > 0x9F)
-                        return false; // ±ÜÃâ UTF-16 surrogate
+                        return false; // é¿å… UTF-16 surrogate
                 }
                 else {
                     if ((c1 & 0xC0) != 0x80)
@@ -258,7 +258,7 @@ bool Tools::IsUtf8File(const std::string &path, bool allow_bom)
                 continue;
             }
             else if ((c & 0xF8) == 0xF0) {
-                // 4 ×Ö½ÚĞòÁĞ: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+                // 4 å­—èŠ‚åºåˆ—: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
                 size_t need_cont = 3;
                 if (i + need_cont >= buf.size()) {
                     pending.insert(pending.end(), buf.begin() + i, buf.end());
@@ -271,13 +271,13 @@ bool Tools::IsUtf8File(const std::string &path, bool allow_bom)
                 }
                 else if (c == 0xF4) {
                     if (c1 < 0x80 || c1 > 0x8F)
-                        return false; // ×î´ó U+10FFFF
+                        return false; // æœ€å¤§ U+10FFFF
                 }
                 else {
                     if ((c1 & 0xC0) != 0x80)
                         return false;
                 }
-                // ¼ì²éÆäÓà continuation bytes
+                // æ£€æŸ¥å…¶ä½™ continuation bytes
                 if ((buf[i + 2] & 0xC0) != 0x80)
                     return false;
                 if ((buf[i + 3] & 0xC0) != 0x80)
@@ -286,19 +286,19 @@ bool Tools::IsUtf8File(const std::string &path, bool allow_bom)
                 continue;
             }
             else {
-                // ÆğÊ¼×Ö½Ú·Ç·¨£¨ÀıÈç 0xF5-0xFF »ò 0x80-0xBF µ¥¶À³öÏÖ£©
+                // èµ·å§‹å­—èŠ‚éæ³•ï¼ˆä¾‹å¦‚ 0xF5-0xFF æˆ– 0x80-0xBF å•ç‹¬å‡ºç°ï¼‰
                 return false;
             }
         }
 
     read_next_chunk:
-        // Èç¹ûÎÄ¼şÒÑ¶ÁÍêÇÒ pending ·Ç¿Õ£¬ËµÃ÷Ä©Î²ÓĞ²»ÍêÕûĞòÁĞ -> ·Ç·¨
+        // å¦‚æœæ–‡ä»¶å·²è¯»å®Œä¸” pending éç©ºï¼Œè¯´æ˜æœ«å°¾æœ‰ä¸å®Œæ•´åºåˆ— -> éæ³•
         if (ifs.eof()) {
             if (!pending.empty())
                 return false;
             break;
         }
-        // ·ñÔò¼ÌĞøÑ­»·¶ÁÈ¡ÏÂÒ»¿é£¨pending ÒÑ±£Áô£©
+        // å¦åˆ™ç»§ç»­å¾ªç¯è¯»å–ä¸‹ä¸€å—ï¼ˆpending å·²ä¿ç•™ï¼‰
         if (!ifs)
             break;
     }
@@ -306,7 +306,7 @@ bool Tools::IsUtf8File(const std::string &path, bool allow_bom)
     return true;
 }
 
-// ¼ì²é path/filename ÊÇ·ñ´æÔÚÇÒÎª³£¹æÎÄ¼ş
+// æ£€æŸ¥ path/filename æ˜¯å¦å­˜åœ¨ä¸”ä¸ºå¸¸è§„æ–‡ä»¶
 bool Tools::file_exists(const fs::path &dir, const std::string &filename)
 {
     try {
@@ -318,7 +318,7 @@ bool Tools::file_exists(const fs::path &dir, const std::string &filename)
     }
 }
 
-// ÅĞ¶ÏÄ³¸öÄ¿Â¼ dir ÊÇ·ñ°üº¬ÖÁÉÙÒ»¸ö×ÓÄ¿Â¼ child£¬ÇÒ child ÖĞÍ¬Ê±°üº¬ video.m4s, audio.m4s, index.json
+// åˆ¤æ–­æŸä¸ªç›®å½• dir æ˜¯å¦åŒ…å«è‡³å°‘ä¸€ä¸ªå­ç›®å½• childï¼Œä¸” child ä¸­åŒæ—¶åŒ…å« video.m4s, audio.m4s, index.json
 bool Tools::has_media_subdir(const fs::path &dir)
 {
     try {
@@ -333,12 +333,12 @@ bool Tools::has_media_subdir(const fs::path &dir)
         }
     }
     catch (const fs::filesystem_error &) {
-        // ºöÂÔÎŞ·¨·ÃÎÊµÄÄ¿Â¼
+        // å¿½ç•¥æ— æ³•è®¿é—®çš„ç›®å½•
     }
     return false;
 }
 
-// ´Ó root ¿ªÊ¼µİ¹éÉ¨Ãè£¬·µ»ØËùÓĞ·ûºÏÌõ¼şµÄÄ¿Â¼Â·¾¶
+// ä» root å¼€å§‹é€’å½’æ‰«æï¼Œè¿”å›æ‰€æœ‰ç¬¦åˆæ¡ä»¶çš„ç›®å½•è·¯å¾„
 std::vector<fs::path> Tools::CollectBiliFolders(const fs::path &root)
 {
     std::vector<fs::path> result;
@@ -353,26 +353,26 @@ std::vector<fs::path> Tools::CollectBiliFolders(const fs::path &root)
                     continue;
                 fs::path dir = it->path();
 
-                // ±ØĞëÍ¬Ê±´æÔÚ entry.json ºÍ danmaku.xml£¨ÔÚ dir ÏÂ£©
+                // å¿…é¡»åŒæ—¶å­˜åœ¨ entry.json å’Œ danmaku.xmlï¼ˆåœ¨ dir ä¸‹ï¼‰
                 if (!file_exists(dir, "entry.json"))
                     continue;
                 if (!file_exists(dir, "danmaku.xml"))
                     continue;
 
-                // ²¢ÇÒ´æÔÚÖÁÉÙÒ»¸ö×ÓÄ¿Â¼°üº¬ video.m4s/audio.m4s/index.json
+                // å¹¶ä¸”å­˜åœ¨è‡³å°‘ä¸€ä¸ªå­ç›®å½•åŒ…å« video.m4s/audio.m4s/index.json
                 if (has_media_subdir(dir)) {
                     result.push_back(dir);
-                    // Èç¹û²»ÏëÔÚ¸ÃÄ¿Â¼ÏÂ¼ÌĞøµİ¹é£¨±ÜÃâÖØ¸´·¢ÏÖ×ÓÄ¿Â¼ÖĞµÄ×ÓÄ¿Â¼£©£¬¿ÉÒÔÌø¹ıµİ¹é£º
+                    // å¦‚æœä¸æƒ³åœ¨è¯¥ç›®å½•ä¸‹ç»§ç»­é€’å½’ï¼ˆé¿å…é‡å¤å‘ç°å­ç›®å½•ä¸­çš„å­ç›®å½•ï¼‰ï¼Œå¯ä»¥è·³è¿‡é€’å½’ï¼š
                     it.disable_recursion_pending();
                 }
             }
             catch (const fs::filesystem_error &) {
-                // ºöÂÔµ¥¸öÌõÄ¿´íÎó£¬¼ÌĞøÉ¨Ãè
+                // å¿½ç•¥å•ä¸ªæ¡ç›®é”™è¯¯ï¼Œç»§ç»­æ‰«æ
             }
         }
     }
     catch (const fs::filesystem_error &) {
-        // ¸ùÄ¿Â¼²»¿É¶Á»òÆäËûÈ«¾Ö´íÎó£¬Ö±½Ó·µ»ØÒÑÊÕ¼¯µÄ½á¹û£¨¿ÉÄÜÎª¿Õ£©
+        // æ ¹ç›®å½•ä¸å¯è¯»æˆ–å…¶ä»–å…¨å±€é”™è¯¯ï¼Œç›´æ¥è¿”å›å·²æ”¶é›†çš„ç»“æœï¼ˆå¯èƒ½ä¸ºç©ºï¼‰
     }
 
     return result;
@@ -380,16 +380,16 @@ std::vector<fs::path> Tools::CollectBiliFolders(const fs::path &root)
 
 json Tools::LoadJsonFromFile(const std::filesystem::path &path)
 {
-    // ´ò¿ªÎÄ¼ş
+    // æ‰“å¼€æ–‡ä»¶
     std::ifstream ifs(path);
     if (!ifs.is_open()) {
         throw std::runtime_error("Failed to open file: " + path.string());
     }
 
-    // ½âÎö JSON
+    // è§£æ JSON
     try {
         json j;
-        ifs >> j; // nlohmann::json Ö§³ÖÖ±½Ó´ÓÁ÷½âÎö
+        ifs >> j; // nlohmann::json æ”¯æŒç›´æ¥ä»æµè§£æ
         return j;
     }
     catch (const json::parse_error &e) {
@@ -404,9 +404,9 @@ std::string Tools::sanitize_windows_filename(const std::string &input)
     const std::string invalid_chars = "\\/:*?\"<>|";
 
     for (char &c : result) {
-        // Ìæ»»·Ç·¨×Ö·û
+        // æ›¿æ¢éæ³•å­—ç¬¦
         if (invalid_chars.find(c) != std::string::npos || static_cast<unsigned char>(c) < 32) {
-            c = '£¿';
+            c = 'ï¼Ÿ';
         }
     }
 
@@ -418,8 +418,8 @@ std::wstring Tools::utf8_to_wstring(const std::string &str)
     if (str.empty())
         return L"";
 
-    // ÏÈ¼ÆËãĞèÒªµÄ³¤¶È
-    int size_needed = MultiByteToWideChar(CP_UTF8, // ÊäÈëÊÇ UTF-8
+    // å…ˆè®¡ç®—éœ€è¦çš„é•¿åº¦
+    int size_needed = MultiByteToWideChar(CP_UTF8, // è¾“å…¥æ˜¯ UTF-8
                                           0,
                                           str.data(),
                                           (int)str.size(),
@@ -432,7 +432,7 @@ std::wstring Tools::utf8_to_wstring(const std::string &str)
 
     std::wstring result(size_needed, 0);
 
-    // ÕæÕı×ª»»
+    // çœŸæ­£è½¬æ¢
     MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), &result[0], size_needed);
 
     return result;
@@ -443,8 +443,8 @@ std::string Tools::wstring_to_utf8(const std::wstring &wstr)
     if (wstr.empty())
         return "";
 
-    // ÏÈ¼ÆËãĞèÒªµÄ³¤¶È
-    int size_needed = WideCharToMultiByte(CP_UTF8, // Êä³ö UTF-8
+    // å…ˆè®¡ç®—éœ€è¦çš„é•¿åº¦
+    int size_needed = WideCharToMultiByte(CP_UTF8, // è¾“å‡º UTF-8
                                           0,
                                           wstr.data(),
                                           (int)wstr.size(),
@@ -459,7 +459,7 @@ std::string Tools::wstring_to_utf8(const std::wstring &wstr)
 
     std::string result(size_needed, 0);
 
-    // ÕæÕı×ª»»
+    // çœŸæ­£è½¬æ¢
     WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(), &result[0], size_needed, nullptr, nullptr);
 
     return result;
@@ -469,12 +469,12 @@ std::wstring Tools::sanitize_windows_filename(const std::wstring &input)
 {
     std::wstring result = input;
 
-    const std::wstring invalid_chars = L"\\/¡«:*?\"<>|";
+    const std::wstring invalid_chars = L"\\/ï½:*?\"<>|";
 
     for (wchar_t &c : result) {
-        // Ìæ»»·Ç·¨×Ö·û + ¿ØÖÆ×Ö·û
+        // æ›¿æ¢éæ³•å­—ç¬¦ + æ§åˆ¶å­—ç¬¦
         if (invalid_chars.find(c) != std::wstring::npos || c < 32) {
-            c = L'£¿';
+            c = L'ï¼Ÿ';
         }
     }
 
@@ -484,7 +484,7 @@ std::wstring Tools::sanitize_windows_filename(const std::wstring &input)
 std::string Tools::Utf8ToLocal(const std::string &utf8)
 {
 #ifdef _WIN32
-    // UTF-8 ¡ú UTF-16
+    // UTF-8 â†’ UTF-16
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
     if (wlen <= 0)
         return "";
@@ -492,7 +492,7 @@ std::string Tools::Utf8ToLocal(const std::string &utf8)
     std::wstring wbuf(wlen, 0);
     MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, &wbuf[0], wlen);
 
-    // UTF-16 ¡ú ±¾µØ±àÂë£¨CP_ACP = ÏµÍ³Ä¬ÈÏ±àÂë£¬Èç GBK£©
+    // UTF-16 â†’ æœ¬åœ°ç¼–ç ï¼ˆCP_ACP = ç³»ç»Ÿé»˜è®¤ç¼–ç ï¼Œå¦‚ GBKï¼‰
     int len = WideCharToMultiByte(CP_ACP, 0, wbuf.c_str(), -1, nullptr, 0, nullptr, nullptr);
     if (len <= 0)
         return "";
@@ -502,7 +502,7 @@ std::string Tools::Utf8ToLocal(const std::string &utf8)
 
     return buf;
 #else
-    // Linux/macOS Ä¬ÈÏ UTF-8£¬²»ĞèÒª×ª»»
+    // Linux/macOS é»˜è®¤ UTF-8ï¼Œä¸éœ€è¦è½¬æ¢
     return utf8;
 #endif
 }
