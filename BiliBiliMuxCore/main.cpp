@@ -290,7 +290,25 @@ int mainPipeline(const MediaSubdir &sub)
         title = L"output";
     }
 
-    const std::wstring safeTitle = Tools::sanitize_windows_filename(title);
+    // 输出文件名优先使用 download_subtitle + page（如果存在），否则回退到 title 或目录名
+    std::wstring outBase;
+    if (!mediaInfo.download_subtitle.empty()) {
+        outBase = mediaInfo.download_subtitle;
+    }
+    else if (!mediaInfo.title.empty()) {
+        outBase = mediaInfo.title;
+    }
+    else {
+        outBase = match->dir.filename().wstring();
+    }
+    if (outBase.empty()) {
+        outBase = L"output";
+    }
+    if (mediaInfo.page > 0) {
+        outBase += L"_" + std::to_wstring(mediaInfo.page);
+    }
+
+    const std::wstring safeTitle = Tools::sanitize_windows_filename(outBase);
     const fs::path outputDir = sub.dir.empty() ? fs::current_path() : sub.dir;
     const fs::path outputPath = outputDir / (safeTitle + L".mp4");
     const std::set<std::string> files = {
