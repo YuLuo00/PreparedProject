@@ -347,6 +347,47 @@ int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaInfo &info)
             av_dict_set(&fmt->metadata, key, val, 0);
         }
     }
+    // 为了兼容一些 muxer （在没有 movflags=use_metadata_tags 时），
+    // 额外把关键字段序列化为 JSON 存入标准 tag（comment），以便保留自定义 dict 数据。
+    try {
+        json extra = json::object();
+        extra["cover"] = Tools::wstring_to_utf8(info.cover);
+        extra["bvid"] = Tools::wstring_to_utf8(info.bvid);
+        extra["download_title"] = Tools::wstring_to_utf8(info.download_title);
+        extra["download_subtitle"] = Tools::wstring_to_utf8(info.download_subtitle);
+        extra["owner_id"] = info.owner_id;
+        extra["avid"] = info.avid;
+        extra["cid"] = info.cid;
+        extra["page"] = info.page;
+
+        json videos = json::array();
+        for (const auto &it : info.videos) {
+            json v = json::object();
+            v["md5"] = Tools::wstring_to_utf8(it.md5);
+            v["base_url"] = Tools::wstring_to_utf8(it.base_url);
+            v["id"] = it.id;
+            videos.push_back(v);
+        }
+        extra["videos"] = videos;
+
+        json audios = json::array();
+        for (const auto &it : info.audios) {
+            json a = json::object();
+            a["md5"] = Tools::wstring_to_utf8(it.md5);
+            a["base_url"] = Tools::wstring_to_utf8(it.base_url);
+            a["id"] = it.id;
+            audios.push_back(a);
+        }
+        extra["audios"] = audios;
+
+        const std::string dump = extra.dump();
+        if (!dump.empty()) {
+            av_dict_set(&fmt->metadata, "comment", dump.c_str(), 0);
+        }
+    }
+    catch (...) {
+        // 忽略序列化错误，保留原有 metadata 写入逻辑
+    }
 
     return 0;
 }
