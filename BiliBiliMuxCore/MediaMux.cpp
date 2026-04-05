@@ -20,6 +20,7 @@
 
 #include "Logger.h"
 #include "ReadNode.h"
+#include "MatchCollector.h"
 
 namespace
 {
@@ -188,6 +189,24 @@ void MediaMux::Close()
         avio_close(m_outCtx->pb);
         m_outCtx = nullptr;
     }
+
+    //for (auto it = inputStreams.begin(); it != inputStreams.end(); )
+    //{
+    //    AVFormatContext* ctx = it->first;
+
+    //    // 找到这一组（同一个 ctx 的所有 stream）
+    //    auto [begin, end] = inputStreams.equal_range(ctx);
+
+    //    // ⚠️ 只关闭一次 ctx（关键点）
+    //    if (ctx)
+    //    {
+    //        avformat_close_input(&ctx);
+    //        // 注意：这里 ctx 已经被置为 nullptr（FFmpeg内部会做）
+    //    }
+
+    //    // 跳到下一个 ctx
+    //    it = end;
+    //}
 }
 
 int MediaMux::mux(bool autoCloseOutput)

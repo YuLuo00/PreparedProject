@@ -60,6 +60,7 @@ using namespace tbb::flow;
 #include "MediaMux.h"
 #include "ReadNode.h"
 #include "tools.h"
+#include "MatchCollector.h"
 
 #include <algorithm>
 #include <vector>
@@ -479,9 +480,10 @@ int main()
     //    R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\【小巫】不行啊♥不故作欢笑是不行的.mp4)",
     //    R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\【小巫】不行啊♥不故作欢笑是不行的_cover.jpg)");
 
-    fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
+    fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1\00)";
     auto matches = BiliCache::CollectBiliFoldersStructured(root);
     MediaSubdir aimSub;
+    MatchCollector col(R"(C:\Users\Administrator\Desktop\bili_zip_1\finished)");
     for (const auto &m : matches) {
         std::string title = BiliCache::GetTitle(m);
         std::wstring titleWstr = Tools::utf8_to_wstring(title);
@@ -489,6 +491,7 @@ int main()
         for (size_t i = 0; i < m.media_subdirs.size(); i++) {
             MediaSubdir sub = m.media_subdirs[i];
             mainPipeline(sub);
+            col.RecordDone(&sub);
         }
         if (titleWstr == LR"(【小巫】不行啊♥不故作欢笑是不行的)") {
             if (!m.media_subdirs.empty()) {

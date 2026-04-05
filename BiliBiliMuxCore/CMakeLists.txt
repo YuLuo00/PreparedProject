@@ -65,6 +65,7 @@ target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/Logger.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/Logger.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/main.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/MatchCollector.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/MediaMux.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/MediaMux.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ReadNode.cpp"
