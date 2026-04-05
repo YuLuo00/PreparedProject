@@ -457,9 +457,9 @@ int main()
     LOG_INFO(LogGroup::DEFAULT, "--------------------------------------run begin-----------------------------------");
 
 
-    return add_cover_to_video(R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\cover.mp4)",
-        R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\【小巫】不行啊♥不故作欢笑是不行的.mp4)",
-        R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\【小巫】不行啊♥不故作欢笑是不行的_cover.jpg)");
+    //return add_cover_to_video(R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\cover.mp4)",
+    //    R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\【小巫】不行啊♥不故作欢笑是不行的.mp4)",
+    //    R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\【小巫】不行啊♥不故作欢笑是不行的_cover.jpg)");
 
     fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1)";
     auto matches = BiliCache::CollectBiliFoldersStructured(root);

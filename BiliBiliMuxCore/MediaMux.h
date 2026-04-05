@@ -28,6 +28,10 @@ public:
     int mux(bool autoCloseOutput = true);
     int EmbedCover(const std::filesystem::path &coverPath);
 
+    // pending cover path: set by EmbedCover(), actually attached during mux()
+    std::filesystem::path m_pendingCoverPath;
+    bool m_hasPendingCover = false;
+
     AVFormatContext *m_outCtx = nullptr;
     std::set<std::string> m_files;
     std::string m_outputFile = "result.mp4";

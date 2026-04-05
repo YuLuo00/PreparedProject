@@ -16,7 +16,7 @@ void Logger::Init()
         "logs/app.log", 1024 * 1024 * 5, 3);
 
     console_sink->set_pattern("[%P][%t] [%^%l%$][%n] %v");
-    file_sink->set_pattern("%Y:%m:%d %H:%M:%S [%s:%#] [%P][%t] [%^%l%$][%n] %v");
+    file_sink->set_pattern("%Y:%m:%d %H:%M:%S [%P][%t] [%^%l%$][%n] [%s:%#] %v");
 
     g_sinks = { console_sink, file_sink };
 }

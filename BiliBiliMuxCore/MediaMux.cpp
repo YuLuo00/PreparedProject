@@ -204,6 +204,111 @@ int MediaMux::mux(bool autoCloseOutput)
         streamIndexMap[inCtx][inputStream->index] = newStream->index;
     }
 
+    // 如果主线程之前调用了 EmbedCover() 并缓存了封面路径，在此创建附图流并填充 attached_pic
+    if (m_hasPendingCover) {
+        AVFormatContext *coverCtx = nullptr;
+        int cret = avformat_open_input(&coverCtx, m_pendingCoverPath.string().c_str(), nullptr, nullptr);
+        if (cret < 0) {
+            char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+            av_strerror(cret, errMsg, sizeof(errMsg));
+            LOG_ERROR(LogGroup::MUX, "Failed to open pending cover {}: {} (ret={})", m_pendingCoverPath.string(), errMsg, cret);
+            m_hasPendingCover = false;
+        } else {
+            LOG_DEBUG(LogGroup::MUX, "Opened pending cover '{}', ret={}", m_pendingCoverPath.string(), cret);
+            cret = avformat_find_stream_info(coverCtx, nullptr);
+            if (cret < 0) {
+                char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+                av_strerror(cret, errMsg, sizeof(errMsg));
+                LOG_ERROR(LogGroup::MUX, "Failed to find stream info for pending cover {}: {} (ret={})", m_pendingCoverPath.string(), errMsg, cret);
+                avformat_close_input(&coverCtx);
+                m_hasPendingCover = false;
+            } else {
+                LOG_DEBUG(LogGroup::MUX, "Found stream info for pending cover '{}', ret={}", m_pendingCoverPath.string(), cret);
+                AVStream *coverInStream = nullptr;
+                for (unsigned int i = 0; i < coverCtx->nb_streams; i++) {
+                    if (coverCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+                        coverInStream = coverCtx->streams[i];
+                        break;
+                    }
+                }
+
+                if (!coverInStream) {
+                    LOG_ERROR(LogGroup::MUX, "No video stream in pending cover: {}", m_pendingCoverPath.string());
+                    avformat_close_input(&coverCtx);
+                    m_hasPendingCover = false;
+                } else {
+                    AVStream *coverOutStream = avformat_new_stream(m_outCtx, nullptr);
+                    if (!coverOutStream) {
+                        LOG_ERROR(LogGroup::MUX, "Failed to create cover stream for pending cover");
+                        avformat_close_input(&coverCtx);
+                        m_hasPendingCover = false;
+                    } else {
+                        int cpy = avcodec_parameters_copy(coverOutStream->codecpar, coverInStream->codecpar);
+                        if (cpy < 0) {
+                            LOG_ERROR(LogGroup::MUX, "Failed to copy codec params for pending cover: {}", cpy);
+                            avformat_close_input(&coverCtx);
+                            m_hasPendingCover = false;
+                        } else {
+                            coverOutStream->codecpar->codec_tag = 0;
+                            coverOutStream->disposition |= AV_DISPOSITION_ATTACHED_PIC;
+                            coverOutStream->time_base = coverInStream->time_base;
+                            if (coverInStream->duration != AV_NOPTS_VALUE) {
+                                coverOutStream->duration = coverInStream->duration;
+                            }
+
+                            AVPacket pkt;
+                            av_init_packet(&pkt);
+                            int r = 0;
+                            while (true) {
+                                r = av_read_frame(coverCtx, &pkt);
+                                if (r < 0) break;
+                                LOG_DEBUG(LogGroup::MUX, "Read cover packet: stream_index={}, size={}, r={}", pkt.stream_index, pkt.size, r);
+                                if (pkt.stream_index == static_cast<int>(coverInStream->index)) break;
+                                av_packet_unref(&pkt);
+                            }
+
+                            if (r < 0) {
+                                char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+                                av_strerror(r, errMsg, sizeof(errMsg));
+                                LOG_ERROR(LogGroup::MUX, "Failed to read cover frame from {}: {} (ret={})", m_pendingCoverPath.string(), errMsg, r);
+                                av_packet_unref(&pkt);
+                                avformat_close_input(&coverCtx);
+                                m_hasPendingCover = false;
+                            } else {
+                                LOG_DEBUG(LogGroup::MUX, "Selected cover packet: stream_index={}, size={}", pkt.stream_index, pkt.size);
+                                pkt.stream_index = coverOutStream->index;
+                                pkt.pts = pkt.dts = 0;
+                                pkt.duration = 0;
+                                pkt.pos = -1;
+                                pkt.flags |= AV_PKT_FLAG_KEY;
+
+                                if (coverOutStream->time_base.num != 0) {
+                                    pkt.pts = av_rescale_q(0, AV_TIME_BASE_Q, coverOutStream->time_base);
+                                    pkt.dts = pkt.pts;
+                                }
+
+                                av_packet_unref(&coverOutStream->attached_pic);
+                                int r2 = av_packet_ref(&coverOutStream->attached_pic, &pkt);
+                                LOG_DEBUG(LogGroup::MUX, "av_packet_ref returned {}", r2);
+                                av_packet_unref(&pkt);
+                                avformat_close_input(&coverCtx);
+                                if (r2 < 0) {
+                                    char errMsg2[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+                                    av_strerror(r2, errMsg2, sizeof(errMsg2));
+                                    LOG_ERROR(LogGroup::MUX, "Failed to set attached_pic for pending cover: {} (ret={})", errMsg2, r2);
+                                    m_hasPendingCover = false;
+                                } else {
+                                    LOG_INFO(LogGroup::MUX, "Pending cover attached as stream index={}, size={}", coverOutStream->index, coverOutStream->attached_pic.size);
+                                    m_hasPendingCover = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // 特殊处理attached_pic流（封面）
     for (unsigned int i = 0; i < m_outCtx->nb_streams; i++) {
         AVStream *stream = m_outCtx->streams[i];
@@ -224,19 +329,26 @@ int MediaMux::mux(bool autoCloseOutput)
         return -2;
     }
 
-    // 将 attached_pic 列表加入输出队列，必须在写 header 之前执行
-    int attachRet = avformat_queue_attached_pictures(m_outCtx);
-    if (attachRet < 0) {
-        LOG_ERROR(LogGroup::MUX, "avformat_queue_attached_pictures failed: {}", attachRet);
-        return -3;
+    const int ret = avformat_write_header(m_outCtx, nullptr);
+    if (ret != 0) {
+        char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+        av_strerror(ret, errMsg, sizeof(errMsg));
+        LOG_ERROR(LogGroup::MUX, "avformat_write_header failed: {}", errMsg);
+        return -4;
     }
 
-    AVDictionary *muxOpts = nullptr;
-    av_dict_set(&muxOpts, "movflags", "use_metadata_tags", 0);
-    const int ret = avformat_write_header(m_outCtx, &muxOpts);
-    av_dict_free(&muxOpts);
-    if (ret != 0) {
-        return -4;
+    for (unsigned int i = 0; i < m_outCtx->nb_streams; i++) {
+        AVStream *stream = m_outCtx->streams[i];
+        if ((stream->disposition & AV_DISPOSITION_ATTACHED_PIC) && stream->attached_pic.size > 0) {
+            int writeRet = av_interleaved_write_frame(m_outCtx, &stream->attached_pic);
+            if (writeRet < 0) {
+                char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+                av_strerror(writeRet, errMsg, sizeof(errMsg));
+                LOG_ERROR(LogGroup::MUX, "Failed to write attached_pic frame: {}", errMsg);
+                return -3;
+            }
+            LOG_INFO(LogGroup::MUX, "Wrote attached picture packet for stream {}, size={}", stream->index, stream->attached_pic.size);
+        }
     }
 
     std::vector<AVFormatContext *> ctsx;
@@ -309,105 +421,8 @@ int MediaMux::EmbedCover(const std::filesystem::path &coverPath)
         return -1;
     }
 
-    AVFormatContext *coverCtx = nullptr;
-    int ret = avformat_open_input(&coverCtx, coverPath.string().c_str(), nullptr, nullptr);
-    if (ret < 0) {
-        char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
-        av_strerror(ret, errMsg, sizeof(errMsg));
-        LOG_ERROR(LogGroup::MUX, "Failed to open cover image {}: {}", coverPath.string(), errMsg);
-        return -2;
-    }
-
-    ret = avformat_find_stream_info(coverCtx, nullptr);
-    if (ret < 0) {
-        LOG_ERROR(LogGroup::MUX, "Failed to find stream info for cover image");
-        avformat_close_input(&coverCtx);
-        return -3;
-    }
-
-    AVStream *coverStream = nullptr;
-    for (unsigned int i = 0; i < coverCtx->nb_streams; i++) {
-        if (coverCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-            coverStream = coverCtx->streams[i];
-            break;
-        }
-    }
-
-    if (!coverStream) {
-        LOG_ERROR(LogGroup::MUX, "No valid video stream found in cover image");
-        avformat_close_input(&coverCtx);
-        return -4;
-    }
-
-    AVStream *coverOutStream = avformat_new_stream(m_outCtx, nullptr);
-    if (!coverOutStream) {
-        LOG_ERROR(LogGroup::MUX, "Failed to create cover stream");
-        avformat_close_input(&coverCtx);
-        return -5;
-    }
-
-    ret = avcodec_parameters_copy(coverOutStream->codecpar, coverStream->codecpar);
-    if (ret < 0) {
-        LOG_ERROR(LogGroup::MUX, "Failed to copy codec parameters for cover stream: {}", ret);
-        avformat_close_input(&coverCtx);
-        return -6;
-    }
-
-    coverOutStream->disposition |= AV_DISPOSITION_ATTACHED_PIC;
-    coverOutStream->time_base = coverStream->time_base;  // 使用原始流的time_base
-    coverOutStream->codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
-    coverOutStream->codecpar->codec_id = coverStream->codecpar->codec_id;
-
-    // 设置流的持续时间等参数，如果可能的话从输入流复制
-    if (coverStream->duration != AV_NOPTS_VALUE) {
-        coverOutStream->duration = coverStream->duration;
-    }
-
-    AVPacket *pkt = av_packet_alloc();
-    if (!pkt) {
-        LOG_ERROR(LogGroup::MUX, "Failed to allocate packet for cover image");
-        avformat_close_input(&coverCtx);
-        return -7;
-    }
-
-    while (true) {
-        ret = av_read_frame(coverCtx, pkt);
-        if (ret < 0) {
-            LOG_ERROR(LogGroup::MUX, "Failed to read cover frame");
-            av_packet_free(&pkt);
-            avformat_close_input(&coverCtx);
-            return -8;
-        }
-        if (pkt->stream_index == static_cast<int>(coverStream->index)) {
-            break;
-        }
-        av_packet_unref(pkt);
-    }
-
-    pkt->stream_index = coverOutStream->index;
-    pkt->pts = pkt->dts = 0;
-    pkt->duration = 0;
-    pkt->pos = -1;
-    pkt->flags |= AV_PKT_FLAG_KEY;
-
-    // 如果需要，根据time_base调整PTS
-    if (coverOutStream->time_base.num != 0) {
-        pkt->pts = av_rescale_q(0, AV_TIME_BASE_Q, coverOutStream->time_base);
-        pkt->dts = pkt->pts;
-    }
-
-    av_packet_unref(&coverOutStream->attached_pic);
-    ret = av_packet_ref(&coverOutStream->attached_pic, pkt);
-    av_packet_free(&pkt);
-    avformat_close_input(&coverCtx);
-
-    if (ret < 0) {
-        LOG_ERROR(LogGroup::MUX, "Failed to copy cover packet to attached_pic: {}", ret);
-        return -9;
-    }
-
-    LOG_INFO(LogGroup::MUX, "Cover embedded successfully as attached picture stream, size={} bytes, stream_index={}",
-             coverOutStream->attached_pic.size,
-             coverOutStream->index);
+    m_pendingCoverPath = coverPath;
+    m_hasPendingCover = true;
+    LOG_INFO(LogGroup::MUX, "Pending cover queued: {}", coverPath.string());
     return 0;
 }
