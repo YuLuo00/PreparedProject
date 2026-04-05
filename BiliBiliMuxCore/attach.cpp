@@ -399,7 +399,37 @@ int write_mediainfo_to_avformat(AVFormatContext *fmt, const MediaSubdir &sub)
         return AVERROR(EINVAL);
     }
 
-    return write_mediainfo_to_avformat(fmt, info);
+    int ret = write_mediainfo_to_avformat(fmt, info);
+
+    // 另外把 entry.json / index.json 的原始 JSON 合并写入到 comment tag，便于恢复完整结构化数据。
+    try {
+        json entryJson;
+        json indexJson;
+        bool haveEntry = false;
+        bool haveIndex = false;
+
+        if (sub.match && !sub.match->entry_json_path.empty()) {
+            haveEntry = load_json_file(sub.match->entry_json_path.wstring(), entryJson);
+        }
+        if (!sub.index.empty()) {
+            haveIndex = load_json_file(sub.index.wstring(), indexJson);
+        }
+
+        if (haveEntry || haveIndex) {
+            json combined = json::object();
+            if (haveEntry) combined["entry"] = entryJson;
+            if (haveIndex) combined["index"] = indexJson;
+            const std::string dump = combined.dump();
+            if (!dump.empty()) {
+                av_dict_set(&fmt->metadata, "comment", dump.c_str(), 0);
+            }
+        }
+    }
+    catch (...) {
+        // 忽略序列化/读取错误，保持之前的 metadata 写入
+    }
+
+    return ret;
 }
 
 int read_mediainfo_from_avformat(const AVFormatContext *fmt, MediaInfo &out)
@@ -418,33 +448,55 @@ int read_mediainfo_from_avformat(const AVFormatContext *fmt, MediaInfo &out)
     GetMetadataInt(fmt->metadata, "avid", out.avid);
     GetMetadataInt64(fmt->metadata, "cid", out.cid);
     GetMetadataInt(fmt->metadata, "page", out.page);
-
-    std::map<size_t, EntryItem> videoEntries;
-    std::map<size_t, EntryItem> audioEntries;
-
-    const AVDictionaryEntry *entry = nullptr;
-    while ((entry = av_dict_get(fmt->metadata, "", entry, AV_DICT_IGNORE_SUFFIX)) != nullptr) {
-        size_t index = 0;
-        std::string field;
-
-        if (ParseIndexedMetadataKey(entry->key, "video.", index, field)) {
-            ApplyEntryField(videoEntries[index], field, entry->value);
-            continue;
+    bool indexParsedFromComment = false;
+    const AVDictionaryEntry *commentEntry = av_dict_get(fmt->metadata, "comment", nullptr, 0);
+    if (commentEntry && commentEntry->value) {
+        try {
+            json commentJson = json::parse(commentEntry->value);
+            if (commentJson.contains("entry")) {
+                parse_entry_json(commentJson["entry"], out);
+            }
+            if (commentJson.contains("index")) {
+                out.videos.clear();
+                out.audios.clear();
+                if (parse_index_json(commentJson["index"], out)) {
+                    indexParsedFromComment = true;
+                }
+            }
         }
-
-        if (ParseIndexedMetadataKey(entry->key, "audio.", index, field)) {
-            ApplyEntryField(audioEntries[index], field, entry->value);
+        catch (...) {
+            // ignore parse errors and fall back to per-key metadata parsing
         }
     }
 
-    out.videos.reserve(videoEntries.size());
-    for (auto &kv : videoEntries) {
-        out.videos.push_back(std::move(kv.second));
-    }
+    if (!indexParsedFromComment) {
+        std::map<size_t, EntryItem> videoEntries;
+        std::map<size_t, EntryItem> audioEntries;
 
-    out.audios.reserve(audioEntries.size());
-    for (auto &kv : audioEntries) {
-        out.audios.push_back(std::move(kv.second));
+        const AVDictionaryEntry *entry = nullptr;
+        while ((entry = av_dict_get(fmt->metadata, "", entry, AV_DICT_IGNORE_SUFFIX)) != nullptr) {
+            size_t index = 0;
+            std::string field;
+
+            if (ParseIndexedMetadataKey(entry->key, "video.", index, field)) {
+                ApplyEntryField(videoEntries[index], field, entry->value);
+                continue;
+            }
+
+            if (ParseIndexedMetadataKey(entry->key, "audio.", index, field)) {
+                ApplyEntryField(audioEntries[index], field, entry->value);
+            }
+        }
+
+        out.videos.reserve(videoEntries.size());
+        for (auto &kv : videoEntries) {
+            out.videos.push_back(std::move(kv.second));
+        }
+
+        out.audios.reserve(audioEntries.size());
+        for (auto &kv : audioEntries) {
+            out.audios.push_back(std::move(kv.second));
+        }
     }
 
     return 0;
