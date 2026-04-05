@@ -470,13 +470,13 @@ int main()
         LOG_INFO(LogGroup::IO, "{}", LOGUTF8(title));
         for (size_t i = 0; i < m.media_subdirs.size(); i++) {
             MediaSubdir sub = m.media_subdirs[i];
-            //mainPipeline(sub);
+            mainPipeline(sub);
         }
         if (titleWstr == LR"(【小巫】不行啊♥不故作欢笑是不行的)") {
             if (!m.media_subdirs.empty()) {
                 aimSub = m.media_subdirs.front();
             }
-            break;
+            //break;
         }
     }
 
@@ -487,6 +487,6 @@ int main()
         return -1;
     }
 
-        //return -1;
-    return mainPipeline(aimSub);
+        return -1;
+    //return mainPipeline(aimSub);
 }
