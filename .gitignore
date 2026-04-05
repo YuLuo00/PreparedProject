@@ -13,3 +13,6 @@ obj
 /.clang-format
 /.vs
 /out/build/x64-Debug
+/BiliBiliMuxCore/build
+/BiliBiliMuxCore/logs
+/BiliBiliMuxCore/cache/bilibili_api/covers
