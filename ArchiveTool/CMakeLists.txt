@@ -66,9 +66,5 @@ install(DIRECTORY
     DESTINATION include
     FILES_MATCHING PATTERN "*.h"
 )
-install(FILES
-        # ${ALL_IMPORTED_LOCATION}
-        $<$<CONFIG:Debug>:${ALL_IMPORTED_LOCATION_Debug}>
-        $<$<CONFIG:Release>:${ALL_IMPORTED_LOCATION_Release}>
-    DESTINATION bin
-)
+
+Install_Imported_Locations()

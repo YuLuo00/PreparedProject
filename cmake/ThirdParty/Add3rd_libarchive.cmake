@@ -11,9 +11,21 @@ endif()
 find_package(LibArchive REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE LibArchive::LibArchive)
 
-install(DIRECTORY
-    $<$<CONFIG:Debug>:${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/debug/bin/>
-    $<$<CONFIG:Release>:${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/bin/>
-    DESTINATION bin
-    FILES_MATCHING PATTERN "*.dll"
-)
+# FindLibArchive 只记录 .dll.a 导入库，不记录运行时 DLL 路径，需手动收集
+if(MINGW)
+    file(GLOB _libarchive_debug_dlls
+        "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-mingw-dynamic/debug/bin/*.dll")
+    file(GLOB _libarchive_release_dlls
+        "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-mingw-dynamic/bin/*.dll")
+else()
+    file(GLOB _libarchive_debug_dlls
+        "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/debug/bin/*.dll")
+    file(GLOB _libarchive_release_dlls
+        "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/bin/*.dll")
+endif()
+
+list(APPEND ALL_IMPORTED_LOCATION_Debug   ${_libarchive_debug_dlls})
+list(APPEND ALL_IMPORTED_LOCATION_Release ${_libarchive_release_dlls})
+
+
+
