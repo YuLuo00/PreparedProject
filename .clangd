@@ -1,0 +1,13 @@
+CompileFlags:
+  Add:
+    - -IC:/_sf_freeSetup/mingw/x86_64-14.2.0-release-win32-seh-msvcrt-rt_v12-rev1/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++
+    - -IC:/_sf_freeSetup/mingw/x86_64-14.2.0-release-win32-seh-msvcrt-rt_v12-rev1/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/x86_64-w64-mingw32
+    - -IC:/_sf_freeSetup/mingw/x86_64-14.2.0-release-win32-seh-msvcrt-rt_v12-rev1/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/backward
+    - -IC:/_sf_freeSetup/mingw/x86_64-14.2.0-release-win32-seh-msvcrt-rt_v12-rev1/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include
+    - -IC:/_sf_freeSetup/mingw/x86_64-14.2.0-release-win32-seh-msvcrt-rt_v12-rev1/mingw64/x86_64-w64-mingw32/include
+    - -IC:/_sf_freeSetup/mingw/x86_64-14.2.0-release-win32-seh-msvcrt-rt_v12-rev1/mingw64/include
+    - -D_WIN32
+    - -D_WIN64
+    - -D__MINGW32__
+    - -D__MINGW64__
+  Compiler: C:/_sf_freeSetup/mingw/x86_64-14.2.0-release-win32-seh-msvcrt-rt_v12-rev1/mingw64/bin/g++.exe
