@@ -34,7 +34,6 @@ macro(target_sources_group TargetName GroupName PERMISSION)
 endmacro()
 
 # 添加运行时依赖文件
-# 添加运行时依赖文件
 macro(Add_Interface_Imported_Location)
     foreach(ProjectName IN ITEMS ${ARGV})
         message(STATUS -----${ProjectName})
@@ -88,287 +87,30 @@ macro(Add_Imported_Location)
 endmacro()
 
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
-
-macro(Add3rd_spdlog ProjectName)
-    set(fmt_DIR "${ProjectRootDir}/ThirdParty/spdlog/installed/x64-windows/share/fmt")
-    set(spdlog_DIR "${ProjectRootDir}/ThirdParty/spdlog/installed/x64-windows/share/spdlog")
-    message("spdlog_DIR == ${spdlog_DIR}")
-
-    find_package(spdlog CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE spdlog::spdlog)
-
-    Add_Interface_Imported_Location(spdlog::spdlog)
-endmacro()
-
-macro(Add3rd_fmt ProjectName)
-    set(fmt_DIR "${ProjectRootDir}/ThirdParty/fmt/installed/x64-windows/share/fmt/")
-    message("fmt_DIR == ${fmt_DIR}")
-    # this is heuristically generated, and may not be correct
-    find_package(fmt CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE fmt::fmt-header-only)
-
-    Add_Interface_Imported_Location(fmt::fmt-header-only)
-endmacro()
-
-macro(Add3rd_nlohmann_json ProjectName)
-    set(nlohmann_json_DIR "${ProjectRootDir}/ThirdParty/nlohmann/installed/x64-windows/share/nlohmann_json/")
-    message("nlohmann_json_DIR == ${nlohmann_json_DIR}")
-    # this is heuristically generated, and may not be correct
-    find_package(nlohmann_json CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE nlohmann_json::nlohmann_json)
-    Add_Interface_Imported_Location(nlohmann_json::nlohmann_json)
-endmacro()
-
-macro(Add3rd_LibArchive ProjectName)
-    message("LibArchive == ${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/")
-    set(CMAKE_INCLUDE_PATH "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/include")
-    set(CMAKE_LIBRARY_PATH "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/lib")
-
-    find_package(LibArchive REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE LibArchive::LibArchive) # since CMake 3.17
-
-    install(DIRECTORY
-        $<$<CONFIG:Debug>:${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/debug/bin/>
-        $<$<CONFIG:Release>:${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/bin/>
-        DESTINATION bin
-        FILES_MATCHING PATTERN "*.dll"
-    )
-endmacro()
-
-macro(Add3rd_7zExtra ProjectName)
-    list(APPEND ALL_IMPORTED_LOCATION "${ProjectRootDir}/ThirdParty/7z2409-extra/x64/7za.dll")
-endmacro()
-
-macro(Add3rd_bit7z ProjectName)
-    set(ghc_filesystem_DIR "${ProjectRootDir}/ThirdParty/bit7z/installed/x64-windows/share/ghc_filesystem/")
-    set(7zip_DIR "${ProjectRootDir}/ThirdParty/bit7z/installed/x64-windows/share/7zip/")
-    set(unofficial-bit7z_DIR "${ProjectRootDir}/ThirdParty/bit7z/installed/x64-windows/share/unofficial-bit7z/")
-    message("unofficial-bit7z_DIR == ${unofficial-bit7z_DIR}")
-    # this is heuristically generated, and may not be correct
-    find_package(unofficial-bit7z CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE unofficial::bit7z::bit7z64)
-
-    Add_Interface_Imported_Location(unofficial::bit7z::bit7z64)
-    Add_Interface_Imported_Location(7zip::7zip)
-endmacro()
-
-macro(Add3rd_vulkan ProjectName)
-    set(vulkan_DIR "${ProjectRootDir}/ThirdParty/vulkan/installed/x64-windows/share/VulkanLoader/")
-    message("vulkan_DIR == ${vulkan_DIR}")
-    # https://cmake.org/cmake/help/latest/module/FindVulkan.html
-    find_package(Vulkan REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE Vulkan::Vulkan)
-
-    Add_Interface_Imported_Location(Vulkan::Vulkan)
-endmacro()
-
-macro(Add3rd_freeimage ProjectName)
-    set(libpng_DIR "${ProjectRootDir}/ThirdParty/libpng/installed/x64-windows/share/libpng/")
-    find_package(PNG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE PNG::PNG)
-    Add_Interface_Imported_Location(PNG::PNG)
-
-    set(freeimage_DIR "${ProjectRootDir}/ThirdParty/freeimage/installed/x64-windows/share/freeimage/")
-    message("freeimage_DIR == ${freeimage_DIR}")
-    # this is heuristically generated, and may not be correct
-    find_package(freeimage CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE
-        freeimage::FreeImage
-        # freeimage::FreeImagePlus
-    )
-
-    Add_Interface_Imported_Location(freeimage::FreeImage)
-    # Add_Interface_Imported_Location(freeimage::FreeImagePlus)
-endmacro()
-
-macro(Add3rd_glm ProjectName)
-    set(glm_DIR "${ProjectRootDir}/ThirdParty/GLM/installed/x64-windows/share/glm")
-    message("glm_DIR == ${glm_DIR}")
-    # this is heuristically generated, and may not be correct
-    find_package(glm CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE glm::glm)
-
-    Add_Interface_Imported_Location(glm::glm)
-endmacro()
-
-macro(Add3rd_Glad ProjectName)
-    set(glad_DIR "${ProjectRootDir}/ThirdParty/glad/installed/x64-windows/share/glad")
-    message("glad_DIR == ${glad_DIR}")
-    # this is heuristically generated, and may not be correct
-    find_package(glad CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE glad::glad)
-    Add_Interface_Imported_Location(glad::glad)
-endmacro()
-
-macro(Add3rd_glfw3 ProjectName)
-    set(glfw3_DIR "${ProjectRootDir}/ThirdParty/GLFW3/installed/x64-windows/share/glfw3")
-    message("glfw3_DIR == ${glfw3_DIR}")
-    # this is heuristically generated, and may not be correct
-    find_package(glfw3 CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE glfw)
-
-    Add_Interface_Imported_Location(glfw)
-endmacro()
-
-macro(Add3rd_GLEW ProjectName)
-    set(GLEW_DIR "${ProjectRootDir}/ThirdParty/GLEW/installed/x64-windows/share/glew")
-    message("GLEW_DIR == ${GLEW_DIR}")
-    # this is heuristically generated, and may not be correct
-    find_package(GLEW REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE GLEW::GLEW)
-
-    Add_Interface_Imported_Location(GLEW::GLEW)
-endmacro()
-
-macro(Add3rd_OpenCV ProjectName)
-    set(Protobuf_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/protobuf/")
-    set(quirc_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/quirc/")
-    set(OpenCV_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/opencv4/")
-    
-    set(TIFF_INCLUDE_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/include/")
-    set(TIFF_LIBRARY "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/bin/")
-    list(APPEND ALL_IMPORTED_LOCATION_Debug "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/debug/bin/tiffd.dll")
-    list(APPEND ALL_IMPORTED_LOCATION_Release "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/bin/tiffd.dll")
-    message("OpenCV_DIR == ${OpenCV_DIR}")
-
-    set(libjpeg-turbo_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/libjpeg-turbo/")
-    set(WebP_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/WebP/")
-    set(libpng_DIR "${ProjectRootDir}/ThirdParty/opencv/installed/x64-windows/share/libpng/")
-    find_package(libpng CONFIG REQUIRED)
-    find_package(libjpeg-turbo CONFIG REQUIRED)
-    find_package(WebP CONFIG REQUIRED)
-    # this is heuristically generated, and may not be correct
-    find_package(OpenCV CONFIG REQUIRED)
-    
-
-    # note: 10 additional targets are not displayed.
-    target_link_libraries(${ProjectName} PRIVATE
-        opencv_ml opencv_dnn opencv_core opencv_flann opencv_imgcodecs opencv_imgproc
-        libjpeg-turbo::jpeg
-        WebP::webp WebP::webpdecoder WebP::webpdemux WebP::sharpyuv
-        png
-    )
-    Add_Interface_Imported_Location(
-        opencv_ml opencv_dnn opencv_core opencv_flann opencv_imgcodecs opencv_imgproc
-        libjpeg-turbo::jpeg
-        WebP::webp WebP::webpdecoder WebP::webpdemux WebP::sharpyuv
-        png
-    )
-endmacro()
-
-macro(Add3rd_sqlite3 ProjectName)
-    set(unofficial-sqlite3_DIR "${ProjectRootDir}/ThirdParty/sqlite3/installed/x64-windows/share/unofficial-sqlite3/")
-    message("unofficial-sqlite3_DIR == ${unofficial-sqlite3_DIR}")
-
-    find_package(unofficial-sqlite3 CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE unofficial::sqlite3::sqlite3)
-    
-    Add_Interface_Imported_Location(unofficial::sqlite3::sqlite3)
-    Add_Imported_Location(unofficial::sqlite3::sqlite3)
-endmacro()
-
-macro(Add3rd_OpenCV411 ProjectName)
-    set(Protobuf_DIR "${ProjectRootDir}/ThirdParty/opencv411/installed/x64-windows/share/protobuf/")
-    set(quirc_DIR "${ProjectRootDir}/ThirdParty/opencv411/installed/x64-windows/share/quirc/")
-    set(OpenCV_DIR "${ProjectRootDir}/ThirdParty/opencv411/installed/x64-windows/share/opencv4/")
-    
-    set(TIFF_INCLUDE_DIR "${ProjectRootDir}/ThirdParty/opencv411/installed/x64-windows/include/")
-    set(TIFF_LIBRARY "${ProjectRootDir}/ThirdParty/opencv411/installed/x64-windows/bin/")
-    list(APPEND ALL_IMPORTED_LOCATION_Debug "${ProjectRootDir}/ThirdParty/opencv411/installed/x64-windows/debug/bin/tiffd.dll")
-    list(APPEND ALL_IMPORTED_LOCATION_Release "${ProjectRootDir}/ThirdParty/opencv411/installed/x64-windows/bin/tiffd.dll")
-    message("OpenCV_DIR == ${OpenCV_DIR}")
-
-    set(libjpeg-turbo_DIR "${ProjectRootDir}/ThirdParty/opencv411/installed/x64-windows/share/libjpeg-turbo/")
-    set(WebP_DIR "${ProjectRootDir}/ThirdParty/opencv411/installed/x64-windows/share/WebP/")
-    set(libpng_DIR "${ProjectRootDir}/ThirdParty/opencv411/installed/x64-windows/share/libpng/")
-    find_package(libpng CONFIG REQUIRED)
-    find_package(libjpeg-turbo CONFIG REQUIRED)
-    find_package(WebP CONFIG REQUIRED)
-    # this is heuristically generated, and may not be correct
-    find_package(OpenCV CONFIG REQUIRED)
-    
-
-    # note: 10 additional targets are not displayed.
-    target_link_libraries(${ProjectName} PRIVATE
-        opencv_ml opencv_dnn opencv_core opencv_flann opencv_imgcodecs opencv_imgproc opencv_highgui
-        libjpeg-turbo::jpeg
-        WebP::webp WebP::webpdecoder WebP::webpdemux WebP::sharpyuv WebP::libwebpmux
-        png
-    )
-    Add_Interface_Imported_Location(
-        opencv_ml opencv_dnn opencv_core opencv_flann opencv_imgcodecs opencv_imgproc opencv_highgui
-        libjpeg-turbo::jpeg
-        WebP::webp WebP::webpdecoder WebP::webpdemux WebP::sharpyuv WebP::libwebpmux
-        png
-    )
-endmacro()
-
-macro(Add3rd_TBB ProjectName)
-    set(TBB_DIR "${ProjectRootDir}/ThirdParty/tbb/installed/x64-windows/share/tbb//")
-    message("TBB_DIR == ${TBB_DIR}")
-
-    find_package(TBB CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE TBB::tbb)
-    
-    Add_Interface_Imported_Location(TBB::tbb)
-    Add_Imported_Location(TBB::tbb)
-endmacro()
-
-# ThirdParty/ffmpeg/installed/x64-windows/share/ffmpeg/FindFFMPEG.cmake
-# FFmpeg::avcodec FFmpeg::avformat FFmpeg::avutil FFmpeg::swresample
-macro(Add3rd_FFmpeg ProjectName)
-    set(FFmpeg_DIR "${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/share/ffmpeg/")
-    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/share/ffmpeg/")
-    message("FFmpeg_DIR == ${FFmpeg_DIR}")
-
-    find_package(FFmpeg REQUIRED)
-    
-    message("
-        FFMPEG_FOUND == ${FFMPEG_FOUND}
-        FFMPEG_INCLUDE_DIRS == ${FFMPEG_INCLUDE_DIRS}
-        FFMPEG_LIBRARY_DIRS == ${FFMPEG_LIBRARY_DIRS}
-        FFMPEG_LIBRARIES == ${FFMPEG_LIBRARIES}
-    ")
-
-    # ✅ 绑定头文件
-    target_include_directories(${ProjectName} PRIVATE
-        ${FFMPEG_INCLUDE_DIRS}
-    )
-
-    # ✅ 绑定库
-    target_link_directories(${ProjectName} PRIVATE
-        $<$<CONFIG:Debug>:${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/lib/>
-        $<$<CONFIG:Release>:${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/lib>
-    )
-
-    target_link_libraries(${ProjectName} PRIVATE
-        avcodec.lib
-        avdevice.lib
-        avfilter.lib
-        avformat.lib
-        avutil.lib
-        pkgconf.lib
-        swresample.lib
-        swscale.lib
-    )
-    list(APPEND ALL_IMPORTED_LOCATION_Debug
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avcodec-61.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avdevice-61.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avfilter-10.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avformat-61.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avutil-59.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/pkgconf-3.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/swresample-5.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/swscale-8.dll
-    )
-    list(APPEND ALL_IMPORTED_LOCATION_Release
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avcodec-61.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avdevice-61.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avfilter-10.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avformat-61.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avutil-59.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/pkgconf-3.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/swresample-5.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/swscale-8.dll
-    )
-endmacro()
+# 各第三方库已拆分为独立 .cmake 文件，位于 cmake/ThirdParty/ 目录下。
+# 使用方式（在子项目 CMakeLists.txt 中）：
+#
+#   set(ProjectName MyTarget)
+#   add_executable(${ProjectName} main.cpp)
+#   include(${ProjectRootDir}/cmake/ThirdParty/Add3rd_spdlog.cmake)
+#   include(${ProjectRootDir}/cmake/ThirdParty/Add3rd_fmt.cmake)
+#   # ... 按需 include 其他库
+#
+# 可用的库文件：
+#   cmake/ThirdParty/Add3rd_spdlog.cmake
+#   cmake/ThirdParty/Add3rd_fmt.cmake
+#   cmake/ThirdParty/Add3rd_nlohmann_json.cmake
+#   cmake/ThirdParty/Add3rd_libarchive.cmake
+#   cmake/ThirdParty/Add3rd_7zextra.cmake
+#   cmake/ThirdParty/Add3rd_bit7z.cmake
+#   cmake/ThirdParty/Add3rd_vulkan.cmake
+#   cmake/ThirdParty/Add3rd_freeimage.cmake
+#   cmake/ThirdParty/Add3rd_glm.cmake
+#   cmake/ThirdParty/Add3rd_glad.cmake
+#   cmake/ThirdParty/Add3rd_glfw3.cmake
+#   cmake/ThirdParty/Add3rd_glew.cmake
+#   cmake/ThirdParty/Add3rd_opencv.cmake
+#   cmake/ThirdParty/Add3rd_sqlite3.cmake
+#   cmake/ThirdParty/Add3rd_opencv411.cmake
+#   cmake/ThirdParty/Add3rd_tbb.cmake
+#   cmake/ThirdParty/Add3rd_ffmpeg.cmake
