@@ -106,8 +106,8 @@ ZYB_ARCHIVE_TOOL_API int FindPasswordAsyncQueue(
     void                       *userData,
     int                         findAll);
 
-// 从队列中弹出一条进度（返回 1=成功，0=队列为空）
-ZYB_ARCHIVE_TOOL_API int PopFindPasswordProgress(
+// 读取最新进度（覆盖写，始终返回最新一条；返回 1=有数据，0=尚无数据）
+ZYB_ARCHIVE_TOOL_API int GetLatestFindPasswordProgress(
     int                          taskId,
     struct FindPasswordProgressOut *out);
 
