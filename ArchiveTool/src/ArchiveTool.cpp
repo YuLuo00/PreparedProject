@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <filesystem>
+#include <thread>
 namespace fs = std::filesystem;
 
 #include <bit7z/bitfileextractor.hpp>
@@ -167,4 +168,94 @@ ZYB_ARCHIVE_TOOL_API std::string TryDetermineType(const std::wstring &filePath)
 ZYB_ARCHIVE_TOOL_API const std::vector<std::string> &ArchiveToolMsg()
 {
     return ArchiveMsg::Ins().MsgLines();
+}
+
+ZYB_ARCHIVE_TOOL_API std::wstring FindFirstPassword(const std::wstring &filePath)
+{
+    // 1. 先确定压缩类型
+    std::string type = TryDetermineType(filePath);
+    std::wstring wtype = CommonTool::Utf82Wstr(type);
+
+    // 2. 遍历密码本，找到第一个能解压的密码
+    std::vector<std::string> pwds = PwdManager::Ins().GetAllPwd();
+    for (const std::string &pwd : pwds) {
+        std::wstring wpwd = CommonTool::Utf82Wstr(pwd);
+        if (ArchiveExtraTest(filePath, wpwd, wtype)) {
+            return wpwd;
+        }
+    }
+    return L""; // 未找到
+}
+
+ZYB_ARCHIVE_TOOL_API std::vector<std::wstring> FindAllPasswords(const std::wstring &filePath)
+{
+    // 1. 先确定压缩类型
+    std::string type = TryDetermineType(filePath);
+    std::wstring wtype = CommonTool::Utf82Wstr(type);
+
+    // 2. 遍历密码本，收集所有能解压的密码
+    std::vector<std::wstring> result;
+    std::vector<std::string> pwds = PwdManager::Ins().GetAllPwd();
+    for (const std::string &pwd : pwds) {
+        std::wstring wpwd = CommonTool::Utf82Wstr(pwd);
+        if (ArchiveExtraTest(filePath, wpwd, wtype)) {
+            result.push_back(wpwd);
+        }
+    }
+    return result;
+}
+
+ZYB_ARCHIVE_TOOL_API void FindPasswordAsync(
+    const wchar_t        *filePath,
+    FindPasswordCallback  callback,
+    void                 *userData,
+    bool                  findAll)
+{
+    // 捕获参数，在后台线程中执行
+    std::wstring filePathStr(filePath);
+
+    std::thread([filePathStr, callback, userData, findAll]() {
+        // 1. 确定压缩类型
+        std::string typeU8 = TryDetermineType(filePathStr);
+        std::wstring wtype = CommonTool::Utf82Wstr(typeU8);
+
+        // 2. 获取密码本
+        std::vector<std::string> pwds = PwdManager::Ins().GetAllPwd();
+        int total = static_cast<int>(pwds.size());
+
+        // 3. 逐个尝试密码
+        for (int i = 0; i < total; ++i) {
+            std::wstring wpwd = CommonTool::Utf82Wstr(pwds[i]);
+            bool found = ArchiveExtraTest(filePathStr, wpwd, wtype);
+
+            FindPasswordProgress progress;
+            progress.current  = i + 1;
+            progress.total    = total;
+            progress.pwd      = wpwd.c_str();
+            progress.type     = wtype.c_str();
+            progress.found    = found;
+            progress.finished = false;
+
+            // 调用回调，返回 false 则中止
+            if (!callback(&progress, userData)) {
+                return;
+            }
+
+            // findAll=false 且找到密码，停止
+            if (!findAll && found) {
+                return;
+            }
+        }
+
+        // 4. 全部遍历完成，发送 finished 通知
+        FindPasswordProgress done{};
+        done.current  = total;
+        done.total    = total;
+        done.pwd      = L"";
+        done.type     = wtype.c_str();
+        done.found    = false;
+        done.finished = true;
+        callback(&done, userData);
+
+    }).detach(); // 后台线程，自动分离
 }
