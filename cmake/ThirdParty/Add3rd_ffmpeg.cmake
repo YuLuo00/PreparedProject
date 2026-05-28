@@ -16,16 +16,16 @@ message("
     FFMPEG_LIBRARIES == ${FFMPEG_LIBRARIES}
 ")
 
-target_include_directories(${ProjectName} PRIVATE
+target_include_directories(${PROJECT_NAME} PRIVATE
     ${FFMPEG_INCLUDE_DIRS}
 )
 
-target_link_directories(${ProjectName} PRIVATE
+target_link_directories(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:Debug>:${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/lib/>
     $<$<CONFIG:Release>:${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/lib>
 )
 
-target_link_libraries(${ProjectName} PRIVATE
+target_link_libraries(${PROJECT_NAME} PRIVATE
     avcodec.lib
     avdevice.lib
     avfilter.lib

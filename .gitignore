@@ -12,3 +12,32 @@
 /out/build/x64-Debug
 /build_3rd
 /RawMoveUI/bin/
+
+# 构建输出
+/out/
+/cmake-build-debug-mingw/
+
+# 生成文件
+compile_commands.json
+
+# IDE 缓存
+/.cache/
+/.idea/
+/.vscode/
+
+# 临时脚本
+_fix_cmake.py
+_fix_commits.py
+_fix_brackets.py
+
+# 备份
+/_backup/
+
+# MinGW 编译的第三方库（二进制，不入库）
+ThirdParty/*/installed/x64-mingw-dynamic/
+
+# 解压的临时目录
+/bit7z-mingw/
+/spdlog-mingw/
+/fmt-mingw/
+/libarchive-mingw/

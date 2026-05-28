@@ -7,6 +7,6 @@ set(glfw3_DIR "${ProjectRootDir}/ThirdParty/GLFW3/installed/x64-windows/share/gl
 message("glfw3_DIR == ${glfw3_DIR}")
 
 find_package(glfw3 CONFIG REQUIRED)
-target_link_libraries(${ProjectName} PRIVATE glfw)
+target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 
 Add_Interface_Imported_Location(glfw)

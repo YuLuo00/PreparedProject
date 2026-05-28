@@ -21,7 +21,7 @@ find_package(libjpeg-turbo CONFIG REQUIRED)
 find_package(WebP CONFIG REQUIRED)
 find_package(OpenCV CONFIG REQUIRED)
 
-target_link_libraries(${ProjectName} PRIVATE
+target_link_libraries(${PROJECT_NAME} PRIVATE
     opencv_ml opencv_dnn opencv_core opencv_flann opencv_imgcodecs opencv_imgproc
     libjpeg-turbo::jpeg
     WebP::webp WebP::webpdecoder WebP::webpdemux WebP::sharpyuv

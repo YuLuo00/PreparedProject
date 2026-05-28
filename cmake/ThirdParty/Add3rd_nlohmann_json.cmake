@@ -7,6 +7,6 @@ set(nlohmann_json_DIR "${ProjectRootDir}/ThirdParty/nlohmann/installed/x64-windo
 message("nlohmann_json_DIR == ${nlohmann_json_DIR}")
 
 find_package(nlohmann_json CONFIG REQUIRED)
-target_link_libraries(${ProjectName} PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 
 Add_Interface_Imported_Location(nlohmann_json::nlohmann_json)

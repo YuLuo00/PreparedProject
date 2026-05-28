@@ -1,0 +1,31 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "gcc",
+            "displayName": "GCC x86_64 MinGW",
+            "description": "Using MinGW GCC compiler",
+            "binaryDir": "${sourceDir}/out/build/gcc",
+            "generator": "MinGW Makefiles",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/gcc",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "clang-cl",
+            "displayName": "Clang-cl 19.1.1 x86_64-pc-windows-msvc",
+            "description": "Using compilers: C = C:\\Program Files\\LLVM\\bin\\clang-cl.exe, CXX = C:\\Program Files\\LLVM\\bin\\clang-cl.exe",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_C_COMPILER": "C:/Program Files/LLVM/bin/clang-cl.exe",
+                "CMAKE_CXX_COMPILER": "C:/Program Files/LLVM/bin/clang-cl.exe",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        }
+    ]
+}

@@ -7,6 +7,6 @@ set(vulkan_DIR "${ProjectRootDir}/ThirdParty/vulkan/installed/x64-windows/share/
 message("vulkan_DIR == ${vulkan_DIR}")
 
 find_package(Vulkan REQUIRED)
-target_link_libraries(${ProjectName} PRIVATE Vulkan::Vulkan)
+target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
 
 Add_Interface_Imported_Location(Vulkan::Vulkan)

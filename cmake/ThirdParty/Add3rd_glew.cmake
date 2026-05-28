@@ -7,6 +7,6 @@ set(GLEW_DIR "${ProjectRootDir}/ThirdParty/GLEW/installed/x64-windows/share/glew
 message("GLEW_DIR == ${GLEW_DIR}")
 
 find_package(GLEW REQUIRED)
-target_link_libraries(${ProjectName} PRIVATE GLEW::GLEW)
+target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW)
 
 Add_Interface_Imported_Location(GLEW::GLEW)
