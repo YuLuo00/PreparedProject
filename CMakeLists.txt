@@ -18,3 +18,4 @@ endif()
 
 add_subdirectory(Tests/HelloWorld)
 add_subdirectory(ArchiveTool)
+add_subdirectory(ArchiveToolConsole)
