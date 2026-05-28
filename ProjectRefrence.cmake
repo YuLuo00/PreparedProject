@@ -34,7 +34,6 @@ macro(target_sources_group TargetName GroupName PERMISSION)
 endmacro()
 
 # 添加运行时依赖文件
-# 添加运行时依赖文件
 macro(Add_Interface_Imported_Location)
     foreach(ProjectName IN ITEMS ${ARGV})
         message(STATUS -----${ProjectName})
@@ -88,4 +87,30 @@ macro(Add_Imported_Location)
 endmacro()
 
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
-
+# 各第三方库已拆分为独立 .cmake 文件，位于 cmake/ThirdParty/ 目录下。
+# 使用方式（在子项目 CMakeLists.txt 中）：
+#
+#   set(ProjectName MyTarget)
+#   add_executable(${ProjectName} main.cpp)
+#   include(${ProjectRootDir}/cmake/ThirdParty/Add3rd_spdlog.cmake)
+#   include(${ProjectRootDir}/cmake/ThirdParty/Add3rd_fmt.cmake)
+#   # ... 按需 include 其他库
+#
+# 可用的库文件：
+#   cmake/ThirdParty/Add3rd_spdlog.cmake
+#   cmake/ThirdParty/Add3rd_fmt.cmake
+#   cmake/ThirdParty/Add3rd_nlohmann_json.cmake
+#   cmake/ThirdParty/Add3rd_libarchive.cmake
+#   cmake/ThirdParty/Add3rd_7zextra.cmake
+#   cmake/ThirdParty/Add3rd_bit7z.cmake
+#   cmake/ThirdParty/Add3rd_vulkan.cmake
+#   cmake/ThirdParty/Add3rd_freeimage.cmake
+#   cmake/ThirdParty/Add3rd_glm.cmake
+#   cmake/ThirdParty/Add3rd_glad.cmake
+#   cmake/ThirdParty/Add3rd_glfw3.cmake
+#   cmake/ThirdParty/Add3rd_glew.cmake
+#   cmake/ThirdParty/Add3rd_opencv.cmake
+#   cmake/ThirdParty/Add3rd_sqlite3.cmake
+#   cmake/ThirdParty/Add3rd_opencv411.cmake
+#   cmake/ThirdParty/Add3rd_tbb.cmake
+#   cmake/ThirdParty/Add3rd_ffmpeg.cmake
