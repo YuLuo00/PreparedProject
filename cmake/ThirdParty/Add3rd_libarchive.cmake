@@ -1,14 +1,15 @@
-# 使用前需设置变量: ProjectName
-# 示例:
-#   set(ProjectName MyTarget)
-#   include(${ProjectRootDir}/cmake/ThirdParty/libarchive.cmake)
-
-message("LibArchive == ${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/")
-set(CMAKE_INCLUDE_PATH "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/include")
-set(CMAKE_LIBRARY_PATH "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/lib")
+if(MINGW)
+    set(CMAKE_INCLUDE_PATH "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-mingw-dynamic/include")
+    set(CMAKE_LIBRARY_PATH "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-mingw-dynamic/lib")
+    message("LibArchive (MinGW) == ${ProjectRootDir}/ThirdParty/libarchive/installed/x64-mingw-dynamic/")
+else()
+    set(CMAKE_INCLUDE_PATH "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/include")
+    set(CMAKE_LIBRARY_PATH "${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/lib")
+    message("LibArchive == ${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/")
+endif()
 
 find_package(LibArchive REQUIRED)
-target_link_libraries(${ProjectName} PRIVATE LibArchive::LibArchive)
+target_link_libraries(${PROJECT_NAME} PRIVATE LibArchive::LibArchive)
 
 install(DIRECTORY
     $<$<CONFIG:Debug>:${ProjectRootDir}/ThirdParty/libarchive/installed/x64-windows/debug/bin/>
