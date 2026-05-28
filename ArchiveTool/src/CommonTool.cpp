@@ -4,7 +4,6 @@
 
 #include <fstream>
 #include <codecvt>
-#include <corecrt_wstring.h>
 
 std::string CommonTool::Local2Utf8(const std::string &str)
 {
