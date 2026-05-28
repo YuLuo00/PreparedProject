@@ -8,6 +8,10 @@
 
 bit7z::Bit7zLibrary &Get7zLibrary()
 {
+#ifdef __MINGW32__
+    static bit7z::Bit7zLibrary lib{ "lib7zip.dll" };
+#else
     static bit7z::Bit7zLibrary lib{ "7zip.dll" };
+#endif
     return lib;
 }
