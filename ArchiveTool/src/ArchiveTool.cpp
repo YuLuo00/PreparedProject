@@ -5,6 +5,10 @@
 #include <vector>
 #include <filesystem>
 #include <thread>
+#include <atomic>
+#include <mutex>
+#include <map>
+#include <memory>
 #include <cstring>
 namespace fs = std::filesystem;
 
@@ -18,6 +22,35 @@ namespace fs = std::filesystem;
 #include "PwdManager.h"
 #include "ArchiveType.h"
 #include "ArchiveMsg.h"
+
+// -----------------------------------------------------------------------
+// 任务管理（taskId -> 取消标志）
+// -----------------------------------------------------------------------
+static std::mutex              g_taskMutex;
+static std::map<int, std::shared_ptr<std::atomic<bool>>> g_tasks;
+static std::atomic<int>        g_nextTaskId{1};
+
+static int AllocTask()
+{
+    int id = g_nextTaskId.fetch_add(1);
+    auto flag = std::make_shared<std::atomic<bool>>(false);
+    std::lock_guard<std::mutex> lk(g_taskMutex);
+    g_tasks[id] = flag;
+    return id;
+}
+
+static std::shared_ptr<std::atomic<bool>> GetTaskFlag(int id)
+{
+    std::lock_guard<std::mutex> lk(g_taskMutex);
+    auto it = g_tasks.find(id);
+    return (it != g_tasks.end()) ? it->second : nullptr;
+}
+
+static void RemoveTask(int id)
+{
+    std::lock_guard<std::mutex> lk(g_taskMutex);
+    g_tasks.erase(id);
+}
 
 // -----------------------------------------------------------------------
 // 内部辅助
@@ -42,7 +75,6 @@ ZYB_ARCHIVE_TOOL_API int ArchiveExtraTest(
 {
     std::wstring wfile   = CommonTool::Utf82Wstr(file   ? file   : "");
     std::wstring wpasswd = CommonTool::Utf82Wstr(passwd ? passwd : "");
-    std::wstring wtype   = CommonTool::Utf82Wstr(type   ? type   : "Auto");
 
     std::string typeU8 = type ? type : "Auto";
     const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(typeU8);
@@ -168,16 +200,19 @@ ZYB_ARCHIVE_TOOL_API int FindFirstPassword(const char *filePath, char *buf, int 
     return 0;
 }
 
-ZYB_ARCHIVE_TOOL_API void FindPasswordAsync(
+ZYB_ARCHIVE_TOOL_API int FindPasswordAsync(
     const char           *filePath,
     FindPasswordCallback  callback,
     void                 *userData,
     int                   findAll)
 {
-    if (!filePath || !callback) return;
+    if (!filePath || !callback) return 0;
+
+    int taskId = AllocTask();
+    auto cancelFlag = GetTaskFlag(taskId);
     std::string filePathStr(filePath);
 
-    std::thread([filePathStr, callback, userData, findAll]() {
+    std::thread([filePathStr, callback, userData, findAll, taskId, cancelFlag]() {
         // 1. 确定压缩类型
         char typeBuf[256] = {};
         TryDetermineType(filePathStr.c_str(), typeBuf, sizeof(typeBuf));
@@ -188,6 +223,9 @@ ZYB_ARCHIVE_TOOL_API void FindPasswordAsync(
 
         // 3. 逐个尝试密码
         for (int i = 0; i < total; ++i) {
+            // 检查取消标志
+            if (cancelFlag && cancelFlag->load()) break;
+
             int found = ArchiveExtraTest(filePathStr.c_str(), pwds[i].c_str(), typeBuf);
 
             FindPasswordProgress progress{};
@@ -198,11 +236,12 @@ ZYB_ARCHIVE_TOOL_API void FindPasswordAsync(
             progress.found    = found;
             progress.finished = 0;
 
-            if (!callback(&progress, userData)) return;
-            if (!findAll && found) return;
+            // 回调返回 0 也中止
+            if (!callback(&progress, userData)) break;
+            if (!findAll && found) break;
         }
 
-        // 4. 完成通知
+        // 4. 完成/取消通知
         FindPasswordProgress done{};
         done.current  = total;
         done.total    = total;
@@ -212,5 +251,16 @@ ZYB_ARCHIVE_TOOL_API void FindPasswordAsync(
         done.finished = 1;
         callback(&done, userData);
 
+        RemoveTask(taskId);
     }).detach();
+
+    return taskId;
+}
+
+ZYB_ARCHIVE_TOOL_API void CancelFindPassword(int taskId)
+{
+    auto flag = GetTaskFlag(taskId);
+    if (flag) {
+        flag->store(true);
+    }
 }

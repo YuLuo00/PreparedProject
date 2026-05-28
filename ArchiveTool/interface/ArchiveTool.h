@@ -78,11 +78,15 @@ typedef int (*FindPasswordCallback)(const struct FindPasswordProgress *progress,
 
 // 异步搜索密码（后台线程执行）
 // findAll: 1=全部遍历，0=找到第一个就停止
-ZYB_ARCHIVE_TOOL_API void FindPasswordAsync(
+// 返回任务 ID（>0），可用于 CancelFindPassword 取消
+ZYB_ARCHIVE_TOOL_API int FindPasswordAsync(
     const char           *filePath,
     FindPasswordCallback  callback,
     void                 *userData,
     int                   findAll);
+
+// 取消指定任务（taskId 由 FindPasswordAsync 返回）
+ZYB_ARCHIVE_TOOL_API void CancelFindPassword(int taskId);
 
 #ifdef __cplusplus
 }
