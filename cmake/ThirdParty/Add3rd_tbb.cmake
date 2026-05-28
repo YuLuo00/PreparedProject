@@ -1,9 +1,8 @@
-# 使用前需设置变量: ProjectName
-# 示例:
-#   set(ProjectName MyTarget)
-#   include(${ProjectRootDir}/cmake/ThirdParty/tbb.cmake)
-
-set(TBB_DIR "${ProjectRootDir}/ThirdParty/tbb/installed/x64-windows/share/tbb//")
+if(MINGW)
+    set(TBB_DIR "${ProjectRootDir}/ThirdParty/tbb/installed/x64-mingw-dynamic/lib/cmake/TBB")
+else()
+    set(TBB_DIR "${ProjectRootDir}/ThirdParty/tbb/installed/x64-windows/share/tbb//")
+endif()
 message("TBB_DIR == ${TBB_DIR}")
 
 find_package(TBB CONFIG REQUIRED)
