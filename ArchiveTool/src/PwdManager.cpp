@@ -33,6 +33,7 @@ bool PwdManager::AddNewPwd(const std::string &pwd)
         file << pwd << '\n';
     }
     file.close();
+    return true;
 }
 
 std::vector<std::string> PwdManager::GetAllPwd()

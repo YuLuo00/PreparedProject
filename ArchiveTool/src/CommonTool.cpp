@@ -3,42 +3,41 @@
 #include <Windows.h>
 
 #include <fstream>
-#include <codecvt>
 
 std::string CommonTool::Local2Utf8(const std::string &str)
 {
-    int size = MultiByteToWideChar(CP_ACP, 0, str.c_str(), str.size(), NULL, NULL);
-    if (size <= 0) {
-        return "";
-    }
+    if (str.empty()) return "";
+    int size = MultiByteToWideChar(CP_ACP, 0, str.c_str(), (int)str.size(), nullptr, 0);
+    if (size <= 0) return "";
     std::wstring wstr(size, L'\0');
-    size = MultiByteToWideChar(CP_ACP, 0, str.c_str(), str.size(), wstr.data(), wstr.size());
-
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> cvt;
-    std::string ret = Wstr2Utf8(wstr);
-    return ret;
+    MultiByteToWideChar(CP_ACP, 0, str.c_str(), (int)str.size(), wstr.data(), size);
+    return Wstr2Utf8(wstr);
 }
 
 std::string CommonTool::Utf82Local(const std::string &str)
 {
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> cvt;
-    std::wstring wstr = cvt.from_bytes(str);
-    std::string strLocal = Wstr2Local(wstr);
-    return strLocal;
+    std::wstring wstr = Utf82Wstr(str);
+    return Wstr2Local(wstr);
 }
 
 std::string CommonTool::Wstr2Utf8(const std::wstring &wstr)
 {
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> cvt;
-    std::string ret = cvt.to_bytes(wstr);
-
+    if (wstr.empty()) return "";
+    int size = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), nullptr, 0, nullptr, nullptr);
+    if (size <= 0) return "";
+    std::string ret(size, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), ret.data(), size, nullptr, nullptr);
     return ret;
 }
 
 std::wstring CommonTool::Utf82Wstr(const std::string &str)
 {
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> cvt;
-    return cvt.from_bytes(str);
+    if (str.empty()) return L"";
+    int size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), nullptr, 0);
+    if (size <= 0) return L"";
+    std::wstring ret(size, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), ret.data(), size);
+    return ret;
 }
 
 std::wstring CommonTool::Local2Wstr(const std::string &str)
@@ -49,14 +48,11 @@ std::wstring CommonTool::Local2Wstr(const std::string &str)
 
 std::string CommonTool::Wstr2Local(const std::wstring &wstr)
 {
-    int size = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), wstr.size(), NULL, 0, NULL, NULL);
-    if (size <= 0) {
-        return "";
-    }
-
+    if (wstr.empty()) return "";
+    int size = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), (int)wstr.size(), nullptr, 0, nullptr, nullptr);
+    if (size <= 0) return "";
     std::string ret(size, '\0');
-    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), wstr.size(), ret.data(), ret.size(), NULL, NULL);
-
+    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), (int)wstr.size(), ret.data(), size, nullptr, nullptr);
     return ret;
 }
 
@@ -65,9 +61,9 @@ bool CommonTool::StrIsUtf8Bom(const std::string &str)
     if (str.size() < 3) {
         return false;
     }
-
-    bool ret = str[0] == 0xEF && str[1] == 0xBB && str[2] == 0xBF;
-    return false;
+    return (unsigned char)str[0] == 0xEF &&
+           (unsigned char)str[1] == 0xBB &&
+           (unsigned char)str[2] == 0xBF;
 }
 
 bool CommonTool::FileIsUtf8Bom(const std::string &filePath)
@@ -77,21 +73,17 @@ bool CommonTool::FileIsUtf8Bom(const std::string &filePath)
         return false;
     }
 
-    // 检查文件大小是否足够
     file.seekg(0, std::ios::end);
     std::streamsize fileSize = file.tellg();
     if (fileSize < 3) {
-        return false; // 文件不足3字节，不可能包含 BOM
+        return false;
     }
 
-    // 读取 BOM
     file.seekg(0, std::ios::beg);
     unsigned char bom[3] = {0};
     file.read(reinterpret_cast<char *>(bom), 3);
 
-    // 检查 BOM
-    bool ret = bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF;
-    return ret;
+    return bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF;
 }
 
 std::vector<std::string> CommonTool::ReadFileTxtAsLocal(const std::string &filePath)
@@ -108,13 +100,13 @@ std::vector<std::string> CommonTool::ReadFileTxtAsLocal(const std::string &fileP
         line = std::string(line.begin() + 3, line.end());
         line = CommonTool::Utf82Local(line);
         ret.push_back(line);
-        while (std::getline(file, line)) { // 按行读取
+        while (std::getline(file, line)) {
             line = CommonTool::Utf82Local(line);
             ret.push_back(line);
         }
     }
     else {
-        while (std::getline(file, line)) { // 按行读取
+        while (std::getline(file, line)) {
             ret.push_back(line);
         }
     }

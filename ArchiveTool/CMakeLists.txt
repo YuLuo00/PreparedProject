@@ -13,11 +13,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 # 三方库
-set(ProjectName ${PROJECT_NAME})
 include(${ProjectRootDir}/cmake/ThirdParty/Add3rd_spdlog.cmake)
 include(${ProjectRootDir}/cmake/ThirdParty/Add3rd_bit7z.cmake)
-include(${ProjectRootDir}/cmake/ThirdParty/Add3rd_libArchive.cmake)
+include(${ProjectRootDir}/cmake/ThirdParty/Add3rd_libarchive.cmake)
 include(${ProjectRootDir}/cmake/ThirdParty/Add3rd_fmt.cmake)
+include(${ProjectRootDir}/cmake/ThirdParty/Add3rd_nlohmann_json.cmake)
 # Add3rd_bit7z(${PROJECT_NAME})
 # Add3rd_LibArchive(${PROJECT_NAME})
 # Add3rd_nlohmann_json(${PROJECT_NAME})

@@ -32,7 +32,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     return TRUE;
 }
 
-void main()
+int main()
 {
     try
     { // bit7z classes can throw BitException objects
@@ -53,6 +53,7 @@ void main()
     catch (const bit7z::BitException &ex)
     {
         std::cout << ex.what() << std::endl;
-        exit(-1);
+        return -1;
     }
+    return 0;
 }

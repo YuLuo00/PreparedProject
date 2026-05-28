@@ -10,6 +10,7 @@ namespace fs = std::filesystem;
 #include <bit7z/bitfileextractor.hpp>
 
 #include <nlohmann/json.hpp>
+#include <mutex>
 
 struct StrCmpIns
 {
