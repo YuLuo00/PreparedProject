@@ -7,3 +7,4 @@ set(CMAKE_CXX_STANDARD 17)
 message("${PROJECT_NAME} --------------------- ffffffff")
 
 add_subdirectory(Tests/HelloWorld)
+add_subdirectory(ArchiveTool)
