@@ -20,7 +20,7 @@ namespace fs = std::filesystem;
 #include "ArchiveMsg.h"
 
 // -----------------------------------------------------------------------
-// 内部辅助：将字符串写入缓冲区，返回实际字符数
+// 内部辅助
 // -----------------------------------------------------------------------
 static int WriteStrBuf(const std::string &src, char *buf, int bufSize)
 {
@@ -33,29 +33,18 @@ static int WriteStrBuf(const std::string &src, char *buf, int bufSize)
     return len;
 }
 
-static int WriteWStrBuf(const std::wstring &src, wchar_t *buf, int bufSize)
-{
-    int len = static_cast<int>(src.size());
-    if (buf && bufSize > 0) {
-        int copy = (len < bufSize - 1) ? len : bufSize - 1;
-        std::wmemcpy(buf, src.c_str(), copy);
-        buf[copy] = L'\0';
-    }
-    return len;
-}
-
 // -----------------------------------------------------------------------
-// 实现
+// 实现（所有对外字符串均为 UTF-8）
 // -----------------------------------------------------------------------
 
 ZYB_ARCHIVE_TOOL_API int ArchiveExtraTest(
-    const wchar_t *file, const wchar_t *passwd, const wchar_t *type)
+    const char *file, const char *passwd, const char *type)
 {
-    std::wstring wfile(file ? file : L"");
-    std::wstring wpasswd(passwd ? passwd : L"");
-    std::wstring wtype(type ? type : L"Auto");
+    std::wstring wfile   = CommonTool::Utf82Wstr(file   ? file   : "");
+    std::wstring wpasswd = CommonTool::Utf82Wstr(passwd ? passwd : "");
+    std::wstring wtype   = CommonTool::Utf82Wstr(type   ? type   : "Auto");
 
-    std::string typeU8 = CommonTool::Wstr2Utf8(wtype);
+    std::string typeU8 = type ? type : "Auto";
     const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(typeU8);
 
     try {
@@ -94,9 +83,9 @@ ZYB_ARCHIVE_TOOL_API int check_format(const char *filePath, char *buf, int bufSi
     return WriteStrBuf(result, buf, bufSize);
 }
 
-ZYB_ARCHIVE_TOOL_API int TryDetermineType(const wchar_t *filePath, char *buf, int bufSize)
+ZYB_ARCHIVE_TOOL_API int TryDetermineType(const char *filePath, char *buf, int bufSize)
 {
-    std::wstring wpath(filePath ? filePath : L"");
+    std::wstring wpath = CommonTool::Utf82Wstr(filePath ? filePath : "");
     ArchiveMsg::Ins().Clear();
 
     std::vector<std::string> keys = ArchiveType::Ins().GetKeys();
@@ -132,8 +121,7 @@ ZYB_ARCHIVE_TOOL_API int TryDetermineType(const wchar_t *filePath, char *buf, in
 ZYB_ARCHIVE_TOOL_API void GetKeys(EnumKeysCallback callback, void *userData)
 {
     if (!callback) return;
-    auto keys = ArchiveType::Ins().GetKeys();
-    for (const auto &k : keys) {
+    for (const auto &k : ArchiveType::Ins().GetKeys()) {
         callback(k.c_str(), userData);
     }
 }
@@ -167,38 +155,32 @@ ZYB_ARCHIVE_TOOL_API void GetAllPwd(EnumPwdCallback callback, void *userData)
     }
 }
 
-ZYB_ARCHIVE_TOOL_API int FindFirstPassword(
-    const wchar_t *filePath, wchar_t *buf, int bufSize)
+ZYB_ARCHIVE_TOOL_API int FindFirstPassword(const char *filePath, char *buf, int bufSize)
 {
-    std::wstring wpath(filePath ? filePath : L"");
-
     char typeBuf[256] = {};
     TryDetermineType(filePath, typeBuf, sizeof(typeBuf));
-    std::wstring wtype = CommonTool::Utf82Wstr(typeBuf);
 
     for (const auto &pwd : PwdManager::Ins().GetAllPwd()) {
-        std::wstring wpwd = CommonTool::Utf82Wstr(pwd);
-        if (ArchiveExtraTest(filePath, wpwd.c_str(), wtype.c_str())) {
-            return WriteWStrBuf(wpwd, buf, bufSize);
+        if (ArchiveExtraTest(filePath, pwd.c_str(), typeBuf)) {
+            return WriteStrBuf(pwd, buf, bufSize);
         }
     }
     return 0;
 }
 
 ZYB_ARCHIVE_TOOL_API void FindPasswordAsync(
-    const wchar_t        *filePath,
+    const char           *filePath,
     FindPasswordCallback  callback,
     void                 *userData,
     int                   findAll)
 {
     if (!filePath || !callback) return;
-    std::wstring filePathStr(filePath);
+    std::string filePathStr(filePath);
 
     std::thread([filePathStr, callback, userData, findAll]() {
         // 1. 确定压缩类型
         char typeBuf[256] = {};
         TryDetermineType(filePathStr.c_str(), typeBuf, sizeof(typeBuf));
-        std::wstring wtype = CommonTool::Utf82Wstr(typeBuf);
 
         // 2. 获取密码本
         std::vector<std::string> pwds = PwdManager::Ins().GetAllPwd();
@@ -206,13 +188,12 @@ ZYB_ARCHIVE_TOOL_API void FindPasswordAsync(
 
         // 3. 逐个尝试密码
         for (int i = 0; i < total; ++i) {
-            std::wstring wpwd = CommonTool::Utf82Wstr(pwds[i]);
-            int found = ArchiveExtraTest(filePathStr.c_str(), wpwd.c_str(), wtype.c_str());
+            int found = ArchiveExtraTest(filePathStr.c_str(), pwds[i].c_str(), typeBuf);
 
             FindPasswordProgress progress{};
             progress.current  = i + 1;
             progress.total    = total;
-            progress.pwd      = wpwd.c_str();
+            progress.pwd      = pwds[i].c_str();
             progress.type     = typeBuf;
             progress.found    = found;
             progress.finished = 0;
@@ -225,7 +206,7 @@ ZYB_ARCHIVE_TOOL_API void FindPasswordAsync(
         FindPasswordProgress done{};
         done.current  = total;
         done.total    = total;
-        done.pwd      = L"";
+        done.pwd      = "";
         done.type     = typeBuf;
         done.found    = 0;
         done.finished = 1;
