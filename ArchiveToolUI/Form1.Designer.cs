@@ -113,7 +113,6 @@
             this.lvResults.Location      = new System.Drawing.Point(8, 122);
             this.lvResults.Size          = new System.Drawing.Size(384, 120);
             this.lvResults.Anchor        = System.Windows.Forms.AnchorStyles.Top
-                                         | System.Windows.Forms.AnchorStyles.Bottom
                                          | System.Windows.Forms.AnchorStyles.Left
                                          | System.Windows.Forms.AnchorStyles.Right;
             this.lvResults.View          = System.Windows.Forms.View.Details;

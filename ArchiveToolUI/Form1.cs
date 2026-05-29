@@ -65,6 +65,7 @@ namespace ArchiveToolUI
             };
 
             chkBatchMode.CheckedChanged += (s, e) => SwitchMode(chkBatchMode.Checked);
+            this.Resize += (s, e) => AdjustBatchLayout();
             btnStart.Click += BtnStart_Click;
 
             btnCopy.Click += (s, e) => {
@@ -169,20 +170,29 @@ namespace ArchiveToolUI
             lvResults.Visible    = batch;
 
             if (batch) {
-                // 批量模式：勾选框在 y=96，ListView 在 y=122，按钮锚定底部
                 MinimumSize = new Size(320, 320);
                 if (ClientSize.Height < 298) ClientSize = new Size(Math.Max(ClientSize.Width, 400), 298);
                 chkFindAll.Location   = new Point(8, 96);
                 chkBatchMode.Location = new Point(180, 96);
                 lvResults.Location    = new Point(8, 122);
-                // btnStart 锚定 Bottom，不需要手动设置 Location
+                AdjustBatchLayout();
             } else {
-                // 单文件模式：紧凑布局，按钮锚定底部
                 MinimumSize = new Size(320, 190);
                 if (ClientSize.Height > 200) ClientSize = new Size(ClientSize.Width, 158);
                 chkFindAll.Location   = new Point(8, 40);
                 chkBatchMode.Location = new Point(180, 40);
             }
+        }
+
+        // lvResults 高度自适应：填充 chkBatchMode 和 btnStart 之间的空间
+        private void AdjustBatchLayout()
+        {
+            if (!chkBatchMode.Checked || !lvResults.Visible) return;
+            int top    = lvResults.Location.Y;
+            int bottom = btnStart.Location.Y - 4;
+            int height = Math.Max(40, bottom - top);
+            int width  = ClientSize.Width - 16;
+            lvResults.Size = new Size(width, height);
         }
 
         // ── 开始/停止 ─────────────────────────────────────────────────
