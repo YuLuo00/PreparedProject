@@ -276,17 +276,22 @@ ZYB_ARCHIVE_TOOL_API int FindFirstPassword(const char *filePath, char *buf, int 
 // 方式一：完整回调（TBB task_group）
 // -----------------------------------------------------------------------
 ZYB_ARCHIVE_TOOL_API int FindPasswordAsync(
-    const char *filePath, FindPasswordCallback callback, void *userData, int findAll)
+    const char *filePath, const char *type, FindPasswordCallback callback, void *userData, int findAll)
 {
     if (!filePath || !callback) return 0;
 
     int taskId = AllocTask(false);
     TaskData td = GetTask(taskId);
     std::string filePathStr(filePath);
+    std::string typeStr = type ? type : "";
 
-    td.tg->run([filePathStr, callback, userData, findAll, taskId, td]() {
+    td.tg->run([filePathStr, typeStr, callback, userData, findAll, taskId, td]() {
         char typeBuf[256] = {};
-        TryDetermineType(filePathStr.c_str(), typeBuf, sizeof(typeBuf));
+        if (!typeStr.empty()) {
+            WriteStrBuf(typeStr, typeBuf, sizeof(typeBuf));
+        } else {
+            TryDetermineType(filePathStr.c_str(), typeBuf, sizeof(typeBuf));
+        }
 
         std::vector<std::string> pwds = PwdManager::Ins().GetAllPwd();
         int total = static_cast<int>(pwds.size());
@@ -325,17 +330,22 @@ ZYB_ARCHIVE_TOOL_API int FindPasswordAsync(
 // 方式二：信号 + tbb::concurrent_queue
 // -----------------------------------------------------------------------
 ZYB_ARCHIVE_TOOL_API int FindPasswordAsyncQueue(
-    const char *filePath, FindPasswordSignalCallback signalCallback, void *userData, int findAll)
+    const char *filePath, const char *type, FindPasswordSignalCallback signalCallback, void *userData, int findAll)
 {
     if (!filePath || !signalCallback) return 0;
 
     int taskId = AllocTask(true);
     TaskData td = GetTask(taskId);
     std::string filePathStr(filePath);
+    std::string typeStr = type ? type : "";
 
-    td.tg->run([filePathStr, signalCallback, userData, findAll, taskId, td]() {
+    td.tg->run([filePathStr, typeStr, signalCallback, userData, findAll, taskId, td]() {
         char typeBuf[256] = {};
-        TryDetermineType(filePathStr.c_str(), typeBuf, sizeof(typeBuf));
+        if (!typeStr.empty()) {
+            WriteStrBuf(typeStr, typeBuf, sizeof(typeBuf));
+        } else {
+            TryDetermineType(filePathStr.c_str(), typeBuf, sizeof(typeBuf));
+        }
 
         std::vector<std::string> pwds = PwdManager::Ins().GetAllPwd();
         int total = static_cast<int>(pwds.size());

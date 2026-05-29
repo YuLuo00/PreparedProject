@@ -94,6 +94,7 @@ ZYB_ARCHIVE_TOOL_API int FindFirstPassword(
 // 返回 taskId（>0）
 ZYB_ARCHIVE_TOOL_API int FindPasswordAsync(
     const char           *filePath,
+    const char           *type,
     FindPasswordCallback  callback,
     void                 *userData,
     int                   findAll);
@@ -108,6 +109,7 @@ typedef void (*FindPasswordSignalCallback)(int taskId, void *userData);
 // 启动异步搜索（方式二），返回 taskId
 ZYB_ARCHIVE_TOOL_API int FindPasswordAsyncQueue(
     const char                 *filePath,
+    const char                 *type,
     FindPasswordSignalCallback  signalCallback,
     void                       *userData,
     int                         findAll);

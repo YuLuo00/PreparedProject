@@ -20,6 +20,7 @@ namespace ArchiveToolUI
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int FindPasswordAsync(
             [MarshalAs(UnmanagedType.LPUTF8Str)] string filePath,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string type,
             FindPasswordCallback callback,
             IntPtr userData,
             int findAll);
@@ -27,6 +28,7 @@ namespace ArchiveToolUI
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int FindPasswordAsyncQueue(
             [MarshalAs(UnmanagedType.LPUTF8Str)] string filePath,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string type,
             FindPasswordSignalCallback signalCallback,
             IntPtr userData,
             int findAll);
@@ -189,36 +191,17 @@ namespace ArchiveToolUI
                 ArchiveToolNative.CancelFindPassword(_currentTaskId);
                 _currentTaskId = 0;
             }
-
-            if (!string.IsNullOrEmpty(specifiedType))
+            // Ensure we have a type to pass to native side; if not provided, determine synchronously first
+            string typeToUse = specifiedType ?? "";
+            if (string.IsNullOrEmpty(typeToUse))
             {
-                // 用户指定了 type，在 C# 层面直接遍历密码本
-                var fp   = filePath;
-                var type = specifiedType;
-                Task.Run(() => {
-                    var pwds = new List<string>();
-                    ArchiveToolNative.GetAllPwd((pwd, _) => pwds.Add(pwd), IntPtr.Zero);
-                    int total = pwds.Count;
-                    for (int i = 0; i < total; i++) {
-                        int found = ArchiveToolNative.ArchiveExtraTest(fp, pwds[i], type);
-                        OnPasswordProgress?.Invoke(new PasswordSearchProgress {
-                            Current = i + 1, Total = total,
-                            Password = pwds[i], Type = type,
-                            Found = found != 0, Finished = false,
-                        });
-                        if (!findAll && found != 0) break;
-                    }
-                    OnPasswordProgress?.Invoke(new PasswordSearchProgress {
-                        Current = total, Total = total,
-                        Password = "", Type = type,
-                        Found = false, Finished = true,
-                    });
-                });
-                return 0;
+                byte[] buf = new byte[256];
+                int len = ArchiveToolNative.TryDetermineType(filePath, buf, buf.Length);
+                typeToUse = len > 0 ? Encoding.UTF8.GetString(buf, 0, len) : "";
             }
 
             _callbackRef = OnNativeCallback;
-            int taskId = ArchiveToolNative.FindPasswordAsync(filePath, _callbackRef, IntPtr.Zero, findAll ? 1 : 0);
+            int taskId = ArchiveToolNative.FindPasswordAsync(filePath, typeToUse, _callbackRef, IntPtr.Zero, findAll ? 1 : 0);
             _currentTaskId = taskId;
             return taskId;
         }
