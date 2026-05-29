@@ -37,6 +37,24 @@ namespace ArchiveToolUI
             InitializeComponent();
             WireEvents();
             LoadArchiveTypes();
+            StartBackgroundInit();
+        }
+
+        // ── 后台初始化 7-Zip DLL ──────────────────────────────────────
+        private void StartBackgroundInit()
+        {
+            btnStart.Enabled = false;
+            toolTip.SetToolTip(btnStart, "正在初始化 7-Zip 库，请稍候…");
+            tsLabel.Text = "正在初始化 7-Zip…";
+
+            Task.Run(() => {
+                ArchiveToolNative.InitArchiveTool();
+                Invoke(() => {
+                    btnStart.Enabled = true;
+                    toolTip.SetToolTip(btnStart, "");
+                    tsLabel.Text = "就绪";
+                });
+            });
         }
 
         private void WireEvents()

@@ -44,6 +44,9 @@ namespace ArchiveToolUI
             [MarshalAs(UnmanagedType.LPUTF8Str)] string pwd);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void InitArchiveTool();
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int check_format(
             [MarshalAs(UnmanagedType.LPUTF8Str)] string filePath,
             byte[] buf, int bufSize);
