@@ -22,6 +22,7 @@
             this.colFile       = new System.Windows.Forms.ColumnHeader();
             this.colPwd        = new System.Windows.Forms.ColumnHeader();
             this.colType       = new System.Windows.Forms.ColumnHeader();
+            this.colRawFormat  = new System.Windows.Forms.ColumnHeader();
             this.chkFindAll    = new System.Windows.Forms.CheckBox();
             this.chkBatchMode  = new System.Windows.Forms.CheckBox();
             this.btnStart      = new System.Windows.Forms.Button();
@@ -103,12 +104,14 @@
             this.txtFilePaths.TabIndex   = 0;
 
             // ── 批量：结果列表（四边拉伸）────────────────────────────
-            this.colFile.Text  = "文件";
-            this.colFile.Width = 160;
-            this.colPwd.Text   = "密码";
-            this.colPwd.Width  = 130;
-            this.colType.Text  = "类型";
-            this.colType.Width = 80;
+            this.colFile.Text      = "文件";
+            this.colFile.Width     = 140;
+            this.colPwd.Text       = "密码";
+            this.colPwd.Width      = 110;
+            this.colType.Text      = "类型";
+            this.colType.Width     = 70;
+            this.colRawFormat.Text  = "原始格式";
+            this.colRawFormat.Width = 80;
 
             this.lvResults.Location      = new System.Drawing.Point(8, 122);
             this.lvResults.Size          = new System.Drawing.Size(384, 120);
@@ -119,7 +122,7 @@
             this.lvResults.FullRowSelect = true;
             this.lvResults.GridLines     = true;
             this.lvResults.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-                this.colFile, this.colPwd, this.colType });
+                this.colFile, this.colPwd, this.colType, this.colRawFormat });
             this.lvResults.Visible       = false;
             this.lvResults.Name          = "lvResults";
             this.lvResults.TabIndex      = 4;
@@ -205,6 +208,7 @@
         private System.Windows.Forms.ColumnHeader colFile;
         private System.Windows.Forms.ColumnHeader colPwd;
         private System.Windows.Forms.ColumnHeader colType;
+        private System.Windows.Forms.ColumnHeader colRawFormat;
         // 共用
         private System.Windows.Forms.CheckBox          chkFindAll;
         private System.Windows.Forms.CheckBox          chkBatchMode;

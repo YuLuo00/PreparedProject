@@ -232,7 +232,8 @@ namespace ArchiveToolUI
                 foreach (var fp in lines) {
                     var item = new ListViewItem(Path.GetFileName(fp));
                     item.SubItems.Add("检索中…");
-                    item.SubItems.Add("");
+                    item.SubItems.Add("");   // 类型列
+                    item.SubItems.Add("");   // 原始格式列
                     item.Tag = fp;
                     lvResults.Items.Add(item);
                 }
@@ -256,6 +257,18 @@ namespace ArchiveToolUI
                 // 读取用户预设的 type（如果有）
                 string? presetType = item.SubItems.Count >= 3 && !string.IsNullOrEmpty(item.SubItems[2].Text)
                     ? item.SubItems[2].Text : null;
+
+                // 后台获取 libarchive 原始格式字符串，填入第4列
+                var capturedItem = item;
+                Task.Run(() => {
+                    byte[] rawBuf = new byte[256];
+                    int rawLen = ArchiveToolNative.check_format(fp, rawBuf, rawBuf.Length);
+                    string raw = rawLen > 0 ? System.Text.Encoding.UTF8.GetString(rawBuf, 0, rawLen) : "";
+                    Invoke(() => {
+                        if (capturedItem.SubItems.Count >= 4)
+                            capturedItem.SubItems[3].Text = raw;
+                    });
+                });
 
                 svc.OnPasswordProgress += p => Invoke(() => UpdateProgressBatch(fp, p));
                 _batchServices.Add(svc);
