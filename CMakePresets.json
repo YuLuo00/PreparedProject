@@ -1,5 +1,5 @@
 {
-    "version": 8,
+    "version": 6,
     "configurePresets": [
         {
             "name": "gcc",
@@ -7,8 +7,14 @@
             "description": "Using MinGW GCC compiler",
             "binaryDir": "${sourceDir}/out/build/gcc",
             "generator": "MinGW Makefiles",
+            "environment": {
+                "PATH": "C:/Program Files/w64devkit/bin;$penv{PATH}"
+            },
             "cacheVariables": {
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}",
+                "CMAKE_MAKE_PROGRAM": "C:/Program Files/w64devkit/bin/mingw32-make.exe",
+                "CMAKE_C_COMPILER": "C:/Program Files/w64devkit/bin/gcc.exe",
+                "CMAKE_CXX_COMPILER": "C:/Program Files/w64devkit/bin/g++.exe",
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
@@ -25,6 +31,15 @@
                 "CMAKE_CXX_COMPILER": "C:/Program Files/LLVM/bin/clang-cl.exe",
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "gcc",
+            "configurePreset": "gcc",
+            "environment": {
+                "PATH": "C:/Program Files/w64devkit/bin;$penv{PATH}"
             }
         }
     ]

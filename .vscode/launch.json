@@ -4,14 +4,14 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/testTool.exe", // Path to your compiled program
+            "program": "${workspaceFolder}/bin/ArchiveToolConsole.exe", // Path to your compiled program
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}/bin",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
-            "miDebuggerPath": "C:\\_sf_freeSetup\\mingw\\x86_64-14.2.0-release-win32-seh-msvcrt-rt_v12-rev1\\mingw64\\bin\\gdb.exe",
+            "miDebuggerPath": "C:\\Program Files\\w64devkit\\bin\\gdb.exe",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",

@@ -8,7 +8,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 message("${PROJECT_NAME} --------------------- ffffffff")
 
 # 每次 configure 后自动将 compile_commands.json 复制到根目录（供 clangd 使用）
-if(CMAKE_EXPORT_COMPILE_COMMANDS)
+if(CMAKE_EXPORT_COMPILE_COMMANDS AND EXISTS "${CMAKE_BINARY_DIR}/compile_commands.json")
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${CMAKE_BINARY_DIR}/compile_commands.json
