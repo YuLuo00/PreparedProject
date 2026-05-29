@@ -2,10 +2,30 @@ using System.IO;
 
 namespace ArchiveToolUI
 {
+    // -----------------------------------------------------------------------
+    // ListView 列排序比较器
+    // -----------------------------------------------------------------------
+    class ListViewColumnSorter : System.Collections.IComparer
+    {
+        public int  SortColumn { get; set; } = 0;
+        public bool Ascending  { get; set; } = true;
+
+        public int Compare(object? x, object? y)
+        {
+            var lx = (ListViewItem)x!;
+            var ly = (ListViewItem)y!;
+            string sx = lx.SubItems.Count > SortColumn ? lx.SubItems[SortColumn].Text : "";
+            string sy = ly.SubItems.Count > SortColumn ? ly.SubItems[SortColumn].Text : "";
+            int result = string.Compare(sx, sy, StringComparison.CurrentCultureIgnoreCase);
+            return Ascending ? result : -result;
+        }
+    }
+
     public partial class Form1 : Form
     {
         private readonly ArchiveToolService _service = new();
         private bool _isSearching = false;
+        private readonly ListViewColumnSorter _lvSorter = new();
 
         // 批量模式：每个文件对应一个独立的 ArchiveToolService
         private readonly List<ArchiveToolService> _batchServices = new();
@@ -63,6 +83,23 @@ namespace ArchiveToolUI
                     var pwd = lvResults.SelectedItems[0].SubItems[1].Text;
                     if (!string.IsNullOrEmpty(pwd)) Clipboard.SetText(pwd);
                 }
+            };
+
+            // ── 批量结果列表：点击列头排序 ────────────────────────────
+            lvResults.ListViewItemSorter = _lvSorter;
+            lvResults.ColumnClick += (s, e) => {
+                if (_lvSorter.SortColumn == e.Column)
+                    _lvSorter.Ascending = !_lvSorter.Ascending;
+                else {
+                    _lvSorter.SortColumn = e.Column;
+                    _lvSorter.Ascending  = true;
+                }
+                lvResults.Sort();
+                // 更新列头箭头提示
+                foreach (ColumnHeader col in lvResults.Columns)
+                    col.Text = col.Text.TrimEnd(' ', '▲', '▼');
+                var activeCol = lvResults.Columns[e.Column];
+                activeCol.Text += _lvSorter.Ascending ? " ▲" : " ▼";
             };
 
             // ── 单文件业务层回调 ──────────────────────────────────────
