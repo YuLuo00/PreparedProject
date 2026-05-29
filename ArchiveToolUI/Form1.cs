@@ -95,6 +95,7 @@ namespace ArchiveToolUI
             _service.OnTypeDetected += type => Invoke(() => {
                 int idx = cmbType.Items.IndexOf(type);
                 if (idx >= 0) cmbType.SelectedIndex = idx;
+                tsTypeLabel.Text = string.IsNullOrEmpty(type) ? "" : $"类型: {type}";
             });
             _service.OnPasswordProgress += p => Invoke(() => UpdateProgressSingle(p));
         }
@@ -185,6 +186,7 @@ namespace ArchiveToolUI
                 var svc  = new ArchiveToolService();
                 var item = new ListViewItem(Path.GetFileName(fp));
                 item.SubItems.Add("检索中…");
+                item.SubItems.Add("");  // 类型列占位
                 item.Tag = fp;
                 lvResults.Items.Add(item);
                 svc.OnPasswordProgress += p => Invoke(() => UpdateProgressBatch(fp, p));
@@ -224,6 +226,9 @@ namespace ArchiveToolUI
         {
             foreach (ListViewItem item in lvResults.Items) {
                 if (item.Tag as string == filePath) {
+                    if (!string.IsNullOrEmpty(p.Type) && item.SubItems.Count >= 3
+                        && string.IsNullOrEmpty(item.SubItems[2].Text))
+                        item.SubItems[2].Text = p.Type;
                     if (p.Found) item.SubItems[1].Text = p.Password;
                     if (p.Finished) {
                         if (item.SubItems[1].Text == "检索中…") item.SubItems[1].Text = "未找到";

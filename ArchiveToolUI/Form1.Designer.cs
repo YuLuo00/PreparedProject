@@ -20,12 +20,14 @@
             this.lvResults     = new System.Windows.Forms.ListView();
             this.colFile       = new System.Windows.Forms.ColumnHeader();
             this.colPwd        = new System.Windows.Forms.ColumnHeader();
+            this.colType       = new System.Windows.Forms.ColumnHeader();
             this.chkFindAll    = new System.Windows.Forms.CheckBox();
             this.chkBatchMode  = new System.Windows.Forms.CheckBox();
             this.btnStart      = new System.Windows.Forms.Button();
             this.statusStrip   = new System.Windows.Forms.StatusStrip();
             this.tsProgressBar = new System.Windows.Forms.ToolStripProgressBar();
             this.tsLabel       = new System.Windows.Forms.ToolStripStatusLabel();
+            this.tsTypeLabel   = new System.Windows.Forms.ToolStripStatusLabel();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
 
@@ -75,11 +77,13 @@
             this.txtFilePaths.Name       = "txtFilePaths";
             this.txtFilePaths.TabIndex   = 0;
 
-            // ── 批量：结果列表 ────────────────────────────────────────
+            // ── 批量：结果列表（文件 | 密码 | 类型）──────────────────
             this.colFile.Text  = "文件";
-            this.colFile.Width = 200;
+            this.colFile.Width = 160;
             this.colPwd.Text   = "密码";
-            this.colPwd.Width  = 170;
+            this.colPwd.Width  = 130;
+            this.colType.Text  = "类型";
+            this.colType.Width = 80;
 
             this.lvResults.Location      = new System.Drawing.Point(8, 96);
             this.lvResults.Size          = new System.Drawing.Size(384, 120);
@@ -87,7 +91,7 @@
             this.lvResults.FullRowSelect = true;
             this.lvResults.GridLines     = true;
             this.lvResults.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-                this.colFile, this.colPwd });
+                this.colFile, this.colPwd, this.colType });
             this.lvResults.Visible       = false;
             this.lvResults.Name          = "lvResults";
             this.lvResults.TabIndex      = 4;
@@ -115,9 +119,13 @@
 
             // ── 共用：底部 StatusStrip ────────────────────────────────
             this.tsProgressBar.Name    = "tsProgressBar";
-            this.tsProgressBar.Size    = new System.Drawing.Size(200, 16);
+            this.tsProgressBar.Size    = new System.Drawing.Size(150, 16);
             this.tsProgressBar.Minimum = 0;
             this.tsProgressBar.Maximum = 100;
+
+            this.tsTypeLabel.Name      = "tsTypeLabel";
+            this.tsTypeLabel.Text      = "";
+            this.tsTypeLabel.ForeColor = System.Drawing.Color.DimGray;
 
             this.tsLabel.Name      = "tsLabel";
             this.tsLabel.Text      = "就绪";
@@ -125,7 +133,7 @@
             this.tsLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 
             this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-                this.tsProgressBar, this.tsLabel });
+                this.tsProgressBar, this.tsTypeLabel, this.tsLabel });
             this.statusStrip.Name     = "statusStrip";
             this.statusStrip.TabIndex = 7;
 
@@ -157,6 +165,7 @@
         private System.Windows.Forms.ListView     lvResults;
         private System.Windows.Forms.ColumnHeader colFile;
         private System.Windows.Forms.ColumnHeader colPwd;
+        private System.Windows.Forms.ColumnHeader colType;
         // 共用
         private System.Windows.Forms.CheckBox          chkFindAll;
         private System.Windows.Forms.CheckBox          chkBatchMode;
@@ -164,5 +173,6 @@
         private System.Windows.Forms.StatusStrip       statusStrip;
         private System.Windows.Forms.ToolStripProgressBar tsProgressBar;
         private System.Windows.Forms.ToolStripStatusLabel tsLabel;
+        private System.Windows.Forms.ToolStripStatusLabel tsTypeLabel;
     }
 }
