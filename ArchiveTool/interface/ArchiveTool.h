@@ -49,6 +49,9 @@ ZYB_ARCHIVE_TOOL_API void ArchiveToolMsg(EnumMsgCallback callback, void *userDat
 
 ZYB_ARCHIVE_TOOL_API int AddNewPwd(const char *pwd);
 
+// 将指定密码移到密码本最前面（匹配成功后调用，提升下次命中速度）
+ZYB_ARCHIVE_TOOL_API int PromotePwd(const char *pwd);
+
 typedef void (*EnumPwdCallback)(const char *pwd, void *userData);
 ZYB_ARCHIVE_TOOL_API void GetAllPwd(EnumPwdCallback callback, void *userData);
 

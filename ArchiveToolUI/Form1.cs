@@ -343,9 +343,15 @@ namespace ArchiveToolUI
             }
             if (p.Finished) {
                 SetSearching(false);
-                tsLabel.Text = string.IsNullOrEmpty(txtResult.Text)
-                    ? "未找到匹配密码"
-                    : $"完成 ✓ {p.Current}/{p.Total}";
+                if (!string.IsNullOrEmpty(txtResult.Text)) {
+                    tsLabel.Text = $"完成 ✓ {p.Current}/{p.Total}";
+                    // 将第一个匹配密码提升到密码本最前面
+                    string firstPwd = txtResult.Text.Split(Environment.NewLine)[0].Trim();
+                    if (!string.IsNullOrEmpty(firstPwd))
+                        Task.Run(() => ArchiveToolNative.PromotePwd(firstPwd));
+                } else {
+                    tsLabel.Text = "未找到匹配密码";
+                }
             }
         }
 

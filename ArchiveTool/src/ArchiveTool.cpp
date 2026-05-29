@@ -186,6 +186,12 @@ ZYB_ARCHIVE_TOOL_API int AddNewPwd(const char *pwd)
     return PwdManager::Ins().AddNewPwd(std::string(pwd)) ? 1 : 0;
 }
 
+ZYB_ARCHIVE_TOOL_API int PromotePwd(const char *pwd)
+{
+    if (!pwd) return 0;
+    return PwdManager::Ins().PromotePwd(std::string(pwd)) ? 1 : 0;
+}
+
 ZYB_ARCHIVE_TOOL_API void GetAllPwd(EnumPwdCallback callback, void *userData)
 {
     if (!callback) return;

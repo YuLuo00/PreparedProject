@@ -44,6 +44,10 @@ namespace ArchiveToolUI
             [MarshalAs(UnmanagedType.LPUTF8Str)] string pwd);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int PromotePwd(
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string pwd);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void InitArchiveTool();
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]

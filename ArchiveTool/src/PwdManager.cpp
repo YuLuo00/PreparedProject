@@ -9,34 +9,49 @@ namespace fs = std::filesystem;
 void PwdManager::Init()
 {
     m_pwdBoolPath = fs::absolute(m_pwdBoolPath).generic_string();
-    if (!fs::exists(m_pwdBoolPath)) {
-        return;
-    }
+    if (!fs::exists(m_pwdBoolPath)) return;
 
     std::vector<std::string> lines = CommonTool::ReadFileTxtAsLocal(this->m_pwdBoolPath);
-    m_pwdBook.insert(lines.begin(), lines.end());
-    return;
+    for (const auto &line : lines) {
+        if (!line.empty()) m_pwdBook.push_back(line);
+    }
 }
 
-bool PwdManager::AddNewPwd(const std::string &pwd)
+void PwdManager::SaveToFile()
 {
-    if (this->m_pwdBook.count(pwd) > 0) {
-        return true;
-    }
-
-    this->m_pwdBook.insert(pwd);
     std::ofstream file(this->m_pwdBoolPath, std::ios_base::trunc);
-    if (!file.is_open()) {
-        return false;
-    }
+    if (!file.is_open()) return;
     for (const std::string &pwd : this->m_pwdBook) {
         file << pwd << '\n';
     }
     file.close();
+}
+
+bool PwdManager::AddNewPwd(const std::string &pwd)
+{
+    // 检查是否已存在
+    auto it = std::find(m_pwdBook.begin(), m_pwdBook.end(), pwd);
+    if (it != m_pwdBook.end()) return true;
+
+    m_pwdBook.push_back(pwd);
+    SaveToFile();
     return true;
 }
 
 std::vector<std::string> PwdManager::GetAllPwd()
 {
-    return std::vector<std::string>(this->m_pwdBook.begin(), this->m_pwdBook.end());
+    return m_pwdBook;
+}
+
+bool PwdManager::PromotePwd(const std::string &pwd)
+{
+    auto it = std::find(m_pwdBook.begin(), m_pwdBook.end(), pwd);
+    if (it == m_pwdBook.end()) return false;  // 不存在
+    if (it == m_pwdBook.begin()) return true;  // 已经在最前面
+
+    // 移到最前面
+    m_pwdBook.erase(it);
+    m_pwdBook.insert(m_pwdBook.begin(), pwd);
+    SaveToFile();
+    return true;
 }
