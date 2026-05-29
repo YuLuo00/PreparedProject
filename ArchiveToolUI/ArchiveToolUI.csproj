@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- publish 输出目录：与 cmake install 保持一致 -->
+    <PublishDir>$(MSBuildThisFileDirectory)\..\bin\ArchiveToolUI</PublishDir>
+    <!-- 不打包运行时（目标机器需安装 .NET 8） -->
+    <SelfContained>false</SelfContained>
+    <!-- 单文件发布（可选，注释掉则输出多个文件） -->
+    <!-- <PublishSingleFile>true</PublishSingleFile> -->
+  </PropertyGroup>
+
+</Project>

@@ -19,3 +19,22 @@ endif()
 add_subdirectory(Tests/HelloWorld)
 add_subdirectory(ArchiveTool)
 add_subdirectory(ArchiveToolConsole)
+
+# ArchiveToolUI：dotnet publish → bin/ArchiveToolUI/（等效于 cmake --install）
+find_program(DOTNET_EXE dotnet
+    HINTS "C:/Program Files/dotnet"
+    DOC "dotnet CLI executable")
+
+if(DOTNET_EXE)
+    add_custom_target(install_ui
+        COMMAND ${DOTNET_EXE} publish
+            "${ProjectRootDir}/ArchiveToolUI/ArchiveToolUI.csproj"
+            -c Release
+        WORKING_DIRECTORY "${ProjectRootDir}"
+        COMMENT "Publishing ArchiveToolUI → bin/ArchiveToolUI/"
+        VERBATIM
+    )
+    message(STATUS "install_ui target available (dotnet: ${DOTNET_EXE})")
+else()
+    message(STATUS "dotnet not found, install_ui target skipped")
+endif()
