@@ -28,21 +28,31 @@ namespace ArchiveToolUI
             txtPwd.Size     = new Size(280, 23);
             txtPwd.SelectAll();
 
+            var btnPaste = new Button {
+                Text     = "粘贴",
+                Location = new Point(8, 64),
+                Size     = new Size(60, 26),
+            };
+            btnPaste.Click += (s, e) => {
+                if (Clipboard.ContainsText())
+                    txtPwd.Text = Clipboard.GetText().Trim();
+            };
+
             btnOk.Text           = "添加";
-            btnOk.Location       = new Point(130, 64);
-            btnOk.Size           = new Size(70, 26);
+            btnOk.Location       = new Point(150, 64);
+            btnOk.Size           = new Size(65, 26);
             btnOk.DialogResult   = DialogResult.OK;
             btnOk.Font           = new Font(btnOk.Font, FontStyle.Bold);
 
             btnCancel.Text         = "取消";
-            btnCancel.Location     = new Point(210, 64);
-            btnCancel.Size         = new Size(70, 26);
+            btnCancel.Location     = new Point(222, 64);
+            btnCancel.Size         = new Size(65, 26);
             btnCancel.DialogResult = DialogResult.Cancel;
 
             this.AcceptButton = btnOk;
             this.CancelButton = btnCancel;
 
-            this.Controls.AddRange(new Control[] { lblHint, txtPwd, btnOk, btnCancel });
+            this.Controls.AddRange(new Control[] { lblHint, txtPwd, btnPaste, btnOk, btnCancel });
         }
     }
 }
