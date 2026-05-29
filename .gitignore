@@ -41,3 +41,6 @@ _fix_brackets.py
 /spdlog-mingw/
 /fmt-mingw/
 /libarchive-mingw/
+/ArchiveToolUI/bin/
+/ArchiveToolUI/obj/
+
