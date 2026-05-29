@@ -15,7 +15,8 @@
             this.txtFilePath   = new System.Windows.Forms.TextBox();
             this.cmbType       = new System.Windows.Forms.ComboBox();
             this.txtResult     = new System.Windows.Forms.TextBox();
-            this.btnCopy       = new System.Windows.Forms.Button();
+            this.btnCopy       = new DropdownButton();
+            this.toolTip       = new System.Windows.Forms.ToolTip();
             this.txtFilePaths  = new System.Windows.Forms.TextBox();
             this.lvResults     = new System.Windows.Forms.ListView();
             this.colFile       = new System.Windows.Forms.ColumnHeader();
@@ -76,6 +77,7 @@
             this.btnCopy.Name          = "btnCopy";
             this.btnCopy.TabIndex      = 5;
             this.btnCopy.ContextMenuStrip = this.ctxBtnCopy;
+            this.toolTip.SetToolTip(this.btnCopy, "左键：拷贝密码\n右键：添加密码到密码本");
 
             // ── 批量：多行地址栏 ──────────────────────────────────────
             this.txtFilePaths.Location   = new System.Drawing.Point(8, 10);
@@ -170,7 +172,8 @@
         private System.Windows.Forms.TextBox      txtFilePath;
         private System.Windows.Forms.ComboBox     cmbType;
         private System.Windows.Forms.TextBox      txtResult;
-        private System.Windows.Forms.Button            btnCopy;
+        private DropdownButton                         btnCopy;
+        private System.Windows.Forms.ToolTip           toolTip;
         private System.Windows.Forms.ContextMenuStrip  ctxBtnCopy;
         private System.Windows.Forms.ToolStripMenuItem menuAddPwd;
         // 批量模式
