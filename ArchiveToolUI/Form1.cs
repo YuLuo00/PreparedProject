@@ -207,8 +207,11 @@ namespace ArchiveToolUI
             if (p.Total > 0)
                 tsProgressBar.Value = Math.Min(100, p.Current * 100 / p.Total);
             tsLabel.Text = $"{p.Current}/{p.Total}";
-            if (p.Found && string.IsNullOrEmpty(txtResult.Text))
-                txtResult.Text = p.Password;
+            if (p.Found) {
+                txtResult.Text = string.IsNullOrEmpty(txtResult.Text)
+                    ? p.Password
+                    : txtResult.Text + Environment.NewLine + p.Password;
+            }
             if (p.Finished) {
                 SetSearching(false);
                 tsLabel.Text = string.IsNullOrEmpty(txtResult.Text)
