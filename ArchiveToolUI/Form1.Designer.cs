@@ -24,6 +24,9 @@
             this.chkFindAll    = new System.Windows.Forms.CheckBox();
             this.chkBatchMode  = new System.Windows.Forms.CheckBox();
             this.btnStart      = new System.Windows.Forms.Button();
+            this.ctxBtnCopy    = new System.Windows.Forms.ContextMenuStrip();
+            this.menuAddPwd    = new System.Windows.Forms.ToolStripMenuItem();
+            this.ctxBtnCopy.SuspendLayout();
             this.statusStrip   = new System.Windows.Forms.StatusStrip();
             this.tsProgressBar = new System.Windows.Forms.ToolStripProgressBar();
             this.tsLabel       = new System.Windows.Forms.ToolStripStatusLabel();
@@ -60,12 +63,19 @@
             this.txtResult.Name        = "txtResult";
             this.txtResult.TabIndex    = 4;
 
-            // ── 单文件：拷贝按钮 ──────────────────────────────────────
+            // ── 单文件：拷贝按钮（右键菜单）──────────────────────────
+            this.menuAddPwd.Text = "添加密码到密码本";
+            this.menuAddPwd.Name = "menuAddPwd";
+
+            this.ctxBtnCopy.Items.Add(this.menuAddPwd);
+            this.ctxBtnCopy.Name = "ctxBtnCopy";
+
             this.btnCopy.Location      = new System.Drawing.Point(302, 65);
             this.btnCopy.Size          = new System.Drawing.Size(90, 23);
             this.btnCopy.Text          = "拷贝密码";
             this.btnCopy.Name          = "btnCopy";
             this.btnCopy.TabIndex      = 5;
+            this.btnCopy.ContextMenuStrip = this.ctxBtnCopy;
 
             // ── 批量：多行地址栏 ──────────────────────────────────────
             this.txtFilePaths.Location   = new System.Drawing.Point(8, 10);
@@ -149,6 +159,7 @@
             this.Controls.Add(this.btnStart);
             this.Controls.Add(this.statusStrip);
 
+            this.ctxBtnCopy.ResumeLayout(false);
             this.statusStrip.ResumeLayout(false);
             this.statusStrip.PerformLayout();
             this.ResumeLayout(false);
@@ -159,7 +170,9 @@
         private System.Windows.Forms.TextBox      txtFilePath;
         private System.Windows.Forms.ComboBox     cmbType;
         private System.Windows.Forms.TextBox      txtResult;
-        private System.Windows.Forms.Button       btnCopy;
+        private System.Windows.Forms.Button            btnCopy;
+        private System.Windows.Forms.ContextMenuStrip  ctxBtnCopy;
+        private System.Windows.Forms.ToolStripMenuItem menuAddPwd;
         // 批量模式
         private System.Windows.Forms.TextBox      txtFilePaths;
         private System.Windows.Forms.ListView     lvResults;

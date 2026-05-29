@@ -71,6 +71,20 @@ namespace ArchiveToolUI
                     Clipboard.SetText(txtResult.Text);
             };
 
+            // 右键"拷贝密码"→ 添加密码到密码本
+            menuAddPwd.Click += (s, e) => {
+                // 默认填入结果框第一行（或空）
+                string defaultPwd = txtResult.Text.Contains(Environment.NewLine)
+                    ? txtResult.Text.Split(Environment.NewLine)[0].Trim()
+                    : txtResult.Text.Trim();
+
+                using var dlg = new AddPasswordDialog(defaultPwd);
+                if (dlg.ShowDialog(this) == DialogResult.OK && !string.IsNullOrEmpty(dlg.Password)) {
+                    int ok = ArchiveToolNative.AddNewPwd(dlg.Password);
+                    tsLabel.Text = ok != 0 ? $"已添加: {dlg.Password}" : "添加失败（已存在？）";
+                }
+            };
+
             lvResults.DoubleClick += (s, e) => {
                 if (lvResults.SelectedItems.Count > 0) {
                     var pwd = lvResults.SelectedItems[0].SubItems[1].Text;
