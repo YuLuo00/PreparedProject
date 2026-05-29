@@ -7,28 +7,6 @@
 #define ZYB_ARCHIVE_TOOL_API __declspec(dllimport)
 #include "ArchiveTool.h"
 
-// 将 UTF-8 字符串转为宽字符串
-static std::wstring Utf8ToWstr(const std::string &str)
-{
-    if (str.empty()) return L"";
-    int size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), nullptr, 0);
-    if (size <= 0) return L"";
-    std::wstring ret(size, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), ret.data(), size);
-    return ret;
-}
-
-// 将宽字符串转为 UTF-8
-static std::string WstrToUtf8(const std::wstring &wstr)
-{
-    if (wstr.empty()) return "";
-    int size = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), nullptr, 0, nullptr, nullptr);
-    if (size <= 0) return "";
-    std::string ret(size, '\0');
-    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), ret.data(), size, nullptr, nullptr);
-    return ret;
-}
-
 // 分割字符串
 static std::vector<std::string> Split(const std::string &s)
 {
@@ -78,55 +56,48 @@ int main()
             PrintHelp();
         }
         else if (cmd == "keys") {
-            auto keys = GetKeys();
+            std::vector<std::string> keys;
+            GetKeys([](const char *key, void *ud) {
+                static_cast<std::vector<std::string>*>(ud)->push_back(key);
+            }, &keys);
             std::cout << "支持的格式（" << keys.size() << " 个）：\n";
-            for (const auto &k : keys) {
-                std::cout << "  " << k << "\n";
-            }
+            for (const auto &k : keys) std::cout << "  " << k << "\n";
         }
         else if (cmd == "check") {
-            if (args.size() < 2) {
-                std::cout << "用法: check <file>\n";
-                continue;
-            }
-            std::string result = check_format(args[1]);
+            if (args.size() < 2) { std::cout << "用法: check <file>\n"; continue; }
+            char buf[256] = {};
+            int len = check_format(args[1].c_str(), buf, sizeof(buf));
+            std::string result = len > 0 ? buf : "";
             std::cout << "格式: " << (result.empty() ? "(未识别)" : result) << "\n";
         }
         else if (cmd == "type") {
-            if (args.size() < 2) {
-                std::cout << "用法: type <file>\n";
-                continue;
-            }
-            std::wstring wfile = Utf8ToWstr(args[1]);
-            std::string result = TryDetermineType(wfile);
-            std::cout << "识别类型: " << result << "\n";
+            if (args.size() < 2) { std::cout << "用法: type <file>\n"; continue; }
+            char buf[256] = {};
+            TryDetermineType(args[1].c_str(), buf, sizeof(buf));
+            std::cout << "识别类型: " << buf << "\n";
 
-            auto msgs = ArchiveToolMsg();
-            if (!msgs.empty()) {
-                std::cout << "详细日志：\n";
-                for (const auto &m : msgs) std::cout << "  " << m << "\n";
-            }
+            std::cout << "详细日志：\n";
+            ArchiveToolMsg([](const char *msg, void *) {
+                std::cout << "  " << msg << "\n";
+            }, nullptr);
         }
         else if (cmd == "test") {
-            if (args.size() < 2) {
-                std::cout << "用法: test <file> [passwd] [type]\n";
-                continue;
-            }
-            std::wstring wfile   = Utf8ToWstr(args[1]);
-            std::wstring wpasswd = args.size() >= 3 ? Utf8ToWstr(args[2]) : L"";
-            std::wstring wtype   = args.size() >= 4 ? Utf8ToWstr(args[3]) : L"Auto";
+            if (args.size() < 2) { std::cout << "用法: test <file> [passwd] [type]\n"; continue; }
+            const char *file   = args[1].c_str();
+            const char *passwd = args.size() >= 3 ? args[2].c_str() : "";
+            const char *type   = args.size() >= 4 ? args[3].c_str() : "Auto";
 
             std::cout << "测试中...\n";
-            bool ok = ArchiveExtraTest(wfile, wpasswd, wtype);
+            int ok = ArchiveExtraTest(file, passwd, type);
             std::cout << "结果: " << (ok ? "✓ 通过" : "✗ 失败") << "\n";
         }
         else if (cmd == "msg") {
-            auto msgs = ArchiveToolMsg();
-            if (msgs.empty()) {
-                std::cout << "(无日志)\n";
-            } else {
-                for (const auto &m : msgs) std::cout << m << "\n";
-            }
+            bool hasMsg = false;
+            ArchiveToolMsg([](const char *msg, void *has) {
+                std::cout << msg << "\n";
+                *static_cast<bool*>(has) = true;
+            }, &hasMsg);
+            if (!hasMsg) std::cout << "(无日志)\n";
         }
         else {
             std::cout << "未知命令: " << cmd << "，输入 'help' 查看帮助\n";
