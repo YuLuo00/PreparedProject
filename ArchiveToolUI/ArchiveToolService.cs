@@ -43,6 +43,13 @@ namespace ArchiveToolUI
         public static extern int AddNewPwd(
             [MarshalAs(UnmanagedType.LPUTF8Str)] string pwd);
 
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void EnumKeysCallback(
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string key, IntPtr userData);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void GetKeys(EnumKeysCallback callback, IntPtr userData);
+
         // 回调委托
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate int FindPasswordCallback(
