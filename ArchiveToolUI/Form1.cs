@@ -169,16 +169,19 @@ namespace ArchiveToolUI
             lvResults.Visible    = batch;
 
             if (batch) {
-                ClientSize = new Size(400, 298);
+                // 批量模式：勾选框在 y=96，ListView 在 y=122，按钮锚定底部
+                MinimumSize = new Size(320, 320);
+                if (ClientSize.Height < 298) ClientSize = new Size(Math.Max(ClientSize.Width, 400), 298);
                 chkFindAll.Location   = new Point(8, 96);
                 chkBatchMode.Location = new Point(180, 96);
                 lvResults.Location    = new Point(8, 122);
-                btnStart.Location     = new Point(8, 248);
+                // btnStart 锚定 Bottom，不需要手动设置 Location
             } else {
-                ClientSize = new Size(400, 158);
+                // 单文件模式：紧凑布局，按钮锚定底部
+                MinimumSize = new Size(320, 190);
+                if (ClientSize.Height > 200) ClientSize = new Size(ClientSize.Width, 158);
                 chkFindAll.Location   = new Point(8, 40);
                 chkBatchMode.Location = new Point(180, 40);
-                btnStart.Location     = new Point(8, 94);
             }
         }
 

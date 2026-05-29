@@ -37,51 +37,64 @@
 
             // ── 窗体 ──────────────────────────────────────────────────
             this.ClientSize      = new System.Drawing.Size(400, 158);
+            this.MinimumSize     = new System.Drawing.Size(320, 190);
             this.Text            = "ArchiveTool";
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.MaximizeBox     = false;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Sizable;
+            this.MaximizeBox     = true;
             this.AllowDrop       = true;
             this.Name            = "Form1";
 
-            // ── 单文件：地址栏 ────────────────────────────────────────
+            // ── 单文件：地址栏（左右拉伸）────────────────────────────
             this.txtFilePath.Location  = new System.Drawing.Point(8, 10);
             this.txtFilePath.Size      = new System.Drawing.Size(258, 23);
+            this.txtFilePath.Anchor    = System.Windows.Forms.AnchorStyles.Top
+                                       | System.Windows.Forms.AnchorStyles.Left
+                                       | System.Windows.Forms.AnchorStyles.Right;
             this.txtFilePath.AllowDrop = true;
             this.txtFilePath.Name      = "txtFilePath";
             this.txtFilePath.TabIndex  = 0;
 
-            // ── 单文件：类型下拉框 ────────────────────────────────────
+            // ── 单文件：类型下拉框（右对齐）──────────────────────────
             this.cmbType.Location      = new System.Drawing.Point(270, 10);
             this.cmbType.Size          = new System.Drawing.Size(122, 23);
+            this.cmbType.Anchor        = System.Windows.Forms.AnchorStyles.Top
+                                       | System.Windows.Forms.AnchorStyles.Right;
             this.cmbType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cmbType.Name          = "cmbType";
             this.cmbType.TabIndex      = 1;
 
-            // ── 单文件：结果框 ────────────────────────────────────────
+            // ── 单文件：结果框（左右拉伸）────────────────────────────
             this.txtResult.Location    = new System.Drawing.Point(8, 65);
             this.txtResult.Size        = new System.Drawing.Size(290, 23);
+            this.txtResult.Anchor      = System.Windows.Forms.AnchorStyles.Top
+                                       | System.Windows.Forms.AnchorStyles.Left
+                                       | System.Windows.Forms.AnchorStyles.Right;
             this.txtResult.ReadOnly    = true;
             this.txtResult.Name        = "txtResult";
             this.txtResult.TabIndex    = 4;
 
-            // ── 单文件：拷贝按钮（右键菜单）──────────────────────────
+            // ── 单文件：拷贝按钮（右对齐）────────────────────────────
             this.menuAddPwd.Text = "添加密码到密码本";
             this.menuAddPwd.Name = "menuAddPwd";
-
             this.ctxBtnCopy.Items.Add(this.menuAddPwd);
             this.ctxBtnCopy.Name = "ctxBtnCopy";
 
-            this.btnCopy.Location      = new System.Drawing.Point(302, 65);
-            this.btnCopy.Size          = new System.Drawing.Size(90, 23);
-            this.btnCopy.Text          = "拷贝密码";
-            this.btnCopy.Name          = "btnCopy";
-            this.btnCopy.TabIndex      = 5;
+            this.btnCopy.Location         = new System.Drawing.Point(302, 65);
+            this.btnCopy.Size             = new System.Drawing.Size(90, 23);
+            this.btnCopy.Anchor           = System.Windows.Forms.AnchorStyles.Top
+                                          | System.Windows.Forms.AnchorStyles.Right;
+            this.btnCopy.Text             = "拷贝密码";
+            this.btnCopy.Name             = "btnCopy";
+            this.btnCopy.TabIndex         = 5;
             this.btnCopy.ContextMenuStrip = this.ctxBtnCopy;
             this.toolTip.SetToolTip(this.btnCopy, "左键：拷贝密码\n右键：添加密码到密码本");
 
-            // ── 批量：多行地址栏 ──────────────────────────────────────
+            // ── 批量：多行地址栏（左右拉伸）──────────────────────────
             this.txtFilePaths.Location   = new System.Drawing.Point(8, 10);
             this.txtFilePaths.Size       = new System.Drawing.Size(384, 80);
+            this.txtFilePaths.Anchor     = System.Windows.Forms.AnchorStyles.Top
+                                         | System.Windows.Forms.AnchorStyles.Left
+                                         | System.Windows.Forms.AnchorStyles.Right;
             this.txtFilePaths.Multiline  = true;
             this.txtFilePaths.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.txtFilePaths.AllowDrop  = true;
@@ -89,7 +102,7 @@
             this.txtFilePaths.Name       = "txtFilePaths";
             this.txtFilePaths.TabIndex   = 0;
 
-            // ── 批量：结果列表（文件 | 密码 | 类型）──────────────────
+            // ── 批量：结果列表（四边拉伸）────────────────────────────
             this.colFile.Text  = "文件";
             this.colFile.Width = 160;
             this.colPwd.Text   = "密码";
@@ -97,8 +110,12 @@
             this.colType.Text  = "类型";
             this.colType.Width = 80;
 
-            this.lvResults.Location      = new System.Drawing.Point(8, 96);
+            this.lvResults.Location      = new System.Drawing.Point(8, 122);
             this.lvResults.Size          = new System.Drawing.Size(384, 120);
+            this.lvResults.Anchor        = System.Windows.Forms.AnchorStyles.Top
+                                         | System.Windows.Forms.AnchorStyles.Bottom
+                                         | System.Windows.Forms.AnchorStyles.Left
+                                         | System.Windows.Forms.AnchorStyles.Right;
             this.lvResults.View          = System.Windows.Forms.View.Details;
             this.lvResults.FullRowSelect = true;
             this.lvResults.GridLines     = true;
@@ -108,22 +125,29 @@
             this.lvResults.Name          = "lvResults";
             this.lvResults.TabIndex      = 4;
 
-            // ── 共用：勾选框行 ────────────────────────────────────────
+            // ── 共用：勾选框行（左对齐）──────────────────────────────
             this.chkFindAll.Location   = new System.Drawing.Point(8, 40);
             this.chkFindAll.Size       = new System.Drawing.Size(160, 20);
+            this.chkFindAll.Anchor     = System.Windows.Forms.AnchorStyles.Top
+                                       | System.Windows.Forms.AnchorStyles.Left;
             this.chkFindAll.Text       = "检查全部匹配密码";
             this.chkFindAll.Name       = "chkFindAll";
             this.chkFindAll.TabIndex   = 2;
 
             this.chkBatchMode.Location = new System.Drawing.Point(180, 40);
             this.chkBatchMode.Size     = new System.Drawing.Size(100, 20);
+            this.chkBatchMode.Anchor   = System.Windows.Forms.AnchorStyles.Top
+                                       | System.Windows.Forms.AnchorStyles.Left;
             this.chkBatchMode.Text     = "批量模式";
             this.chkBatchMode.Name     = "chkBatchMode";
             this.chkBatchMode.TabIndex = 3;
 
-            // ── 共用：开始/停止按钮 ───────────────────────────────────
+            // ── 共用：开始/停止按钮（左右拉伸，底部锚定）────────────
             this.btnStart.Location = new System.Drawing.Point(8, 94);
             this.btnStart.Size     = new System.Drawing.Size(384, 28);
+            this.btnStart.Anchor   = System.Windows.Forms.AnchorStyles.Bottom
+                                   | System.Windows.Forms.AnchorStyles.Left
+                                   | System.Windows.Forms.AnchorStyles.Right;
             this.btnStart.Text     = "开始检索";
             this.btnStart.Font     = new System.Drawing.Font(this.btnStart.Font, System.Drawing.FontStyle.Bold);
             this.btnStart.Name     = "btnStart";
