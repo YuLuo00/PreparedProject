@@ -12,6 +12,7 @@
 
         private void InitializeComponent()
         {
+            this.btnBrowse     = new System.Windows.Forms.Button();
             this.txtFilePath   = new System.Windows.Forms.TextBox();
             this.cmbType       = new System.Windows.Forms.ComboBox();
             this.txtResult     = new System.Windows.Forms.TextBox();
@@ -45,15 +46,24 @@
             this.AllowDrop       = true;
             this.Name            = "Form1";
 
-            // ── 单文件：地址栏（左右拉伸）────────────────────────────
-            this.txtFilePath.Location  = new System.Drawing.Point(8, 10);
-            this.txtFilePath.Size      = new System.Drawing.Size(258, 23);
+            // ── 单文件：浏览按钮（左对齐）────────────────────────────
+            this.btnBrowse.Location = new System.Drawing.Point(8, 10);
+            this.btnBrowse.Size     = new System.Drawing.Size(28, 23);
+            this.btnBrowse.Anchor   = System.Windows.Forms.AnchorStyles.Top
+                                    | System.Windows.Forms.AnchorStyles.Left;
+            this.btnBrowse.Text     = "…";
+            this.btnBrowse.Name     = "btnBrowse";
+            this.btnBrowse.TabIndex = 0;
+
+            // ── 单文件：地址栏（左右拉伸，左边给浏览按钮留位置）─────
+            this.txtFilePath.Location  = new System.Drawing.Point(40, 10);
+            this.txtFilePath.Size      = new System.Drawing.Size(226, 23);
             this.txtFilePath.Anchor    = System.Windows.Forms.AnchorStyles.Top
                                        | System.Windows.Forms.AnchorStyles.Left
                                        | System.Windows.Forms.AnchorStyles.Right;
             this.txtFilePath.AllowDrop = true;
             this.txtFilePath.Name      = "txtFilePath";
-            this.txtFilePath.TabIndex  = 0;
+            this.txtFilePath.TabIndex  = 1;
 
             // ── 单文件：类型下拉框（右对齐）──────────────────────────
             this.cmbType.Location      = new System.Drawing.Point(270, 10);
@@ -176,6 +186,7 @@
             this.statusStrip.TabIndex = 7;
 
             // ── 添加控件 ──────────────────────────────────────────────
+            this.Controls.Add(this.btnBrowse);
             this.Controls.Add(this.txtFilePath);
             this.Controls.Add(this.cmbType);
             this.Controls.Add(this.txtResult);
@@ -195,6 +206,7 @@
         }
 
         // 单文件模式
+        private System.Windows.Forms.Button       btnBrowse;
         private System.Windows.Forms.TextBox      txtFilePath;
         private System.Windows.Forms.ComboBox     cmbType;
         private System.Windows.Forms.TextBox      txtResult;

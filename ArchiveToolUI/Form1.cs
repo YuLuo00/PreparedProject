@@ -64,6 +64,33 @@ namespace ArchiveToolUI
                 }
             };
 
+            // 浏览按钮：选一个文件保持单文件模式，选多个自动切换批量模式
+            btnBrowse.Click += (s, e) => {
+                using var dlg = new OpenFileDialog {
+                    Title       = "选择压缩文件",
+                    Multiselect = true,
+                    Filter      = "压缩文件|*.zip;*.rar;*.7z;*.tar;*.gz;*.bz2|所有文件|*.*",
+                };
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+                if (dlg.FileNames.Length == 1) {
+                    // 单文件：保持单文件模式
+                    if (chkBatchMode.Checked) {
+                        chkBatchMode.Checked = false;
+                        SwitchMode(false);
+                    }
+                    txtFilePath.Text = dlg.FileNames[0];
+                    _service.DetectFileType(dlg.FileNames[0]);
+                } else {
+                    // 多文件：自动切换到批量模式
+                    if (!chkBatchMode.Checked) {
+                        chkBatchMode.Checked = true;
+                        SwitchMode(true);
+                    }
+                    txtFilePaths.Text = string.Join(Environment.NewLine, dlg.FileNames);
+                }
+            };
+
             chkBatchMode.CheckedChanged += (s, e) => SwitchMode(chkBatchMode.Checked);
             this.Resize += (s, e) => AdjustBatchLayout();
             btnStart.Click += BtnStart_Click;
