@@ -1,0 +1,40 @@
+{
+    "configurations": [
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/testTool.exe", // Path to your compiled program
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:\\_sf_freeSetup\\mingw\\x86_64-14.2.0-release-win32-seh-msvcrt-rt_v12-rev1\\mingw64\\bin\\gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": ".NET Launch",
+            "type": "coreclr",
+            "request": "launch",
+            // "program": "${workspaceFolder}/bin/Debug/net8.0-windows/ArchiveToolUI.exe",
+            "program": "${workspaceFolder}/bin/ArchiveToolUI.exe",
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+    ]
+}
+

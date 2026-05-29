@@ -1,0 +1,16 @@
+{
+    "clangd.arguments": [
+        "--compile-commands-dir=${workspaceFolder}/out/build/gcc",
+        "--query-driver=C:/_sf_freeSetup/mingw/x86_64-14.2.0-release-win32-seh-msvcrt-rt_v12-rev1/mingw64/bin/g++.exe",
+        "--all-scopes-completion",
+        "--background-index",
+        "--completion-style=detailed",
+        "--header-insertion=never",
+        "-j=8",
+        "--pch-storage=memory"
+    ],
+    "cmake.configureOnOpen": true,
+    "cmake.preferredGenerators": [
+        "MinGW Makefiles"
+    ]
+}

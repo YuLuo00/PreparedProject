@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/_sf_freeSetup/mingw/x86_64-14.2.0-release-win32-seh-msvcrt-rt_v12-rev1/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "compilerPath": "C:/_sf_freeSetup/mingw/x86_64-14.2.0-release-win32-seh-msvcrt-rt_v12-rev1/mingw64/bin/g++.exe",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "windows-gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
+}
+ 
