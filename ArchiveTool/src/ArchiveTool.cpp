@@ -94,6 +94,68 @@ static int WriteStrBuf(const std::string &src, char *buf, int bufSize)
     return len;
 }
 
+static bool IsAsciiPath(const std::string &path)
+{
+    for (unsigned char ch : path) {
+        if (ch >= 0x80) return false;
+    }
+    return true;
+}
+
+class Bit7zInputPath {
+public:
+    explicit Bit7zInputPath(const char *pathU8)
+        : originalU8_(pathU8 ? pathU8 : "")
+    {
+        if (originalU8_.empty() || IsAsciiPath(originalU8_)) {
+            bit7zPath_ = originalU8_;
+            return;
+        }
+
+        std::wstring originalW = CommonTool::Utf82Wstr(originalU8_);
+        if (originalW.empty()) {
+            bit7zPath_ = originalU8_;
+            return;
+        }
+
+        wchar_t tempDir[MAX_PATH] = {};
+        if (GetTempPathW(MAX_PATH, tempDir) == 0) {
+            bit7zPath_ = originalU8_;
+            return;
+        }
+
+        wchar_t tempFile[MAX_PATH] = {};
+        if (GetTempFileNameW(tempDir, L"zat", 0, tempFile) == 0) {
+            bit7zPath_ = originalU8_;
+            return;
+        }
+
+        tempPathW_ = tempFile;
+        if (!CopyFileW(originalW.c_str(), tempPathW_.c_str(), FALSE)) {
+            DeleteFileW(tempPathW_.c_str());
+            tempPathW_.clear();
+            bit7zPath_ = originalU8_;
+            return;
+        }
+
+        bit7zPath_ = CommonTool::Wstr2Local(tempPathW_);
+    }
+
+    ~Bit7zInputPath()
+    {
+        if (!tempPathW_.empty()) {
+            DeleteFileW(tempPathW_.c_str());
+        }
+    }
+
+    const std::string &Get() const { return bit7zPath_; }
+
+private:
+    std::string  originalU8_;
+    std::string  bit7zPath_;
+    std::wstring tempPathW_;
+};
+
 // -----------------------------------------------------------------------
 // 实现
 // -----------------------------------------------------------------------
@@ -101,18 +163,18 @@ static int WriteStrBuf(const std::string &src, char *buf, int bufSize)
 ZYB_ARCHIVE_TOOL_API int ArchiveExtraTest(
     const char *file, const char *passwd, const char *type)
 {
-    std::wstring wfile   = CommonTool::Utf82Wstr(file   ? file   : "");
-    std::wstring wpasswd = CommonTool::Utf82Wstr(passwd ? passwd : "");
-    std::string  typeU8  = type ? type : "Auto";
+    Bit7zInputPath bit7zPath(file);
+    std::string    passwdU8 = passwd ? passwd : "";
+    std::string    typeU8   = type ? type : "Auto";
 
     const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(typeU8);
     try {
         using namespace bit7z;
         BitFileExtractor extractor{::Get7zLibrary(), *format};
-        if (!wpasswd.empty()) {
-            extractor.setPassword(CommonTool::Wstr2Utf8(wpasswd));
+        if (!passwdU8.empty()) {
+            extractor.setPassword(passwdU8);
         }
-        extractor.test(CommonTool::Wstr2Utf8(wfile));
+        extractor.test(bit7zPath.Get());
     }
     catch (...) { return 0; }
     return 1;
@@ -122,7 +184,8 @@ ZYB_ARCHIVE_TOOL_API int check_format(const char *filePath, char *buf, int bufSi
 {
     struct archive *a = archive_read_new();
     archive_read_support_format_all(a);
-    if (archive_read_open_filename(a, filePath, 500 * 1240) != ARCHIVE_OK) {
+    std::wstring wpath = CommonTool::Utf82Wstr(filePath ? filePath : "");
+    if (archive_read_open_filename_w(a, wpath.c_str(), 500 * 1240) != ARCHIVE_OK) {
         archive_read_free(a);
         return 0;
     }
@@ -137,7 +200,7 @@ ZYB_ARCHIVE_TOOL_API int check_format(const char *filePath, char *buf, int bufSi
 
 ZYB_ARCHIVE_TOOL_API int TryDetermineType(const char *filePath, char *buf, int bufSize)
 {
-    std::wstring wpath = CommonTool::Utf82Wstr(filePath ? filePath : "");
+    Bit7zInputPath bit7zPath(filePath);
     ArchiveMsg::Ins().Clear();
 
     std::vector<std::string> keys = ArchiveType::Ins().GetKeys();
@@ -148,7 +211,7 @@ ZYB_ARCHIVE_TOOL_API int TryDetermineType(const char *filePath, char *buf, int b
         const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(type);
         bit7z::BitFileExtractor extractor{::Get7zLibrary(), *format};
         try {
-            extractor.test(CommonTool::Wstr2Utf8(wpath));
+            extractor.test(bit7zPath.Get());
             result = type; break;
         }
         catch (const bit7z::BitException &ex) {
