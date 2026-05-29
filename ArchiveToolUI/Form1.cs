@@ -274,11 +274,12 @@ namespace ArchiveToolUI
             // 先用空密码测试，判断文件是否有密码
             string type = cmbType.SelectedItem?.ToString() ?? "Auto";
             if (ArchiveToolNative.ArchiveExtraTest(fp, "", type) != 0) {
-                txtResult.Text = "";
-                tsLabel.Text   = "文件无需密码";
-                MessageBox.Show("该文件不需要密码，可以直接解压。", "无需密码", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                txtResult.Text             = "";
+                txtResult.PlaceholderText  = "✓ 无需密码，可直接解压";
+                tsLabel.Text               = "无需密码";
                 return;
             }
+            txtResult.PlaceholderText = "匹配到的密码";
 
             txtResult.Text         = "";
             tsProgressBar.Value    = 0;
@@ -324,25 +325,41 @@ namespace ArchiveToolUI
             foreach (ListViewItem item in lvResults.Items) {
                 var svc = new ArchiveToolService();
                 var fp  = item.Tag as string ?? "";
-                // 读取用户预设的 type（如果有）
                 string? presetType = item.SubItems.Count >= 3 && !string.IsNullOrEmpty(item.SubItems[2].Text)
                     ? item.SubItems[2].Text : null;
 
-                // 后台获取 libarchive 原始格式字符串，填入第4列
                 var capturedItem = item;
                 Task.Run(() => {
+                    // 获取原始格式
                     byte[] rawBuf = new byte[256];
                     int rawLen = ArchiveToolNative.check_format(fp, rawBuf, rawBuf.Length);
                     string raw = rawLen > 0 ? System.Text.Encoding.UTF8.GetString(rawBuf, 0, rawLen) : "";
+
+                    // 先用空密码测试，判断是否无需密码
+                    string testType = presetType ?? "Auto";
+                    bool noPassword = ArchiveToolNative.ArchiveExtraTest(fp, "", testType) != 0;
+
                     Invoke(() => {
                         if (capturedItem.SubItems.Count >= 4)
                             capturedItem.SubItems[3].Text = raw;
+                        if (noPassword) {
+                            capturedItem.SubItems[1].Text = "✓ 无需密码";
+                            _batchDone++;
+                            tsProgressBar.Value = _batchDone;
+                            tsLabel.Text = $"{_batchDone}/{_batchTotal}";
+                            if (_batchDone >= _batchTotal) {
+                                SetSearching(false);
+                                tsLabel.Text = $"完成 {_batchTotal} 个文件";
+                            }
+                        }
                     });
-                });
 
-                svc.OnPasswordProgress += p => Invoke(() => UpdateProgressBatch(fp, p));
-                _batchServices.Add(svc);
-                svc.StartPasswordSearch(fp, chkFindAll.Checked, presetType);
+                    if (!noPassword) {
+                        svc.OnPasswordProgress += p => Invoke(() => UpdateProgressBatch(fp, p));
+                        _batchServices.Add(svc);
+                        svc.StartPasswordSearch(fp, chkFindAll.Checked, presetType);
+                    }
+                });
             }
         }
 
