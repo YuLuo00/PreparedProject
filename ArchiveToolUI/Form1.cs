@@ -172,7 +172,8 @@ namespace ArchiveToolUI
                 ClientSize = new Size(400, 298);
                 chkFindAll.Location   = new Point(8, 96);
                 chkBatchMode.Location = new Point(180, 96);
-                btnStart.Location     = new Point(8, 222);
+                lvResults.Location    = new Point(8, 122);
+                btnStart.Location     = new Point(8, 248);
             } else {
                 ClientSize = new Size(400, 158);
                 chkFindAll.Location   = new Point(8, 40);
