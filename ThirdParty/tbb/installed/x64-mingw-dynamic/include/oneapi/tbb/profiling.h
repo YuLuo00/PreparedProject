@@ -145,7 +145,17 @@ namespace d1 {
     }
 #else
     inline void itt_set_sync_name( void* obj, const char* name) {
+    #if defined(_WIN32) || defined(_WIN64)
+        // MinGW on Windows: r1::itt_set_sync_name expects wchar_t* (tchar=wchar_t when _UNICODE)
+        // Fix: convert char* to wchar_t* before calling r1
+        std::size_t len_name = multibyte_to_widechar(nullptr, name, 0);
+        wchar_t *obj_name = new wchar_t[len_name];
+        multibyte_to_widechar(obj_name, name, len_name);
+        r1::itt_set_sync_name(obj, obj_name);
+        delete[] obj_name;
+    #else
         r1::itt_set_sync_name(obj, name);
+    #endif
     }
 #endif //WIN
 
