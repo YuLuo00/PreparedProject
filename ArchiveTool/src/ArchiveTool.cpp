@@ -8,9 +8,11 @@
 #include <mutex>
 #include <map>
 #include <memory>
-#include <thread>
 #include <cstring>
 namespace fs = std::filesystem;
+
+#include <tbb/task_group.h>
+#include <tbb/flow_graph.h>
 
 #include <bit7z/bitfileextractor.hpp>
 #include <archive.h>
@@ -24,7 +26,7 @@ namespace fs = std::filesystem;
 #include "ArchiveMsg.h"
 
 // -----------------------------------------------------------------------
-// 内部进度数据
+// 内部进度数据（带字符串副本，用于队列存储）
 // -----------------------------------------------------------------------
 struct ProgressItem {
     int         current;
@@ -35,39 +37,31 @@ struct ProgressItem {
     int         finished;
 };
 
-// 方式二专用：线程安全覆盖写容器
-struct LatestHolder {
-    std::mutex                    mutex;
-    std::shared_ptr<ProgressItem> item;
-
-    void store(std::shared_ptr<ProgressItem> p) {
-        std::lock_guard<std::mutex> lk(mutex);
-        item = std::move(p);
-    }
-    std::shared_ptr<ProgressItem> load() {
-        std::lock_guard<std::mutex> lk(mutex);
-        return item;
-    }
-};
-
 // -----------------------------------------------------------------------
-// 任务管理（std::thread + atomic<bool> 取消标志，不依赖 TBB）
+// 任务数据（方式一 和 方式二 共用 task_group + 取消标志）
 // -----------------------------------------------------------------------
 struct TaskData {
-    std::shared_ptr<std::atomic<bool>> cancelled;
-    std::shared_ptr<LatestHolder>      latest;
+    std::shared_ptr<tbb::task_group>                         tg;
+    std::shared_ptr<std::atomic<bool>>                       cancelled;
+    // 方式二专用：overwrite_node 覆盖写，只保留最新进度
+    std::shared_ptr<tbb::flow::graph>                        flowGraph;
+    std::shared_ptr<tbb::flow::overwrite_node<ProgressItem>> latestNode;
 };
 
 static std::mutex              g_taskMutex;
 static std::map<int, TaskData> g_tasks;
 static std::atomic<int>        g_nextTaskId{1};
 
-static int AllocTask(bool withLatest)
+static int AllocTask(bool withQueue)
 {
     int id = g_nextTaskId.fetch_add(1);
     TaskData td;
+    td.tg        = std::make_shared<tbb::task_group>();
     td.cancelled = std::make_shared<std::atomic<bool>>(false);
-    if (withLatest) td.latest = std::make_shared<LatestHolder>();
+    if (withQueue) {
+        td.flowGraph  = std::make_shared<tbb::flow::graph>();
+        td.latestNode = std::make_shared<tbb::flow::overwrite_node<ProgressItem>>(*td.flowGraph);
+    }
     std::lock_guard<std::mutex> lk(g_taskMutex);
     g_tasks[id] = std::move(td);
     return id;
@@ -115,7 +109,9 @@ ZYB_ARCHIVE_TOOL_API int ArchiveExtraTest(
     try {
         using namespace bit7z;
         BitFileExtractor extractor{::Get7zLibrary(), *format};
-        if (!wpasswd.empty()) extractor.setPassword(CommonTool::Wstr2Utf8(wpasswd));
+        if (!wpasswd.empty()) {
+            extractor.setPassword(CommonTool::Wstr2Utf8(wpasswd));
+        }
         extractor.test(CommonTool::Wstr2Utf8(wfile));
     }
     catch (...) { return 0; }
@@ -127,7 +123,8 @@ ZYB_ARCHIVE_TOOL_API int check_format(const char *filePath, char *buf, int bufSi
     struct archive *a = archive_read_new();
     archive_read_support_format_all(a);
     if (archive_read_open_filename(a, filePath, 500 * 1240) != ARCHIVE_OK) {
-        archive_read_free(a); return 0;
+        archive_read_free(a);
+        return 0;
     }
     struct archive_entry *entry = nullptr;
     archive_read_next_header(a, &entry);
@@ -207,7 +204,7 @@ ZYB_ARCHIVE_TOOL_API int FindFirstPassword(const char *filePath, char *buf, int 
 }
 
 // -----------------------------------------------------------------------
-// 方式一：完整回调（std::thread）
+// 方式一：完整回调（TBB task_group）
 // -----------------------------------------------------------------------
 ZYB_ARCHIVE_TOOL_API int FindPasswordAsync(
     const char *filePath, FindPasswordCallback callback, void *userData, int findAll)
@@ -218,7 +215,7 @@ ZYB_ARCHIVE_TOOL_API int FindPasswordAsync(
     TaskData td = GetTask(taskId);
     std::string filePathStr(filePath);
 
-    std::thread([filePathStr, callback, userData, findAll, taskId, td]() {
+    td.tg->run([filePathStr, callback, userData, findAll, taskId, td]() {
         char typeBuf[256] = {};
         TryDetermineType(filePathStr.c_str(), typeBuf, sizeof(typeBuf));
 
@@ -242,6 +239,7 @@ ZYB_ARCHIVE_TOOL_API int FindPasswordAsync(
             if (!findAll && found) break;
         }
 
+        // 完成通知
         FindPasswordProgress done{};
         done.current = done.total = total;
         done.pwd = ""; done.type = typeBuf;
@@ -249,13 +247,13 @@ ZYB_ARCHIVE_TOOL_API int FindPasswordAsync(
         callback(&done, userData);
 
         RemoveTask(taskId);
-    }).detach();
+    });
 
     return taskId;
 }
 
 // -----------------------------------------------------------------------
-// 方式二：信号 + 覆盖写（std::thread）
+// 方式二：信号 + tbb::concurrent_queue
 // -----------------------------------------------------------------------
 ZYB_ARCHIVE_TOOL_API int FindPasswordAsyncQueue(
     const char *filePath, FindPasswordSignalCallback signalCallback, void *userData, int findAll)
@@ -266,7 +264,7 @@ ZYB_ARCHIVE_TOOL_API int FindPasswordAsyncQueue(
     TaskData td = GetTask(taskId);
     std::string filePathStr(filePath);
 
-    std::thread([filePathStr, signalCallback, userData, findAll, taskId, td]() {
+    td.tg->run([filePathStr, signalCallback, userData, findAll, taskId, td]() {
         char typeBuf[256] = {};
         TryDetermineType(filePathStr.c_str(), typeBuf, sizeof(typeBuf));
 
@@ -278,27 +276,31 @@ ZYB_ARCHIVE_TOOL_API int FindPasswordAsyncQueue(
 
             int found = ArchiveExtraTest(filePathStr.c_str(), pwds[i].c_str(), typeBuf);
 
-            auto item = std::make_shared<ProgressItem>();
-            item->current  = i + 1;
-            item->total    = total;
-            item->pwd      = pwds[i];
-            item->type     = typeBuf;
-            item->found    = found;
-            item->finished = 0;
-            td.latest->store(item);
+            // 覆盖写：只保留最新进度
+            ProgressItem item;
+            item.current  = i + 1;
+            item.total    = total;
+            item.pwd      = pwds[i];
+            item.type     = typeBuf;
+            item.found    = found;
+            item.finished = 0;
+            td.latestNode->try_put(item);
 
+            // 只发送信号，不传数据
             signalCallback(taskId, userData);
+
             if (!findAll && found) break;
         }
 
-        auto done = std::make_shared<ProgressItem>();
-        done->current = done->total = total;
-        done->found = 0; done->finished = 1;
-        td.latest->store(done);
+        // 完成通知（覆盖写）
+        ProgressItem done{};
+        done.current = done.total = total;
+        done.found = 0; done.finished = 1;
+        td.latestNode->try_put(done);
         signalCallback(taskId, userData);
 
         RemoveTask(taskId);
-    }).detach();
+    });
 
     return taskId;
 }
@@ -308,22 +310,26 @@ ZYB_ARCHIVE_TOOL_API int GetLatestFindPasswordProgress(
 {
     if (!out) return 0;
     TaskData td = GetTask(taskId);
-    if (!td.latest) return 0;
+    if (!td.latestNode) return 0;
 
-    auto item = td.latest->load();
-    if (!item) return 0;
+    ProgressItem item;
+    if (!td.latestNode->try_get(item)) return 0;
 
-    out->current  = item->current;
-    out->total    = item->total;
-    out->found    = item->found;
-    out->finished = item->finished;
-    WriteStrBuf(item->pwd,  out->pwd,  sizeof(out->pwd));
-    WriteStrBuf(item->type, out->type, sizeof(out->type));
+    out->current  = item.current;
+    out->total    = item.total;
+    out->found    = item.found;
+    out->finished = item.finished;
+    WriteStrBuf(item.pwd,  out->pwd,  sizeof(out->pwd));
+    WriteStrBuf(item.type, out->type, sizeof(out->type));
     return 1;
 }
 
 ZYB_ARCHIVE_TOOL_API void CancelFindPassword(int taskId)
 {
     TaskData td = GetTask(taskId);
-    if (td.cancelled) td.cancelled->store(true);
+    if (td.cancelled) {
+        td.cancelled->store(true);
+        // 请求 TBB 取消任务组（对 task_group 内的子任务生效）
+        td.tg->cancel();
+    }
 }

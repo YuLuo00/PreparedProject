@@ -51,9 +51,6 @@ target_sources_group(${PROJECT_NAME} "interface" PRIVATE
     
 )
 
-# 禁用 TBB ITT 支持（MinGW 版本 profiling.h 有 tchar/wchar_t 类型不匹配 bug）
-target_compile_definitions(${PROJECT_NAME} PRIVATE TBB_USE_THREADING_TOOLS=0)
-
 # dll导出宏
 target_compile_definitions(${PROJECT_NAME} PRIVATE ZYB_ARCHIVE_TOOL_API=__declspec\(dllexport\))
 target_compile_definitions(${PROJECT_NAME} INTERFACE ZYB_ARCHIVE_TOOL_API=__declspec\(dllimport\))
