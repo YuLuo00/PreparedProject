@@ -174,6 +174,20 @@ namespace ArchiveToolUI
                 tsTypeLabel.Text = string.IsNullOrEmpty(raw) ? "" : $"原始: {raw}";
             });
 
+            // 点击原始格式标签 → 复制到剪贴板
+            tsTypeLabel.Click += (s, e) => {
+                if (string.IsNullOrEmpty(tsTypeLabel.Text)) return;
+                // 去掉 "原始: " 前缀
+                string raw = tsTypeLabel.Text.StartsWith("原始: ")
+                    ? tsTypeLabel.Text[4..] : tsTypeLabel.Text;
+                Clipboard.SetText(raw);
+                string orig = tsTypeLabel.Text;
+                tsTypeLabel.Text = "已复制 ✓";
+                Task.Delay(1500).ContinueWith(_ => Invoke(() => tsTypeLabel.Text = orig));
+            };
+            tsTypeLabel.IsLink = true;
+            toolTip.SetToolTip(statusStrip, "点击原始格式标签可复制到剪贴板");
+
             _service.OnTypeDetected += type => Invoke(() => {
                 int idx = cmbType.Items.IndexOf(type);
                 if (idx >= 0) cmbType.SelectedIndex = idx;
@@ -256,6 +270,16 @@ namespace ArchiveToolUI
         {
             string fp = txtFilePath.Text.Trim();
             if (string.IsNullOrEmpty(fp)) { MessageBox.Show("请先输入或拖入文件路径", "提示"); return; }
+
+            // 先用空密码测试，判断文件是否有密码
+            string type = cmbType.SelectedItem?.ToString() ?? "Auto";
+            if (ArchiveToolNative.ArchiveExtraTest(fp, "", type) != 0) {
+                txtResult.Text = "";
+                tsLabel.Text   = "文件无需密码";
+                MessageBox.Show("该文件不需要密码，可以直接解压。", "无需密码", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             txtResult.Text         = "";
             tsProgressBar.Value    = 0;
             tsLabel.Text           = "检索中…";
