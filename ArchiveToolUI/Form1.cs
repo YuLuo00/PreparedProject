@@ -28,6 +28,7 @@ namespace ArchiveToolUI
         private readonly ListViewColumnSorter _lvSorter = new();
 
         private readonly List<ArchiveToolService> _batchServices = new();
+        private CancellationTokenSource? _batchCts;
         private int _batchTotal = 0;
         private int _batchDone  = 0;
         private readonly List<string> _availableTypes = new();
@@ -322,6 +323,12 @@ namespace ArchiveToolUI
             tsLabel.Text          = $"0/{lines.Count}";
             SetSearching(true);
 
+            _batchCts?.Cancel();
+            _batchCts = new CancellationTokenSource();
+            _ = RunBatchSerialAsync(_batchCts.Token);
+            return;
+
+#if false
             foreach (ListViewItem item in lvResults.Items) {
                 var svc = new ArchiveToolService();
                 var fp  = item.Tag as string ?? "";
@@ -361,10 +368,107 @@ namespace ArchiveToolUI
                     }
                 });
             }
+#endif
+        }
+
+        private async Task RunBatchSerialAsync(CancellationToken token)
+        {
+            foreach (ListViewItem item in lvResults.Items) {
+                if (token.IsCancellationRequested) break;
+
+                var svc = new ArchiveToolService();
+                var fp  = item.Tag as string ?? "";
+                string? presetType = item.SubItems.Count >= 3 && !string.IsNullOrEmpty(item.SubItems[2].Text)
+                    ? item.SubItems[2].Text : null;
+
+                try {
+                    var precheck = await Task.Run(() => {
+                        byte[] rawBuf = new byte[256];
+                        int rawLen = ArchiveToolNative.check_format(fp, rawBuf, rawBuf.Length);
+                        string raw = rawLen > 0 ? System.Text.Encoding.UTF8.GetString(rawBuf, 0, rawLen) : "";
+
+                        string testType = presetType ?? "Auto";
+                        bool noPassword = ArchiveToolNative.ArchiveExtraTest(fp, "", testType) != 0;
+                        return (raw, noPassword);
+                    }, token);
+
+                    if (item.SubItems.Count >= 4)
+                        item.SubItems[3].Text = precheck.raw;
+
+                    if (precheck.noPassword) {
+                        item.SubItems[1].Text = "No password";
+                        _batchDone++;
+                        tsProgressBar.Value = _batchDone;
+                        tsLabel.Text = $"{_batchDone}/{_batchTotal}";
+                        continue;
+                    }
+
+                    _batchServices.Add(svc);
+                    await SearchBatchItemAsync(svc, fp, presetType, token);
+                }
+                catch (OperationCanceledException) {
+                    break;
+                }
+                finally {
+                    _batchServices.Remove(svc);
+                }
+            }
+
+            if (!token.IsCancellationRequested && _batchDone >= _batchTotal) {
+                SetSearching(false);
+                tsLabel.Text = $"Done {_batchTotal} files";
+            }
+        }
+
+        private Task SearchBatchItemAsync(
+            ArchiveToolService svc,
+            string filePath,
+            string? presetType,
+            CancellationToken token)
+        {
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            CancellationTokenRegistration reg = default;
+
+            void Handler(PasswordSearchProgress p)
+            {
+                if (IsDisposed) {
+                    tcs.TrySetCanceled();
+                    return;
+                }
+
+                BeginInvoke(() => {
+                    UpdateProgressBatch(filePath, p);
+                    if (p.Finished) {
+                        tcs.TrySetResult();
+                    }
+                });
+            }
+
+            reg = token.Register(() => {
+                svc.CancelSearch();
+                tcs.TrySetCanceled(token);
+            });
+
+            svc.OnPasswordProgress += Handler;
+            try {
+                svc.StartPasswordSearch(filePath, chkFindAll.Checked, presetType);
+            }
+            catch {
+                svc.OnPasswordProgress -= Handler;
+                reg.Dispose();
+                throw;
+            }
+
+            return tcs.Task.ContinueWith(t => {
+                svc.OnPasswordProgress -= Handler;
+                reg.Dispose();
+                return t;
+            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default).Unwrap();
         }
 
         private void StopAll()
         {
+            _batchCts?.Cancel();
             _service.CancelSearch();
             foreach (var svc in _batchServices) svc.CancelSearch();
             SetSearching(false);
