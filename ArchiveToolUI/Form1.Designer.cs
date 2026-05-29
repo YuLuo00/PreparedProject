@@ -12,133 +12,152 @@
 
         private void InitializeComponent()
         {
-            // 单文件模式控件
-            txtFilePath   = new TextBox();
-            cmbType       = new ComboBox();
-            txtResult     = new TextBox();
-            btnCopy       = new Button();
-
-            // 批量模式控件
-            txtFilePaths  = new TextBox();
-            lvResults     = new ListView();
-            colFile       = new ColumnHeader();
-            colPwd        = new ColumnHeader();
-
-            // 共用控件
-            chkFindAll    = new CheckBox();
-            chkBatchMode  = new CheckBox();
-            btnStart      = new Button();
-            progressBar   = new ProgressBar();
-            lblStatus     = new Label();
-
-            SuspendLayout();
+            this.txtFilePath   = new System.Windows.Forms.TextBox();
+            this.cmbType       = new System.Windows.Forms.ComboBox();
+            this.txtResult     = new System.Windows.Forms.TextBox();
+            this.btnCopy       = new System.Windows.Forms.Button();
+            this.txtFilePaths  = new System.Windows.Forms.TextBox();
+            this.lvResults     = new System.Windows.Forms.ListView();
+            this.colFile       = new System.Windows.Forms.ColumnHeader();
+            this.colPwd        = new System.Windows.Forms.ColumnHeader();
+            this.chkFindAll    = new System.Windows.Forms.CheckBox();
+            this.chkBatchMode  = new System.Windows.Forms.CheckBox();
+            this.btnStart      = new System.Windows.Forms.Button();
+            this.progressBar   = new System.Windows.Forms.ProgressBar();
+            this.lblStatus     = new System.Windows.Forms.Label();
+            this.SuspendLayout();
 
             // ── 窗体 ──────────────────────────────────────────────────
-            ClientSize      = new Size(400, 180);
-            Text            = "ArchiveTool";
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox     = false;
-            AllowDrop       = true;
+            this.ClientSize      = new System.Drawing.Size(400, 180);
+            this.Text            = "ArchiveTool";
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.MaximizeBox     = false;
+            this.AllowDrop       = true;
+            this.Name            = "Form1";
 
             // ── 单文件：地址栏 ────────────────────────────────────────
-            txtFilePath.Location      = new Point(8, 10);
-            txtFilePath.Size          = new Size(258, 23);
-            txtFilePath.PlaceholderText = "拖入文件或输入路径…";
-            txtFilePath.AllowDrop     = true;
+            this.txtFilePath.Location      = new System.Drawing.Point(8, 10);
+            this.txtFilePath.Size          = new System.Drawing.Size(258, 23);
+            this.txtFilePath.AllowDrop     = true;
+            this.txtFilePath.Name          = "txtFilePath";
+            this.txtFilePath.TabIndex      = 0;
 
             // ── 单文件：类型下拉框 ────────────────────────────────────
-            cmbType.Location          = new Point(270, 10);
-            cmbType.Size              = new Size(122, 23);
-            cmbType.DropDownStyle     = ComboBoxStyle.DropDownList;
+            this.cmbType.Location          = new System.Drawing.Point(270, 10);
+            this.cmbType.Size              = new System.Drawing.Size(122, 23);
+            this.cmbType.DropDownStyle     = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbType.Name              = "cmbType";
+            this.cmbType.TabIndex          = 1;
 
             // ── 单文件：结果框 ────────────────────────────────────────
-            txtResult.Location        = new Point(8, 65);
-            txtResult.Size            = new Size(290, 23);
-            txtResult.ReadOnly        = true;
-            txtResult.PlaceholderText = "匹配到的密码";
+            this.txtResult.Location        = new System.Drawing.Point(8, 65);
+            this.txtResult.Size            = new System.Drawing.Size(290, 23);
+            this.txtResult.ReadOnly        = true;
+            this.txtResult.Name            = "txtResult";
+            this.txtResult.TabIndex        = 4;
 
             // ── 单文件：拷贝按钮 ──────────────────────────────────────
-            btnCopy.Location          = new Point(302, 65);
-            btnCopy.Size              = new Size(90, 23);
-            btnCopy.Text              = "拷贝密码";
+            this.btnCopy.Location          = new System.Drawing.Point(302, 65);
+            this.btnCopy.Size              = new System.Drawing.Size(90, 23);
+            this.btnCopy.Text              = "拷贝密码";
+            this.btnCopy.Name              = "btnCopy";
+            this.btnCopy.TabIndex          = 5;
 
             // ── 批量：多行地址栏 ──────────────────────────────────────
-            txtFilePaths.Location     = new Point(8, 10);
-            txtFilePaths.Size         = new Size(384, 80);
-            txtFilePaths.Multiline    = true;
-            txtFilePaths.ScrollBars   = ScrollBars.Vertical;
-            txtFilePaths.PlaceholderText = "拖入多个文件，或每行输入一个路径…";
-            txtFilePaths.AllowDrop    = true;
-            txtFilePaths.Visible      = false;
+            this.txtFilePaths.Location     = new System.Drawing.Point(8, 10);
+            this.txtFilePaths.Size         = new System.Drawing.Size(384, 80);
+            this.txtFilePaths.Multiline    = true;
+            this.txtFilePaths.ScrollBars   = System.Windows.Forms.ScrollBars.Vertical;
+            this.txtFilePaths.AllowDrop    = true;
+            this.txtFilePaths.Visible      = false;
+            this.txtFilePaths.Name         = "txtFilePaths";
+            this.txtFilePaths.TabIndex     = 0;
 
             // ── 批量：结果列表 ────────────────────────────────────────
-            colFile.Text              = "文件";
-            colFile.Width             = 200;
-            colPwd.Text               = "密码";
-            colPwd.Width              = 170;
+            this.colFile.Text              = "文件";
+            this.colFile.Width             = 200;
+            this.colPwd.Text               = "密码";
+            this.colPwd.Width              = 170;
 
-            lvResults.Location        = new Point(8, 122);
-            lvResults.Size            = new Size(384, 120);
-            lvResults.View            = View.Details;
-            lvResults.FullRowSelect   = true;
-            lvResults.GridLines       = true;
-            lvResults.Columns.AddRange(new[] { colFile, colPwd });
-            lvResults.Visible         = false;
+            this.lvResults.Location        = new System.Drawing.Point(8, 122);
+            this.lvResults.Size            = new System.Drawing.Size(384, 120);
+            this.lvResults.View            = System.Windows.Forms.View.Details;
+            this.lvResults.FullRowSelect   = true;
+            this.lvResults.GridLines       = true;
+            this.lvResults.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+                this.colFile, this.colPwd });
+            this.lvResults.Visible         = false;
+            this.lvResults.Name            = "lvResults";
+            this.lvResults.TabIndex        = 4;
 
             // ── 共用：勾选框行 ────────────────────────────────────────
-            chkFindAll.Location       = new Point(8, 40);
-            chkFindAll.Size           = new Size(160, 20);
-            chkFindAll.Text           = "检查全部匹配密码";
+            this.chkFindAll.Location       = new System.Drawing.Point(8, 40);
+            this.chkFindAll.Size           = new System.Drawing.Size(160, 20);
+            this.chkFindAll.Text           = "检查全部匹配密码";
+            this.chkFindAll.Name           = "chkFindAll";
+            this.chkFindAll.TabIndex       = 2;
 
-            chkBatchMode.Location     = new Point(180, 40);
-            chkBatchMode.Size         = new Size(100, 20);
-            chkBatchMode.Text         = "批量模式";
+            this.chkBatchMode.Location     = new System.Drawing.Point(180, 40);
+            this.chkBatchMode.Size         = new System.Drawing.Size(100, 20);
+            this.chkBatchMode.Text         = "批量模式";
+            this.chkBatchMode.Name         = "chkBatchMode";
+            this.chkBatchMode.TabIndex     = 3;
 
             // ── 共用：开始/停止按钮 ───────────────────────────────────
-            btnStart.Location         = new Point(8, 94);
-            btnStart.Size             = new Size(384, 28);
-            btnStart.Text             = "开始检索";
-            btnStart.Font             = new Font(btnStart.Font, FontStyle.Bold);
+            this.btnStart.Location         = new System.Drawing.Point(8, 94);
+            this.btnStart.Size             = new System.Drawing.Size(384, 28);
+            this.btnStart.Text             = "开始检索";
+            this.btnStart.Font             = new System.Drawing.Font(this.btnStart.Font, System.Drawing.FontStyle.Bold);
+            this.btnStart.Name             = "btnStart";
+            this.btnStart.TabIndex         = 6;
 
             // ── 共用：进度条 + 状态标签 ───────────────────────────────
-            progressBar.Location      = new Point(8, 130);
-            progressBar.Size          = new Size(280, 16);
-            progressBar.Minimum       = 0;
-            progressBar.Maximum       = 100;
+            this.progressBar.Location      = new System.Drawing.Point(8, 130);
+            this.progressBar.Size          = new System.Drawing.Size(280, 16);
+            this.progressBar.Minimum       = 0;
+            this.progressBar.Maximum       = 100;
+            this.progressBar.Name          = "progressBar";
+            this.progressBar.TabIndex      = 7;
 
-            lblStatus.Location        = new Point(292, 130);
-            lblStatus.Size            = new Size(100, 16);
-            lblStatus.Text            = "就绪";
-            lblStatus.TextAlign       = ContentAlignment.MiddleLeft;
+            this.lblStatus.Location        = new System.Drawing.Point(292, 130);
+            this.lblStatus.Size            = new System.Drawing.Size(100, 16);
+            this.lblStatus.Text            = "就绪";
+            this.lblStatus.TextAlign       = System.Drawing.ContentAlignment.MiddleLeft;
+            this.lblStatus.Name            = "lblStatus";
+            this.lblStatus.TabIndex        = 8;
 
             // ── 添加控件 ──────────────────────────────────────────────
-            Controls.AddRange(new Control[] {
-                txtFilePath, cmbType,
-                txtResult, btnCopy,
-                txtFilePaths, lvResults,
-                chkFindAll, chkBatchMode,
-                btnStart,
-                progressBar, lblStatus
-            });
+            this.Controls.Add(this.txtFilePath);
+            this.Controls.Add(this.cmbType);
+            this.Controls.Add(this.txtResult);
+            this.Controls.Add(this.btnCopy);
+            this.Controls.Add(this.txtFilePaths);
+            this.Controls.Add(this.lvResults);
+            this.Controls.Add(this.chkFindAll);
+            this.Controls.Add(this.chkBatchMode);
+            this.Controls.Add(this.btnStart);
+            this.Controls.Add(this.progressBar);
+            this.Controls.Add(this.lblStatus);
 
-            ResumeLayout(false);
+            this.ResumeLayout(false);
+            this.PerformLayout();
         }
 
         // 单文件模式
-        private TextBox     txtFilePath;
-        private ComboBox    cmbType;
-        private TextBox     txtResult;
-        private Button      btnCopy;
+        private System.Windows.Forms.TextBox     txtFilePath;
+        private System.Windows.Forms.ComboBox    cmbType;
+        private System.Windows.Forms.TextBox     txtResult;
+        private System.Windows.Forms.Button      btnCopy;
         // 批量模式
-        private TextBox     txtFilePaths;
-        private ListView    lvResults;
-        private ColumnHeader colFile;
-        private ColumnHeader colPwd;
+        private System.Windows.Forms.TextBox     txtFilePaths;
+        private System.Windows.Forms.ListView    lvResults;
+        private System.Windows.Forms.ColumnHeader colFile;
+        private System.Windows.Forms.ColumnHeader colPwd;
         // 共用
-        private CheckBox    chkFindAll;
-        private CheckBox    chkBatchMode;
-        private Button      btnStart;
-        private ProgressBar progressBar;
-        private Label       lblStatus;
+        private System.Windows.Forms.CheckBox    chkFindAll;
+        private System.Windows.Forms.CheckBox    chkBatchMode;
+        private System.Windows.Forms.Button      btnStart;
+        private System.Windows.Forms.ProgressBar progressBar;
+        private System.Windows.Forms.Label       lblStatus;
     }
 }

@@ -44,6 +44,11 @@ namespace ArchiveToolUI
         // -----------------------------------------------------------------------
         private void WireEvents()
         {
+            // PlaceholderText 在旧版 Designer 中不支持，在此设置
+            txtFilePath.PlaceholderText  = "拖入文件或输入路径…";
+            txtResult.PlaceholderText    = "匹配到的密码";
+            txtFilePaths.PlaceholderText = "拖入多个文件，或每行输入一个路径…";
+
             // ── 单文件：拖拽 ──────────────────────────────────────────
             txtFilePath.DragEnter += OnDragEnterSingle;
             txtFilePath.DragDrop  += OnDragDropSingle;
