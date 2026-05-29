@@ -30,6 +30,7 @@ namespace ArchiveToolUI
         private readonly List<ArchiveToolService> _batchServices = new();
         private int _batchTotal = 0;
         private int _batchDone  = 0;
+        private readonly List<string> _availableTypes = new();
 
         public Form1()
         {
@@ -86,9 +87,25 @@ namespace ArchiveToolUI
             };
 
             lvResults.DoubleClick += (s, e) => {
-                if (lvResults.SelectedItems.Count > 0) {
-                    var pwd = lvResults.SelectedItems[0].SubItems[1].Text;
-                    if (!string.IsNullOrEmpty(pwd)) Clipboard.SetText(pwd);
+                if (lvResults.SelectedItems.Count == 0) return;
+                var item = lvResults.SelectedItems[0];
+
+                // 获取鼠标点击位置，判断点击的是哪一列
+                var pt = lvResults.PointToClient(Cursor.Position);
+                var hitInfo = lvResults.HitTest(pt);
+                int col = hitInfo.Item != null ? hitInfo.SubItem != null
+                    ? item.SubItems.IndexOf(hitInfo.SubItem) : 0 : 0;
+
+                if (col == 2) {
+                    // 双击"类型"列 → 弹出类型选择对话框
+                    using var dlg = new SelectTypeDialog(item.SubItems[2].Text, _availableTypes);
+                    if (dlg.ShowDialog(this) == DialogResult.OK)
+                        item.SubItems[2].Text = dlg.SelectedType;
+                } else {
+                    // 双击其他列 → 拷贝密码
+                    var pwd = item.SubItems[1].Text;
+                    if (!string.IsNullOrEmpty(pwd) && pwd != "检索中…" && pwd != "未找到")
+                        Clipboard.SetText(pwd);
                 }
             };
 
@@ -120,7 +137,9 @@ namespace ArchiveToolUI
             try { ArchiveToolNative.GetKeys((key, _) => keys.Add(key), IntPtr.Zero); } catch { }
             cmbType.Items.Clear();
             cmbType.Items.Add("Auto");
-            foreach (var k in keys) cmbType.Items.Add(k);
+            _availableTypes.Clear();
+            _availableTypes.Add("Auto");
+            foreach (var k in keys) { cmbType.Items.Add(k); _availableTypes.Add(k); }
             cmbType.SelectedIndex = 0;
         }
 
@@ -187,7 +206,24 @@ namespace ArchiveToolUI
                 .Select(l => l.Trim()).Where(l => !string.IsNullOrEmpty(l)).ToList();
             if (lines.Count == 0) { MessageBox.Show("请输入或拖入文件路径", "提示"); return; }
 
-            lvResults.Items.Clear();
+            // 如果 ListView 已有条目（用户预设了 type），保留 type；否则重建列表
+            bool hasExisting = lvResults.Items.Count == lines.Count;
+
+            if (!hasExisting) {
+                lvResults.Items.Clear();
+                foreach (var fp in lines) {
+                    var item = new ListViewItem(Path.GetFileName(fp));
+                    item.SubItems.Add("检索中…");
+                    item.SubItems.Add("");
+                    item.Tag = fp;
+                    lvResults.Items.Add(item);
+                }
+            } else {
+                // 重置密码列，保留类型列
+                foreach (ListViewItem item in lvResults.Items)
+                    item.SubItems[1].Text = "检索中…";
+            }
+
             _batchServices.Clear();
             _batchTotal = lines.Count;
             _batchDone  = 0;
@@ -196,16 +232,16 @@ namespace ArchiveToolUI
             tsLabel.Text          = $"0/{lines.Count}";
             SetSearching(true);
 
-            foreach (var fp in lines) {
-                var svc  = new ArchiveToolService();
-                var item = new ListViewItem(Path.GetFileName(fp));
-                item.SubItems.Add("检索中…");
-                item.SubItems.Add("");  // 类型列占位
-                item.Tag = fp;
-                lvResults.Items.Add(item);
+            foreach (ListViewItem item in lvResults.Items) {
+                var svc = new ArchiveToolService();
+                var fp  = item.Tag as string ?? "";
+                // 读取用户预设的 type（如果有）
+                string? presetType = item.SubItems.Count >= 3 && !string.IsNullOrEmpty(item.SubItems[2].Text)
+                    ? item.SubItems[2].Text : null;
+
                 svc.OnPasswordProgress += p => Invoke(() => UpdateProgressBatch(fp, p));
                 _batchServices.Add(svc);
-                svc.StartPasswordSearch(fp, chkFindAll.Checked);
+                svc.StartPasswordSearch(fp, chkFindAll.Checked, presetType);
             }
         }
 
