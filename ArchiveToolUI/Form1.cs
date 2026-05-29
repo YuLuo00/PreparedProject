@@ -193,6 +193,7 @@ namespace ArchiveToolUI
         // ── 模式切换 ──────────────────────────────────────────────────
         private void SwitchMode(bool batch)
         {
+            btnBrowse.Visible    = !batch;
             txtFilePath.Visible  = !batch;
             cmbType.Visible      = !batch;
             txtResult.Visible    = !batch;
