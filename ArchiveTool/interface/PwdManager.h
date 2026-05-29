@@ -21,7 +21,7 @@ public:
     std::vector<std::string> GetAllPwd();
 
 private:
-    std::string m_pwdBoolPath = "D:/_EnviromentConfiguration/_my_path/pwd.dat";
+    std::string m_pwdBoolPath = "./pwd.dat";
     std::set<std::string> m_pwdBook;
 
 };

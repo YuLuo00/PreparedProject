@@ -16,6 +16,11 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS)
     )
 endif()
 
+# 将 pwd.dat 复制到 bin/（configure 时自动同步）
+if(EXISTS "${ProjectRootDir}/pwd.dat")
+    file(COPY "${ProjectRootDir}/pwd.dat" DESTINATION "${ProjectRootDir}/bin")
+endif()
+
 add_subdirectory(Tests/HelloWorld)
 add_subdirectory(ArchiveTool)
 add_subdirectory(ArchiveToolConsole)
