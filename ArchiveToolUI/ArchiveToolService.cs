@@ -43,6 +43,11 @@ namespace ArchiveToolUI
         public static extern int AddNewPwd(
             [MarshalAs(UnmanagedType.LPUTF8Str)] string pwd);
 
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int check_format(
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string filePath,
+            byte[] buf, int bufSize);
+
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void EnumKeysCallback(
             [MarshalAs(UnmanagedType.LPUTF8Str)] string key, IntPtr userData);
@@ -119,8 +124,11 @@ namespace ArchiveToolUI
     {
         // ── 事件：UI 层订阅 ──────────────────────────────────────────────
 
-        /// <summary>功能1完成：文件类型检测结果（type 字符串，空字符串表示失败）</summary>
+        /// <summary>功能1完成：bit7z 识别的标准类型名（用于下拉框选择）</summary>
         public event Action<string>? OnTypeDetected;
+
+        /// <summary>功能1完成：libarchive 返回的原始格式字符串（用于状态栏显示和 json 矫正）</summary>
+        public event Action<string>? OnRawFormatDetected;
 
         /// <summary>功能3：密码搜索进度更新</summary>
         public event Action<PasswordSearchProgress>? OnPasswordProgress;
@@ -141,6 +149,15 @@ namespace ArchiveToolUI
         {
             Task.Run(() =>
             {
+                // 获取 libarchive 原始格式字符串（用于状态栏显示）
+                byte[] rawBuf = new byte[256];
+                int rawLen = ArchiveToolNative.check_format(filePath, rawBuf, rawBuf.Length);
+                string rawFormat = rawLen > 0
+                    ? System.Text.Encoding.UTF8.GetString(rawBuf, 0, rawLen)
+                    : "";
+                OnRawFormatDetected?.Invoke(rawFormat);
+
+                // 获取 bit7z 标准类型名（用于下拉框选择）
                 byte[] buf = new byte[256];
                 int len = ArchiveToolNative.TryDetermineType(filePath, buf, buf.Length);
                 string type = len > 0

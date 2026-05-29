@@ -124,10 +124,14 @@ namespace ArchiveToolUI
                 lvResults.Columns[e.Column].Text += _lvSorter.Ascending ? " ▲" : " ▼";
             };
 
+            _service.OnRawFormatDetected += raw => Invoke(() => {
+                // 状态栏显示 libarchive 原始格式字符串，方便用户做 json 矫正
+                tsTypeLabel.Text = string.IsNullOrEmpty(raw) ? "" : $"原始: {raw}";
+            });
+
             _service.OnTypeDetected += type => Invoke(() => {
                 int idx = cmbType.Items.IndexOf(type);
                 if (idx >= 0) cmbType.SelectedIndex = idx;
-                tsTypeLabel.Text = string.IsNullOrEmpty(type) ? "" : $"类型: {type}";
             });
             _service.OnPasswordProgress += p => Invoke(() => UpdateProgressSingle(p));
         }
