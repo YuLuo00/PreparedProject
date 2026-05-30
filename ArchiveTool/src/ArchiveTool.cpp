@@ -388,10 +388,15 @@ ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
     void *userData)
 {
     // 临时硬编码测试：用 7z 格式尝试解压指定文件
-    const char *testPath = R"(D:\test\中文路径测试.7z)";
-    const char *testPwd  = "123456";
+    const char *testPath = R"(D:\Downloads\0000\0506迟迟115G.7z.001)";
+    auto s = CommonTool::Utf82Local(testPath);
+    const char *testPathLoc = s.c_str();
 
-    Bit7zInputPath bit7zPath(testPath);
+    const char *testPwd  = "kkshe";
+
+    // D:\Downloads\0000\0506迟迟115G.7z.002
+
+    Bit7zInputPath bit7zPath(testPathLoc);
     std::string pwd = testPwd;
 
     // 临时硬编码：只测 SevenZip 格式
@@ -406,8 +411,9 @@ ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
     }
     catch (const bit7z::BitException &ex) {
         std::string msg = ex.what();
+        const char *msgC = msg.c_str();
         std::error_code code = ex.code();
-        ArchiveMsg::Ins().AddLine(fmt::format("[SevenZip]::[{}]{}", code.value(), msg));
+        ArchiveMsg::Ins().AddLine(fmt::format("[SevenZip]::[{}]{}", code.value(), msgC));
         callback("SevenZip", 0, 1, 1, userData);
     }
     catch (...) {

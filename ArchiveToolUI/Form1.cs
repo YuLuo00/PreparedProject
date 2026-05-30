@@ -119,15 +119,10 @@ namespace ArchiveToolUI
                     Clipboard.SetText(txtResult.Text);
             };
 
-            // 测试按钮事件：输入密码后遍历所有类型尝试解压并展示结果
+            // 测试按钮事件：直接执行硬编码测试
             btnTestAllTypes.Click += async (s, e) => {
-                string fp = txtFilePath.Text.Trim();
-                if (string.IsNullOrEmpty(fp)) { MessageBox.Show("请先输入或拖入文件路径", "提示"); return; }
-                using var dlg = new AddPasswordDialog("");
-                if (dlg.ShowDialog(this) != DialogResult.OK) return;
-                string pwd = dlg.Password;
                 btnTestAllTypes.Enabled = false;
-                tsLabel.Text = "测试中… 0/?";
+                tsLabel.Text = "测试中…";
 
                 Action<TestAllTypesProgress> onProgress = p => {
                     this.BeginInvoke(new Action(() => {
@@ -143,13 +138,10 @@ namespace ArchiveToolUI
                 _service.OnTestAllTypesProgress += onProgress;
 
                 try {
-                    string res = await _service.TestPasswordAllTypesAsync(fp, pwd);
-                    using var win = new Form { Text = "测试结果", Width = 600, Height = 400, StartPosition = FormStartPosition.CenterParent };
-                    var txt = new TextBox { Multiline = true, ReadOnly = true, Dock = DockStyle.Fill, ScrollBars = ScrollBars.Vertical, Text = res };
-                    win.Controls.Add(txt);
-                    win.ShowDialog(this);
+                    string res = await _service.TestPasswordAllTypesAsync("", "");
+                    txtResult.Text = res;
                 } catch (Exception ex) {
-                    MessageBox.Show($"测试失败: {ex.Message}", "错误");
+                    txtResult.Text = $"测试失败: {ex.Message}";
                 } finally {
                     _service.OnTestAllTypesProgress -= onProgress;
                     btnTestAllTypes.Enabled = true;
