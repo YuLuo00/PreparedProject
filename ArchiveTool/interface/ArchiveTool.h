@@ -55,6 +55,10 @@ ZYB_ARCHIVE_TOOL_API int PromotePwd(const char *pwd);
 typedef void (*EnumPwdCallback)(const char *pwd, void *userData);
 ZYB_ARCHIVE_TOOL_API void GetAllPwd(EnumPwdCallback callback, void *userData);
 
+// 测试密码在所有类型下的结果回调
+typedef void (*TestPasswordTypeCallback)(const char *type, int success, void *userData);
+
+
 // -----------------------------------------------------------------------
 // 密码搜索 - 公共数据结构
 // -----------------------------------------------------------------------
@@ -113,6 +117,14 @@ ZYB_ARCHIVE_TOOL_API int FindPasswordAsyncQueue(
     FindPasswordSignalCallback  signalCallback,
     void                       *userData,
     int                         findAll);
+
+// 测试：使用指定密码，遍历所有已知解压类型尝试解压，
+// 回调每种类型的结果（同步调用）。完成后回调一次 type==NULL, success==2 表示结束。
+ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
+    const char *filePath,
+    const char *passwd,
+    TestPasswordTypeCallback callback,
+    void *userData);
 
 // 读取最新进度（覆盖写，始终返回最新一条；返回 1=有数据，0=尚无数据）
 ZYB_ARCHIVE_TOOL_API int GetLatestFindPasswordProgress(

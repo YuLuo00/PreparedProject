@@ -176,7 +176,18 @@ ZYB_ARCHIVE_TOOL_API int ArchiveExtraTest(
         }
         extractor.test(bit7zPath.Get());
     }
-    catch (...) { return 0; }
+    catch (const bit7z::BitException &ex) {
+        char const *msg = ex.what();
+        std::string exMsg = ex.what();
+        std::error_code code = ex.code();
+        ArchiveMsg::Ins().AddLine(fmt::format("[{}]::[{}]{}", type, code.value(), exMsg));
+        int cd = code.value();
+        return 0;
+    }
+    catch (...)
+    {
+        return 0;
+    }
     return 1;
 }
 
@@ -411,4 +422,25 @@ ZYB_ARCHIVE_TOOL_API void CancelFindPassword(int taskId)
         // 请求 TBB 取消任务组（对 task_group 内的子任务生效）
         td.tg->cancel();
     }
+}
+
+ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
+    const char *filePath,
+    const char *passwd,
+    TestPasswordTypeCallback callback,
+    void *userData)
+{
+    if (!filePath || !callback) return;
+
+    std::string fp(filePath);
+    std::string pwd = passwd ? passwd : "";
+
+    std::vector<std::string> keys = ArchiveType::Ins().GetKeys();
+    for (const auto &t : keys) {
+        int ok = ArchiveExtraTest(fp.c_str(), pwd.c_str(), t.c_str());
+        callback(t.c_str(), ok ? 1 : 0, userData);
+    }
+
+    // 完成信号
+    callback(nullptr, 2, userData);
 }

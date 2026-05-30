@@ -84,6 +84,19 @@ namespace ArchiveToolUI
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void FindPasswordSignalCallback(int taskId, IntPtr userData);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void TestPasswordTypeCallback(
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string type,
+            int success,
+            IntPtr userData);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void TestPasswordAcrossAllTypes(
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string filePath,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string passwd,
+            TestPasswordTypeCallback callback,
+            IntPtr userData);
     }
 
     // -----------------------------------------------------------------------
@@ -148,6 +161,7 @@ namespace ArchiveToolUI
         // 保持委托引用，防止 GC 回收
         private ArchiveToolNative.FindPasswordCallback?       _callbackRef;
         private ArchiveToolNative.FindPasswordSignalCallback? _signalCallbackRef;
+        private ArchiveToolNative.TestPasswordTypeCallback?   _testCallbackRef;
 
         // ── 功能1：检测文件类型（后台执行，完成后触发 OnTypeDetected）────
 
@@ -204,6 +218,27 @@ namespace ArchiveToolUI
             int taskId = ArchiveToolNative.FindPasswordAsync(filePath, typeToUse, _callbackRef, IntPtr.Zero, findAll ? 1 : 0);
             _currentTaskId = taskId;
             return taskId;
+        }
+
+        /// <summary>
+        /// 测试指定密码在所有已知类型下的解压结果，异步返回整合字符串结果。
+        /// </summary>
+        public Task<string> TestPasswordAllTypesAsync(string filePath, string password)
+        {
+            var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var sb = new StringBuilder();
+
+            ArchiveToolNative.TestPasswordTypeCallback cb = (type, success, _) => {
+                if (type == null || success == 2) {
+                    tcs.TrySetResult(sb.ToString());
+                    return;
+                }
+                sb.AppendLine($"{type}: {(success != 0 ? "OK" : "FAIL")}");
+            };
+
+            _testCallbackRef = cb;
+            Task.Run(() => ArchiveToolNative.TestPasswordAcrossAllTypes(filePath, password ?? "", cb, IntPtr.Zero));
+            return tcs.Task;
         }
 
         /// <summary>取消当前密码搜索任务</summary>

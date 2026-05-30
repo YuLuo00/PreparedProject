@@ -119,6 +119,29 @@ namespace ArchiveToolUI
                     Clipboard.SetText(txtResult.Text);
             };
 
+            // 测试按钮事件：输入密码后遍历所有类型尝试解压并展示结果
+            btnTestAllTypes.Click += async (s, e) => {
+                string fp = txtFilePath.Text.Trim();
+                if (string.IsNullOrEmpty(fp)) { MessageBox.Show("请先输入或拖入文件路径", "提示"); return; }
+                using var dlg = new AddPasswordDialog("");
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                string pwd = dlg.Password;
+                btnTestAllTypes.Enabled = false;
+                tsLabel.Text = "测试中…";
+                try {
+                    string res = await _service.TestPasswordAllTypesAsync(fp, pwd);
+                    using var win = new Form { Text = "测试结果", Width = 600, Height = 400, StartPosition = FormStartPosition.CenterParent };
+                    var txt = new TextBox { Multiline = true, ReadOnly = true, Dock = DockStyle.Fill, ScrollBars = ScrollBars.Vertical, Text = res };
+                    win.Controls.Add(txt);
+                    win.ShowDialog(this);
+                } catch (Exception ex) {
+                    MessageBox.Show($"测试失败: {ex.Message}", "错误");
+                } finally {
+                    btnTestAllTypes.Enabled = true;
+                    tsLabel.Text = "就绪";
+                }
+            };
+
             // 右键"拷贝密码"→ 添加密码到密码本
             menuAddPwd.Click += (s, e) => {
                 // 默认填入结果框第一行（或空）
@@ -286,7 +309,7 @@ namespace ArchiveToolUI
             tsProgressBar.Value    = 0;
             tsLabel.Text           = "检索中…";
             SetSearching(true);
-            _service.StartPasswordSearch(fp, chkFindAll.Checked);
+            _service.StartPasswordSearch(fp, chkFindAll.Checked, type);
         }
 
         private void StartBatch()

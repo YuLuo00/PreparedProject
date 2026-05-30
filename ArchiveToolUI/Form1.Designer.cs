@@ -100,6 +100,15 @@
             this.btnCopy.ContextMenuStrip = this.ctxBtnCopy;
             this.toolTip.SetToolTip(this.btnCopy, "左键：拷贝密码\n右键：添加密码到密码本");
 
+            // 测试按钮：测试指定密码在所有类型下的解压结果
+            this.btnTestAllTypes = new System.Windows.Forms.Button();
+            this.btnTestAllTypes.Location = new System.Drawing.Point(302, 36);
+            this.btnTestAllTypes.Size     = new System.Drawing.Size(90, 23);
+            this.btnTestAllTypes.Anchor   = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
+            this.btnTestAllTypes.Text     = "测试所有类型";
+            this.btnTestAllTypes.Name     = "btnTestAllTypes";
+            this.btnTestAllTypes.TabIndex = 6;
+
             // ── 批量：多行地址栏（左右拉伸）──────────────────────────
             this.txtFilePaths.Location   = new System.Drawing.Point(8, 10);
             this.txtFilePaths.Size       = new System.Drawing.Size(384, 80);
@@ -191,6 +200,7 @@
             this.Controls.Add(this.cmbType);
             this.Controls.Add(this.txtResult);
             this.Controls.Add(this.btnCopy);
+            this.Controls.Add(this.btnTestAllTypes);
             this.Controls.Add(this.txtFilePaths);
             this.Controls.Add(this.lvResults);
             this.Controls.Add(this.chkFindAll);
@@ -223,6 +233,7 @@
         private System.Windows.Forms.ColumnHeader colRawFormat;
         // 共用
         private System.Windows.Forms.CheckBox          chkFindAll;
+        private System.Windows.Forms.Button            btnTestAllTypes;
         private System.Windows.Forms.CheckBox          chkBatchMode;
         private System.Windows.Forms.Button            btnStart;
         private System.Windows.Forms.StatusStrip       statusStrip;
