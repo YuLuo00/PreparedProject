@@ -382,119 +382,39 @@ ZYB_ARCHIVE_TOOL_API void CancelFindPassword(int taskId)
 }
 
 ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
-    const char *filePath,
-    const char *passwd,
+    const char * /*filePath*/,
+    const char * /*passwd*/,
     TestPasswordTypeCallback callback,
     void *userData)
 {
-    if (!filePath || !callback) return;
+    // 临时硬编码测试：用 7z 格式尝试解压指定文件
+    const char *testPath = R"(D:\test\中文路径测试.7z)";
+    const char *testPwd  = "123456";
 
-    Bit7zInputPath bit7zPath(filePath);
-    std::string pwd = passwd ? passwd : "";
+    Bit7zInputPath bit7zPath(testPath);
+    std::string pwd = testPwd;
 
-    // 清除历史消息，便于只查看本次测试日志
+    // 临时硬编码：只测 SevenZip 格式
     ArchiveMsg::Ins().Clear();
 
-    // 只读格式（BitInFormat）
-    static const struct { const char *name; const bit7z::BitInFormat *fmt; } inFormats[] = {
-        {"Auto",     &bit7z::BitFormat::Auto},
-        {"Rar",      &bit7z::BitFormat::Rar},
-        {"Arj",      &bit7z::BitFormat::Arj},
-        {"Z",        &bit7z::BitFormat::Z},
-        {"Lzh",      &bit7z::BitFormat::Lzh},
-        {"Cab",      &bit7z::BitFormat::Cab},
-        {"Nsis",     &bit7z::BitFormat::Nsis},
-        {"Lzma",     &bit7z::BitFormat::Lzma},
-        {"Lzma86",   &bit7z::BitFormat::Lzma86},
-        {"Ppmd",     &bit7z::BitFormat::Ppmd},
-        {"Zstd",     &bit7z::BitFormat::Zstd},
-        {"LVM",      &bit7z::BitFormat::LVM},
-        {"AVB",      &bit7z::BitFormat::AVB},
-        {"LP",       &bit7z::BitFormat::LP},
-        {"Sparse",   &bit7z::BitFormat::Sparse},
-        {"APFS",     &bit7z::BitFormat::APFS},
-        {"Vhdx",     &bit7z::BitFormat::Vhdx},
-        {"COFF",     &bit7z::BitFormat::COFF},
-        {"Ext",      &bit7z::BitFormat::Ext},
-        {"VMDK",     &bit7z::BitFormat::VMDK},
-        {"VDI",      &bit7z::BitFormat::VDI},
-        {"QCow",     &bit7z::BitFormat::QCow},
-        {"GPT",      &bit7z::BitFormat::GPT},
-        {"Rar5",     &bit7z::BitFormat::Rar5},
-        {"IHex",     &bit7z::BitFormat::IHex},
-        {"Hxs",      &bit7z::BitFormat::Hxs},
-        {"TE",       &bit7z::BitFormat::TE},
-        {"UEFIc",    &bit7z::BitFormat::UEFIc},
-        {"UEFIs",    &bit7z::BitFormat::UEFIs},
-        {"SquashFS", &bit7z::BitFormat::SquashFS},
-        {"CramFS",   &bit7z::BitFormat::CramFS},
-        {"APM",      &bit7z::BitFormat::APM},
-        {"Mslz",     &bit7z::BitFormat::Mslz},
-        {"Flv",      &bit7z::BitFormat::Flv},
-        {"Swf",      &bit7z::BitFormat::Swf},
-        {"Swfc",     &bit7z::BitFormat::Swfc},
-        {"Ntfs",     &bit7z::BitFormat::Ntfs},
-        {"Fat",      &bit7z::BitFormat::Fat},
-        {"Mbr",      &bit7z::BitFormat::Mbr},
-        {"Vhd",      &bit7z::BitFormat::Vhd},
-        {"Pe",       &bit7z::BitFormat::Pe},
-        {"Elf",      &bit7z::BitFormat::Elf},
-        {"Macho",    &bit7z::BitFormat::Macho},
-        {"Udf",      &bit7z::BitFormat::Udf},
-        {"Xar",      &bit7z::BitFormat::Xar},
-        {"Mub",      &bit7z::BitFormat::Mub},
-        {"Hfs",      &bit7z::BitFormat::Hfs},
-        {"Dmg",      &bit7z::BitFormat::Dmg},
-        {"Compound", &bit7z::BitFormat::Compound},
-        {"Iso",      &bit7z::BitFormat::Iso},
-        {"Chm",      &bit7z::BitFormat::Chm},
-        {"Split",    &bit7z::BitFormat::Split},
-        {"Rpm",      &bit7z::BitFormat::Rpm},
-        {"Deb",      &bit7z::BitFormat::Deb},
-        {"Cpio",     &bit7z::BitFormat::Cpio},
-    };
-
-    // 读写格式（BitInOutFormat）
-    static const struct { const char *name; const bit7z::BitInOutFormat *fmt; } inOutFormats[] = {
-        {"Zip",      &bit7z::BitFormat::Zip},
-        {"BZip2",    &bit7z::BitFormat::BZip2},
-        {"SevenZip", &bit7z::BitFormat::SevenZip},
-        {"Xz",       &bit7z::BitFormat::Xz},
-        {"Wim",      &bit7z::BitFormat::Wim},
-        {"Tar",      &bit7z::BitFormat::Tar},
-        {"GZip",     &bit7z::BitFormat::GZip},
-    };
-
-    const int inCount = sizeof(inFormats) / sizeof(inFormats[0]);
-    const int inoutCount = sizeof(inOutFormats) / sizeof(inOutFormats[0]);
-    const int total = inCount + inoutCount;
-
-    auto testOne = [&](const char *name, const bit7z::BitInFormat &format, int idx) {
-        try {
-            using namespace bit7z;
-            BitFileExtractor extractor{::Get7zLibrary(), format};
-            if (!pwd.empty()) extractor.setPassword(pwd);
-            extractor.test(bit7zPath.Get());
-            callback(name, 1, idx, total, userData);
-        }
-        catch (const bit7z::BitException &ex) {
-            const char *msg = ex.what();
-            std::error_code code = ex.code();
-            ArchiveMsg::Ins().AddLine(fmt::format("[{}]::[{}]{}", name, code.value(), msg));
-            callback(name, 0, idx, total, userData);
-        }
-        catch (...) {
-            ArchiveMsg::Ins().AddLine(fmt::format("[{}]::[{}]{}", name, -1, "unknown error"));
-            callback(name, 0, idx, total, userData);
-        }
-    };
-
-    for (int i = 0; i < inCount; ++i)
-        testOne(inFormats[i].name, *inFormats[i].fmt, i + 1);
-
-    for (int i = 0; i < inoutCount; ++i)
-        testOne(inOutFormats[i].name, *inOutFormats[i].fmt, inCount + i + 1);
+    try {
+        using namespace bit7z;
+        BitFileExtractor extractor{::Get7zLibrary(), BitFormat::SevenZip};
+        if (!pwd.empty()) extractor.setPassword(pwd);
+        extractor.test(bit7zPath.Get());
+        callback("SevenZip", 1, 1, 1, userData);
+    }
+    catch (const bit7z::BitException &ex) {
+        std::string msg = ex.what();
+        std::error_code code = ex.code();
+        ArchiveMsg::Ins().AddLine(fmt::format("[SevenZip]::[{}]{}", code.value(), msg));
+        callback("SevenZip", 0, 1, 1, userData);
+    }
+    catch (...) {
+        ArchiveMsg::Ins().AddLine("[SevenZip]::[-1]unknown error");
+        callback("SevenZip", 0, 1, 1, userData);
+    }
 
     // 完成信号
-    callback(nullptr, 2, total, total, userData);
+    callback(nullptr, 2, 1, 1, userData);
 }
