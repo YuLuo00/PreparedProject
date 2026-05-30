@@ -262,8 +262,9 @@ namespace ArchiveToolUI
             btnBrowse.Visible    = !batch;
             txtFilePath.Visible  = !batch;
             cmbType.Visible      = !batch;
-            txtResult.Visible    = !batch;
-            btnCopy.Visible      = !batch;
+            txtResult.Visible     = !batch;
+            btnCopy.Visible       = !batch;
+            btnTestAllTypes.Visible = !batch;
             txtFilePaths.Visible = batch;
             lvResults.Visible    = batch;
 

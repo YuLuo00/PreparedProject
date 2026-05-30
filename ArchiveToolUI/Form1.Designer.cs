@@ -91,7 +91,7 @@
             this.ctxBtnCopy.Name = "ctxBtnCopy";
 
             this.btnCopy.Location         = new System.Drawing.Point(302, 65);
-            this.btnCopy.Size             = new System.Drawing.Size(90, 23);
+            this.btnCopy.AutoSize         = true;
             this.btnCopy.Anchor           = System.Windows.Forms.AnchorStyles.Top
                                           | System.Windows.Forms.AnchorStyles.Right;
             this.btnCopy.Text             = "拷贝密码";
@@ -102,8 +102,8 @@
 
             // 测试按钮：测试指定密码在所有类型下的解压结果
             this.btnTestAllTypes = new System.Windows.Forms.Button();
+            this.btnTestAllTypes.AutoSize = true;
             this.btnTestAllTypes.Location = new System.Drawing.Point(302, 36);
-            this.btnTestAllTypes.Size     = new System.Drawing.Size(90, 23);
             this.btnTestAllTypes.Anchor   = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
             this.btnTestAllTypes.Text     = "测试所有类型";
             this.btnTestAllTypes.Name     = "btnTestAllTypes";
