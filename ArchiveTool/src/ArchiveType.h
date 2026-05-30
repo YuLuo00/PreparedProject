@@ -67,6 +67,13 @@ public:
         return keys;
     }
 
+    std::string LookupType(const std::string &formatStr)
+    {
+        auto it = this->table.find(formatStr);
+        if (it != this->table.end()) return it->second;
+        return "";
+    }
+
     bool combineWithFile()
     {
         std::ifstream file(this->path);

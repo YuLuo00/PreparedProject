@@ -248,6 +248,13 @@ ZYB_ARCHIVE_TOOL_API void UpdateTable(const char *key, const char *type)
     if (key && type) ArchiveType::Ins().UpdateTable(std::string(key), std::string(type));
 }
 
+ZYB_ARCHIVE_TOOL_API int LookupTypeByFormat(const char *formatStr, char *buf, int bufSize)
+{
+    if (!formatStr || !buf || bufSize <= 0) return 0;
+    std::string type = ArchiveType::Ins().LookupType(std::string(formatStr));
+    return WriteStrBuf(type, buf, bufSize);
+}
+
 ZYB_ARCHIVE_TOOL_API void ArchiveToolMsg(EnumMsgCallback callback, void *userData)
 {
     if (!callback) return;

@@ -57,6 +57,11 @@ namespace ArchiveToolUI
             [MarshalAs(UnmanagedType.LPUTF8Str)] string filePath,
             byte[] buf, int bufSize);
 
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int LookupTypeByFormat(
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string formatStr,
+            byte[] buf, int bufSize);
+
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void EnumKeysCallback(
             [MarshalAs(UnmanagedType.LPUTF8Str)] string key, IntPtr userData);
@@ -172,21 +177,24 @@ namespace ArchiveToolUI
         {
             Task.Run(() =>
             {
-                // 获取 libarchive 原始格式字符串（用于状态栏显示）
-                byte[] rawBuf = new byte[256];
-                int rawLen = ArchiveToolNative.check_format(filePath, rawBuf, rawBuf.Length);
-                string rawFormat = rawLen > 0
-                    ? System.Text.Encoding.UTF8.GetString(rawBuf, 0, rawLen)
-                    : "";
-                OnRawFormatDetected?.Invoke(rawFormat);
-
-                // 获取 bit7z 标准类型名（用于下拉框选择）
+                // 1. check_format 获取 libarchive 原始格式字符串
                 byte[] buf = new byte[256];
-                int len = ArchiveToolNative.TryDetermineType(filePath, buf, buf.Length);
-                string type = len > 0
+                int len = ArchiveToolNative.check_format(filePath, buf, buf.Length);
+                string formatStr = len > 0
                     ? System.Text.Encoding.UTF8.GetString(buf, 0, len)
                     : "";
-                OnTypeDetected?.Invoke(type);
+                
+                // 原始格式用于状态栏显示和用户 json 矫正
+                OnRawFormatDetected?.Invoke(formatStr);
+                
+                // 2. 从 table 里查找 format 对应的 archive type
+                byte[] typeBuf = new byte[256];
+                int typeLen = ArchiveToolNative.LookupTypeByFormat(formatStr, typeBuf, typeBuf.Length);
+                string typeStr = typeLen > 0
+                    ? System.Text.Encoding.UTF8.GetString(typeBuf, 0, typeLen)
+                    : "";
+                
+                OnTypeDetected?.Invoke(typeStr);
             });
         }
 

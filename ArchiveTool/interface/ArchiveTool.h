@@ -35,6 +35,7 @@ ZYB_ARCHIVE_TOOL_API int TryDetermineType(
 typedef void (*EnumKeysCallback)(const char *key, void *userData);
 ZYB_ARCHIVE_TOOL_API void GetKeys(EnumKeysCallback callback, void *userData);
 ZYB_ARCHIVE_TOOL_API void UpdateTable(const char *key, const char *type);
+ZYB_ARCHIVE_TOOL_API int LookupTypeByFormat(const char *formatStr, char *buf, int bufSize);
 
 // -----------------------------------------------------------------------
 // 日志
