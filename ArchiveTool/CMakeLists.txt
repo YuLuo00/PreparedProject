@@ -54,6 +54,8 @@ target_sources_group(${PROJECT_NAME} "interface" PRIVATE
 # dll导出宏
 target_compile_definitions(${PROJECT_NAME} PRIVATE ZYB_ARCHIVE_TOOL_API=__declspec\(dllexport\))
 target_compile_definitions(${PROJECT_NAME} INTERFACE ZYB_ARCHIVE_TOOL_API=__declspec\(dllimport\))
+# bit7z 用 NATIVE_STRING 编译，headers 也需要这个定义
+target_compile_definitions(${PROJECT_NAME} PRIVATE BIT7Z_USE_NATIVE_STRING)
 target_include_directories(${PROJECT_NAME} INTERFACE "${ProjectRootDir}/ArchiveTool/interface/")
 
 # 安装
