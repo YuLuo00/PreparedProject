@@ -445,8 +445,8 @@ ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
     // 清除历史消息，便于只查看本次测试日志
     ArchiveMsg::Ins().Clear();
 
-    // 所有 BitFormat 条目（名称, 指针）
-    static const struct { const char *name; const bit7z::BitInFormat *fmt; } allFormats[] = {
+    // 只读格式（BitInFormat）
+    static const struct { const char *name; const bit7z::BitInFormat *fmt; } inFormats[] = {
         {"Auto",     &bit7z::BitFormat::Auto},
         {"Rar",      &bit7z::BitFormat::Rar},
         {"Arj",      &bit7z::BitFormat::Arj},
@@ -502,6 +502,10 @@ ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
         {"Rpm",      &bit7z::BitFormat::Rpm},
         {"Deb",      &bit7z::BitFormat::Deb},
         {"Cpio",     &bit7z::BitFormat::Cpio},
+    };
+
+    // 读写格式（BitInOutFormat）
+    static const struct { const char *name; const bit7z::BitInOutFormat *fmt; } inOutFormats[] = {
         {"Zip",      &bit7z::BitFormat::Zip},
         {"BZip2",    &bit7z::BitFormat::BZip2},
         {"SevenZip", &bit7z::BitFormat::SevenZip},
@@ -510,30 +514,36 @@ ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
         {"Tar",      &bit7z::BitFormat::Tar},
         {"GZip",     &bit7z::BitFormat::GZip},
     };
-    const int total = sizeof(allFormats) / sizeof(allFormats[0]);
 
-    for (int i = 0; i < total; ++i) {
-        const char *name = allFormats[i].name;
-        const bit7z::BitInFormat *format = allFormats[i].fmt;
+    const int inCount = sizeof(inFormats) / sizeof(inFormats[0]);
+    const int inoutCount = sizeof(inOutFormats) / sizeof(inOutFormats[0]);
+    const int total = inCount + inoutCount;
 
+    auto testOne = [&](const char *name, const bit7z::BitInFormat &format, int idx) {
         try {
             using namespace bit7z;
-            BitFileExtractor extractor{::Get7zLibrary(), *format};
+            BitFileExtractor extractor{::Get7zLibrary(), format};
             if (!pwd.empty()) extractor.setPassword(pwd);
             extractor.test(bit7zPath.Get());
-            callback(name, 1, i + 1, total, userData);
+            callback(name, 1, idx, total, userData);
         }
         catch (const bit7z::BitException &ex) {
             const char *msg = ex.what();
             std::error_code code = ex.code();
             ArchiveMsg::Ins().AddLine(fmt::format("[{}]::[{}]{}", name, code.value(), msg));
-            callback(name, 0, i + 1, total, userData);
+            callback(name, 0, idx, total, userData);
         }
         catch (...) {
             ArchiveMsg::Ins().AddLine(fmt::format("[{}]::[{}]{}", name, -1, "unknown error"));
-            callback(name, 0, i + 1, total, userData);
+            callback(name, 0, idx, total, userData);
         }
-    }
+    };
+
+    for (int i = 0; i < inCount; ++i)
+        testOne(inFormats[i].name, *inFormats[i].fmt, i + 1);
+
+    for (int i = 0; i < inoutCount; ++i)
+        testOne(inOutFormats[i].name, *inOutFormats[i].fmt, inCount + i + 1);
 
     // 完成信号
     callback(nullptr, 2, total, total, userData);
