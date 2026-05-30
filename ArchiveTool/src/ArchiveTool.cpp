@@ -97,13 +97,25 @@ static int WriteStrBuf(const std::string &src, char *buf, int bufSize)
 class Bit7zInputPath {
 public:
     explicit Bit7zInputPath(const char *pathU8)
+#ifdef __MINGW32__
         : wpath_(CommonTool::Utf82Wstr(pathU8 ? pathU8 : ""))
+#else
+        : path_(pathU8 ? pathU8 : "")
+#endif
     {}
 
+#ifdef __MINGW32__
     const std::wstring &Get() const { return wpath_; }
+#else
+    const std::string &Get() const { return path_; }
+#endif
 
 private:
+#ifdef __MINGW32__
     std::wstring wpath_;
+#else
+    std::string path_;
+#endif
 };
 
 // -----------------------------------------------------------------------
@@ -114,8 +126,12 @@ ZYB_ARCHIVE_TOOL_API int ArchiveExtraTest(
     const char *file, const char *passwd, const char *type)
 {
     Bit7zInputPath bit7zPath(file);
-    std::wstring   wpwd = CommonTool::Utf82Wstr(passwd ? passwd : "");
     std::string    typeU8   = type ? type : "Auto";
+#ifdef __MINGW32__
+    std::wstring   wpwd = CommonTool::Utf82Wstr(passwd ? passwd : "");
+#else
+    std::string    wpwd = passwd ? passwd : "";
+#endif
 
     const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(typeU8);
     try {
@@ -388,14 +404,13 @@ ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
     void *userData)
 {
     // 临时硬编码测试：用 7z 格式尝试解压指定文件
-    const wchar_t *testPath = LR"(D:\Downloads\0000\0506迟迟115G.7z.001)";
-    // const wchar_t *testPath = LR"(D:\Downloads\0000\kkshe虫虫.7z)";
-    // const wchar_t *testPath = LR"(D:\Downloads\0000\115G.7z.001)";
-    const wchar_t *testPwd  = L"kkshe";
-    auto strU = CommonTool::Wstr2Utf8(testPath);
-    auto pathUtf8 = strU.c_str();
-    auto strL = CommonTool::Wstr2Local(testPath);
-    auto pathLocal = strL.c_str();
+// #ifdef __MINGW32__
+    // const wchar_t *testPath = LR"(D:\Downloads\0000\0506迟迟115G.7z.001)";
+    // const wchar_t *testPwd  = L"kkshe";
+// #else
+    const char *testPath = R"(D:\Downloads\0000\0506迟迟115G.7z.001)";
+    const char *testPwd  = "kkshe";
+// #endif
 
     // 临时硬编码：只测 SevenZip 格式
     ArchiveMsg::Ins().Clear();

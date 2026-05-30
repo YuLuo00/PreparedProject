@@ -10,7 +10,7 @@ namespace ArchiveToolUI
     // -----------------------------------------------------------------------
     internal static class ArchiveToolNative
     {
-        private const string DllName = "libArchiveTool.dll";
+        private const string DllName = "ArchiveTool.dll";
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int TryDetermineType(
