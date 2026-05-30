@@ -124,27 +124,40 @@ public:
             return;
         }
 
+        // 用原文件名创建临时文件，保留分卷后缀（如 .7z.001）
+        std::wstring baseName = fs::path(originalW).filename();
         wchar_t tempFile[MAX_PATH] = {};
         if (GetTempFileNameW(tempDir, L"zat", 0, tempFile) == 0) {
             bit7zPath_ = originalU8_;
             return;
         }
 
-        tempPathW_ = tempFile;
-        if (!CopyFileW(originalW.c_str(), tempPathW_.c_str(), FALSE)) {
-            DeleteFileW(tempPathW_.c_str());
-            tempPathW_.clear();
+        // GetTempFileNameW 创建了空文件，删掉后换成带正确名字的路径
+        std::wstring tempDirPath = tempDir;
+        DeleteFileW(tempFile);
+        std::wstring destPath = tempDirPath.substr(0, tempDirPath.find_last_of(L'\\') + 1) + baseName;
+
+        if (!CopyFileW(originalW.c_str(), destPath.c_str(), FALSE)) {
             bit7zPath_ = originalU8_;
             return;
         }
 
+        tempPathW_ = destPath;
         bit7zPath_ = CommonTool::Wstr2Local(tempPathW_);
+
+        // 复制同目录下的分卷文件（.7z.002, .7z.003, ...）
+        CopySplitVolumes(originalW, destPath);
     }
 
     ~Bit7zInputPath()
     {
+        // 清理临时主文件
         if (!tempPathW_.empty()) {
             DeleteFileW(tempPathW_.c_str());
+        }
+        // 清理临时分卷文件
+        for (auto &p : tempVolumesW_) {
+            DeleteFileW(p.c_str());
         }
     }
 
@@ -154,6 +167,32 @@ private:
     std::string  originalU8_;
     std::string  bit7zPath_;
     std::wstring tempPathW_;
+    std::vector<std::wstring> tempVolumesW_;
+
+    void CopySplitVolumes(const std::wstring &originalW, const std::wstring &destMainW)
+    {
+        // 检测分卷后缀模式：.001, .002, ...
+        fs::path origPath(originalW);
+        std::wstring ext = origPath.extension();
+        int baseNum = 0;
+        try { baseNum = std::stoi(ext.substr(1)); } catch (...) { return; }
+        if (baseNum != 1) return; // 只从 .001 开始扫描
+
+        fs::path origDir = origPath.parent_path();
+        std::wstring baseStem = origPath.stem(); // 去掉 .001 后的部分
+
+        for (int i = 2; ; ++i) {
+            wchar_t suffix[16];
+            swprintf(suffix, 16, L".%03d", i);
+            fs::path volPath = origDir / (baseStem + suffix);
+            if (!fs::exists(volPath)) break;
+
+            fs::path destVol = fs::path(destMainW).parent_path() / (baseStem + suffix);
+            if (CopyFileW(volPath.wstring().c_str(), destVol.wstring().c_str(), FALSE)) {
+                tempVolumesW_.push_back(destVol.wstring());
+            }
+        }
+    }
 };
 
 // -----------------------------------------------------------------------
