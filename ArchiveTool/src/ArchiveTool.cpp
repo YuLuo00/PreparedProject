@@ -94,18 +94,6 @@ static int WriteStrBuf(const std::string &src, char *buf, int bufSize)
     return len;
 }
 
-class Bit7zInputPath {
-public:
-    explicit Bit7zInputPath(const char *pathU8)
-        : path_(CommonTool::Utf82Local(pathU8 ? pathU8 : ""))
-    {}
-
-    const std::string &Get() const { return path_; }
-
-private:
-    std::string path_;
-};
-
 // -----------------------------------------------------------------------
 // 实现
 // -----------------------------------------------------------------------
@@ -113,17 +101,13 @@ private:
 ZYB_ARCHIVE_TOOL_API int ArchiveExtraTest(
     const char *file, const char *passwd, const char *type)
 {
-    // Bit7zInputPath bit7zPath(file);
     std::string    typeU8   = type ? type : "Auto";
-    std::string    wpwd = passwd ? passwd : "";
 
     const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(typeU8);
     try {
         using namespace bit7z;
         BitFileExtractor extractor{::Get7zLibrary(), *format};
-        // if (!wpwd.empty()) {
-            extractor.setPassword(passwd);
-        // }
+        extractor.setPassword(passwd);
         extractor.test(file);
     }
     catch (const bit7z::BitException &ex) {
@@ -161,7 +145,7 @@ ZYB_ARCHIVE_TOOL_API int check_format(const char *filePath, char *buf, int bufSi
 
 ZYB_ARCHIVE_TOOL_API int TryDetermineType(const char *filePath, char *buf, int bufSize)
 {
-    Bit7zInputPath bit7zPath(filePath);
+    std::string filePathLocal = CommonTool::Utf82Local(filePath ? filePath : "");
     ArchiveMsg::Ins().Clear();
 
     std::vector<std::string> keys = ArchiveType::Ins().GetKeys();
@@ -172,7 +156,7 @@ ZYB_ARCHIVE_TOOL_API int TryDetermineType(const char *filePath, char *buf, int b
         const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(type);
         bit7z::BitFileExtractor extractor{::Get7zLibrary(), *format};
         try {
-            extractor.test(bit7zPath.Get());
+            extractor.test(filePathLocal);
             result = type; break;
         }
         catch (const bit7z::BitException &ex) {
