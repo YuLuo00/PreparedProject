@@ -44,3 +44,9 @@ _fix_brackets.py
 /ArchiveToolUI/bin/
 /ArchiveToolUI/obj/
 
+_build/
+run-time-dll/
+include/
+bin/
+.codely-cli/
+.codely/
