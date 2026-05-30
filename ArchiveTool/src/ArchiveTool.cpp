@@ -432,13 +432,38 @@ ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
 {
     if (!filePath || !callback) return;
 
-    std::string fp(filePath);
+    Bit7zInputPath bit7zPath(filePath);
     std::string pwd = passwd ? passwd : "";
+
+    // 清除历史消息，便于只查看本次测试日志
+    ArchiveMsg::Ins().Clear();
 
     std::vector<std::string> keys = ArchiveType::Ins().GetKeys();
     for (const auto &t : keys) {
-        int ok = ArchiveExtraTest(fp.c_str(), pwd.c_str(), t.c_str());
-        callback(t.c_str(), ok ? 1 : 0, userData);
+        const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(t);
+        if (!format) {
+            callback(t.c_str(), 0, userData);
+            continue;
+        }
+
+        try {
+            using namespace bit7z;
+            BitFileExtractor extractor{::Get7zLibrary(), *format};
+            if (!pwd.empty()) extractor.setPassword(pwd);
+            extractor.test(bit7zPath.Get());
+            // 成功
+            callback(t.c_str(), 1, userData);
+        }
+        catch (const bit7z::BitException &ex) {
+            const char *msg = ex.what();
+            std::error_code code = ex.code();
+            ArchiveMsg::Ins().AddLine(fmt::format("[{}]::[{}]{}", t, code.value(), msg));
+            callback(t.c_str(), 0, userData);
+        }
+        catch (...) {
+            ArchiveMsg::Ins().AddLine(fmt::format("[{}]::[{}]{}", t, -1, "unknown error"));
+            callback(t.c_str(), 0, userData);
+        }
     }
 
     // 完成信号
