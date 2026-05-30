@@ -221,13 +221,23 @@ namespace ArchiveToolUI
 
         private void LoadArchiveTypes()
         {
-            var keys = new List<string>();
-            try { ArchiveToolNative.GetKeys((key, _) => keys.Add(key), IntPtr.Zero); } catch { }
+            var otherTypes = new HashSet<string>();
+            try { ArchiveToolNative.GetKeys((key, _) => otherTypes.Add(key), IntPtr.Zero); } catch { }
+            otherTypes.Remove("Auto");  // 去掉 Auto（待会单独加到最前）
+            
             cmbType.Items.Clear();
-            cmbType.Items.Add("Auto");
             _availableTypes.Clear();
+            
+            // Auto 永远在最前
+            cmbType.Items.Add("Auto");
             _availableTypes.Add("Auto");
-            foreach (var k in keys) { cmbType.Items.Add(k); _availableTypes.Add(k); }
+            
+            // 其他类型去重后追加
+            foreach (var t in otherTypes) {
+                cmbType.Items.Add(t);
+                _availableTypes.Add(t);
+            }
+            
             cmbType.SelectedIndex = 0;
         }
 
