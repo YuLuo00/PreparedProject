@@ -447,6 +447,7 @@ ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
 
     // 所有 BitFormat 条目（名称, 指针）
     static const struct { const char *name; const bit7z::BitInFormat *fmt; } allFormats[] = {
+        {"Auto",     &bit7z::BitFormat::Auto},
         {"Rar",      &bit7z::BitFormat::Rar},
         {"Arj",      &bit7z::BitFormat::Arj},
         {"Z",        &bit7z::BitFormat::Z},
