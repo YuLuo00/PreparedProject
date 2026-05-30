@@ -94,6 +94,8 @@ namespace ArchiveToolUI
         public delegate void TestPasswordTypeCallback(
             [MarshalAs(UnmanagedType.LPUTF8Str)] string type,
             int success,
+            int current,
+            int total,
             IntPtr userData);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
@@ -144,6 +146,15 @@ namespace ArchiveToolUI
         public bool   Finished { get; init; }
     }
 
+    public class TestAllTypesProgress
+    {
+        public string Type     { get; init; } = "";
+        public bool   Success  { get; init; }
+        public int    Current  { get; init; }
+        public int    Total    { get; init; }
+        public bool   Finished { get; init; }
+    }
+
     // -----------------------------------------------------------------------
     // 业务层：ArchiveToolService
     // -----------------------------------------------------------------------
@@ -159,6 +170,9 @@ namespace ArchiveToolUI
 
         /// <summary>功能3：密码搜索进度更新</summary>
         public event Action<PasswordSearchProgress>? OnPasswordProgress;
+
+        /// <summary>测试所有类型：进度更新</summary>
+        public event Action<TestAllTypesProgress>? OnTestAllTypesProgress;
 
         // ── 内部状态 ─────────────────────────────────────────────────────
         private int _currentTaskId = 0;
@@ -236,12 +250,14 @@ namespace ArchiveToolUI
             var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             var sb = new StringBuilder();
 
-            ArchiveToolNative.TestPasswordTypeCallback cb = (type, success, _) => {
+            ArchiveToolNative.TestPasswordTypeCallback cb = (type, success, current, total, _) => {
                 if (type == null || success == 2) {
+                    OnTestAllTypesProgress?.Invoke(new TestAllTypesProgress { Current = current, Total = total, Finished = true });
                     tcs.TrySetResult(sb.ToString());
                     return;
                 }
                 sb.AppendLine($"{type}: {(success != 0 ? "OK" : "FAIL")}");
+                OnTestAllTypesProgress?.Invoke(new TestAllTypesProgress { Type = type, Success = success != 0, Current = current, Total = total, Finished = false });
             };
 
             _testCallbackRef = cb;

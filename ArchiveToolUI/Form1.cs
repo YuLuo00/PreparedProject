@@ -127,7 +127,21 @@ namespace ArchiveToolUI
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 string pwd = dlg.Password;
                 btnTestAllTypes.Enabled = false;
-                tsLabel.Text = "测试中…";
+                tsLabel.Text = "测试中… 0/?";
+
+                Action<TestAllTypesProgress> onProgress = p => {
+                    this.BeginInvoke(new Action(() => {
+                        if (p.Finished) {
+                            tsProgressBar.Value = 0;
+                            tsLabel.Text = "就绪";
+                        } else {
+                            tsProgressBar.Value = p.Total > 0 ? (int)(p.Current * 100.0 / p.Total) : 0;
+                            tsLabel.Text = $"测试中… {p.Current}/{p.Total} {p.Type}: {(p.Success ? "OK" : "FAIL")}";
+                        }
+                    }));
+                };
+                _service.OnTestAllTypesProgress += onProgress;
+
                 try {
                     string res = await _service.TestPasswordAllTypesAsync(fp, pwd);
                     using var win = new Form { Text = "测试结果", Width = 600, Height = 400, StartPosition = FormStartPosition.CenterParent };
@@ -137,7 +151,9 @@ namespace ArchiveToolUI
                 } catch (Exception ex) {
                     MessageBox.Show($"测试失败: {ex.Message}", "错误");
                 } finally {
+                    _service.OnTestAllTypesProgress -= onProgress;
                     btnTestAllTypes.Enabled = true;
+                    tsProgressBar.Value = 0;
                     tsLabel.Text = "就绪";
                 }
             };

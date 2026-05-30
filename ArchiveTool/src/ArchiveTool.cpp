@@ -445,34 +445,95 @@ ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
     // 清除历史消息，便于只查看本次测试日志
     ArchiveMsg::Ins().Clear();
 
-    std::vector<std::string> keys = ArchiveType::Ins().GetKeys();
-    for (const auto &t : keys) {
-        const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(t);
-        if (!format) {
-            callback(t.c_str(), 0, userData);
-            continue;
-        }
+    // 所有 BitFormat 条目（名称, 指针）
+    static const struct { const char *name; const bit7z::BitInFormat *fmt; } allFormats[] = {
+        {"Rar",      &bit7z::BitFormat::Rar},
+        {"Arj",      &bit7z::BitFormat::Arj},
+        {"Z",        &bit7z::BitFormat::Z},
+        {"Lzh",      &bit7z::BitFormat::Lzh},
+        {"Cab",      &bit7z::BitFormat::Cab},
+        {"Nsis",     &bit7z::BitFormat::Nsis},
+        {"Lzma",     &bit7z::BitFormat::Lzma},
+        {"Lzma86",   &bit7z::BitFormat::Lzma86},
+        {"Ppmd",     &bit7z::BitFormat::Ppmd},
+        {"Zstd",     &bit7z::BitFormat::Zstd},
+        {"LVM",      &bit7z::BitFormat::LVM},
+        {"AVB",      &bit7z::BitFormat::AVB},
+        {"LP",       &bit7z::BitFormat::LP},
+        {"Sparse",   &bit7z::BitFormat::Sparse},
+        {"APFS",     &bit7z::BitFormat::APFS},
+        {"Vhdx",     &bit7z::BitFormat::Vhdx},
+        {"COFF",     &bit7z::BitFormat::COFF},
+        {"Ext",      &bit7z::BitFormat::Ext},
+        {"VMDK",     &bit7z::BitFormat::VMDK},
+        {"VDI",      &bit7z::BitFormat::VDI},
+        {"QCow",     &bit7z::BitFormat::QCow},
+        {"GPT",      &bit7z::BitFormat::GPT},
+        {"Rar5",     &bit7z::BitFormat::Rar5},
+        {"IHex",     &bit7z::BitFormat::IHex},
+        {"Hxs",      &bit7z::BitFormat::Hxs},
+        {"TE",       &bit7z::BitFormat::TE},
+        {"UEFIc",    &bit7z::BitFormat::UEFIc},
+        {"UEFIs",    &bit7z::BitFormat::UEFIs},
+        {"SquashFS", &bit7z::BitFormat::SquashFS},
+        {"CramFS",   &bit7z::BitFormat::CramFS},
+        {"APM",      &bit7z::BitFormat::APM},
+        {"Mslz",     &bit7z::BitFormat::Mslz},
+        {"Flv",      &bit7z::BitFormat::Flv},
+        {"Swf",      &bit7z::BitFormat::Swf},
+        {"Swfc",     &bit7z::BitFormat::Swfc},
+        {"Ntfs",     &bit7z::BitFormat::Ntfs},
+        {"Fat",      &bit7z::BitFormat::Fat},
+        {"Mbr",      &bit7z::BitFormat::Mbr},
+        {"Vhd",      &bit7z::BitFormat::Vhd},
+        {"Pe",       &bit7z::BitFormat::Pe},
+        {"Elf",      &bit7z::BitFormat::Elf},
+        {"Macho",    &bit7z::BitFormat::Macho},
+        {"Udf",      &bit7z::BitFormat::Udf},
+        {"Xar",      &bit7z::BitFormat::Xar},
+        {"Mub",      &bit7z::BitFormat::Mub},
+        {"Hfs",      &bit7z::BitFormat::Hfs},
+        {"Dmg",      &bit7z::BitFormat::Dmg},
+        {"Compound", &bit7z::BitFormat::Compound},
+        {"Iso",      &bit7z::BitFormat::Iso},
+        {"Chm",      &bit7z::BitFormat::Chm},
+        {"Split",    &bit7z::BitFormat::Split},
+        {"Rpm",      &bit7z::BitFormat::Rpm},
+        {"Deb",      &bit7z::BitFormat::Deb},
+        {"Cpio",     &bit7z::BitFormat::Cpio},
+        {"Zip",      &bit7z::BitFormat::Zip},
+        {"BZip2",    &bit7z::BitFormat::BZip2},
+        {"SevenZip", &bit7z::BitFormat::SevenZip},
+        {"Xz",       &bit7z::BitFormat::Xz},
+        {"Wim",      &bit7z::BitFormat::Wim},
+        {"Tar",      &bit7z::BitFormat::Tar},
+        {"GZip",     &bit7z::BitFormat::GZip},
+    };
+    const int total = sizeof(allFormats) / sizeof(allFormats[0]);
+
+    for (int i = 0; i < total; ++i) {
+        const char *name = allFormats[i].name;
+        const bit7z::BitInFormat *format = allFormats[i].fmt;
 
         try {
             using namespace bit7z;
             BitFileExtractor extractor{::Get7zLibrary(), *format};
             if (!pwd.empty()) extractor.setPassword(pwd);
             extractor.test(bit7zPath.Get());
-            // 成功
-            callback(t.c_str(), 1, userData);
+            callback(name, 1, i + 1, total, userData);
         }
         catch (const bit7z::BitException &ex) {
             const char *msg = ex.what();
             std::error_code code = ex.code();
-            ArchiveMsg::Ins().AddLine(fmt::format("[{}]::[{}]{}", t, code.value(), msg));
-            callback(t.c_str(), 0, userData);
+            ArchiveMsg::Ins().AddLine(fmt::format("[{}]::[{}]{}", name, code.value(), msg));
+            callback(name, 0, i + 1, total, userData);
         }
         catch (...) {
-            ArchiveMsg::Ins().AddLine(fmt::format("[{}]::[{}]{}", t, -1, "unknown error"));
-            callback(t.c_str(), 0, userData);
+            ArchiveMsg::Ins().AddLine(fmt::format("[{}]::[{}]{}", name, -1, "unknown error"));
+            callback(name, 0, i + 1, total, userData);
         }
     }
 
     // 完成信号
-    callback(nullptr, 2, userData);
+    callback(nullptr, 2, total, total, userData);
 }
