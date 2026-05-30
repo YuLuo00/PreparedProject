@@ -32,6 +32,18 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
+        },
+        {
+            "name": "msvc",
+            "displayName": "MSVC x64 (Visual Studio 17 2022)",
+            "description": "Using MSVC via Visual Studio generator",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "generator": "Visual Studio 17 2022",
+            "architecture": "x64",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
         }
     ],
     "buildPresets": [
@@ -41,6 +53,16 @@
             "environment": {
                 "PATH": "C:/Program Files/w64devkit/bin;$penv{PATH}"
             }
+        },
+        {
+            "name": "msvc-debug",
+            "configurePreset": "msvc",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msvc-release",
+            "configurePreset": "msvc",
+            "configuration": "Release"
         }
     ]
 }

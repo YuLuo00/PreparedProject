@@ -97,25 +97,13 @@ static int WriteStrBuf(const std::string &src, char *buf, int bufSize)
 class Bit7zInputPath {
 public:
     explicit Bit7zInputPath(const char *pathU8)
-#ifdef __MINGW32__
-        : wpath_(CommonTool::Utf82Wstr(pathU8 ? pathU8 : ""))
-#else
-        : path_(pathU8 ? pathU8 : "")
-#endif
+        : path_(CommonTool::Utf82Local(pathU8 ? pathU8 : ""))
     {}
 
-#ifdef __MINGW32__
-    const std::wstring &Get() const { return wpath_; }
-#else
     const std::string &Get() const { return path_; }
-#endif
 
 private:
-#ifdef __MINGW32__
-    std::wstring wpath_;
-#else
     std::string path_;
-#endif
 };
 
 // -----------------------------------------------------------------------
@@ -125,22 +113,18 @@ private:
 ZYB_ARCHIVE_TOOL_API int ArchiveExtraTest(
     const char *file, const char *passwd, const char *type)
 {
-    Bit7zInputPath bit7zPath(file);
+    // Bit7zInputPath bit7zPath(file);
     std::string    typeU8   = type ? type : "Auto";
-#ifdef __MINGW32__
-    std::wstring   wpwd = CommonTool::Utf82Wstr(passwd ? passwd : "");
-#else
     std::string    wpwd = passwd ? passwd : "";
-#endif
 
     const bit7z::BitInFormat *format = ArchiveType::Ins().GetFormat(typeU8);
     try {
         using namespace bit7z;
         BitFileExtractor extractor{::Get7zLibrary(), *format};
-        if (!wpwd.empty()) {
-            extractor.setPassword(wpwd);
-        }
-        extractor.test(bit7zPath.Get());
+        // if (!wpwd.empty()) {
+            extractor.setPassword(passwd);
+        // }
+        extractor.test(file);
     }
     catch (const bit7z::BitException &ex) {
         char const *msg = ex.what();
@@ -404,13 +388,16 @@ ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
     void *userData)
 {
     // 临时硬编码测试：用 7z 格式尝试解压指定文件
-// #ifdef __MINGW32__
-    // const wchar_t *testPath = LR"(D:\Downloads\0000\0506迟迟115G.7z.001)";
-    // const wchar_t *testPwd  = L"kkshe";
-// #else
-    const char *testPath = R"(D:\Downloads\0000\0506迟迟115G.7z.001)";
+    const wchar_t *p = LR"(D:\Downloads\0000\0506迟迟115G.7z.001)";
+    // const wchar_t *p = LR"(D:\Downloads\0000\115G.7z.001)";
+    // const wchar_t *p = LR"("D:\Downloads\0000\kkshe虫虫.7z")";
+    auto sU8 = CommonTool::Wstr2Utf8(p);
+    auto pU8 = sU8.c_str();
+    auto sLocal = CommonTool::Wstr2Local(p);
+    auto pLocal = sLocal.c_str();
+    
+    const char *testPath = pLocal;
     const char *testPwd  = "kkshe";
-// #endif
 
     // 临时硬编码：只测 SevenZip 格式
     ArchiveMsg::Ins().Clear();
@@ -422,7 +409,7 @@ ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
         using namespace bit7z;
         BitFileExtractor extractor{::Get7zLibrary(), BitFormat::SevenZip};
         extractor.setPassword(testPwd);
-        extractor.test(testPath);
+        extractor.test(pU8);
         callback("SevenZip", 1, 1, 1, userData);
         return;
     }
@@ -434,8 +421,13 @@ ZYB_ARCHIVE_TOOL_API void TestPasswordAcrossAllTypes(
         callback("SevenZip", 0, 1, 1, userData);
         return;
     }
+    catch (const std::exception &ex) {
+        ArchiveMsg::Ins().AddLine(fmt::format("[SevenZip]::[std::exception] type={} what={}", typeid(ex).name(), ex.what()));
+        callback("SevenZip", 0, 1, 1, userData);
+        return;
+    }
     catch (...) {
-        ArchiveMsg::Ins().AddLine("[SevenZip]::[-1]unknown error");
+        ArchiveMsg::Ins().AddLine("[SevenZip]::[unknown] non-std exception (possible SEH / access violation)");
         callback("SevenZip", 0, 1, 1, userData);
         return;
     }

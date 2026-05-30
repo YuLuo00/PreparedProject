@@ -27,19 +27,24 @@
         },
         {
             "name": ".NET Launch",
-            "type": "cppdbg",
-            // "type": "coreclr",
+            "type": "coreclr",
             "request": "launch",
-            // "program": "${workspaceFolder}/ArchiveToolUI/bin/Debug/net8.0-windows/ArchiveToolUI.exe",
-            // D:\_project\PreparedProject\bin
             "program": "${workspaceFolder}/bin/ArchiveToolUI.exe",
             "args": [],
             "cwd": "${workspaceFolder}/bin",
-            "stopAtEntry": false,
-            "MIMode": "gdb",
-            "miDebuggerPath": "C:\\Program Files\\w64devkit\\bin\\gdb.exe",
             "console": "internalConsole",
             "preLaunchTask": "UI: Build (Debug)"
+        },
+        {
+            "name": "C++ DLL Launch (MSVC)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/ArchiveToolUI.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/bin",
+            "environment": [],
+            "console": "integratedTerminal",
+            // "preLaunchTask": "CMake: build"
         },
     ]
 }
