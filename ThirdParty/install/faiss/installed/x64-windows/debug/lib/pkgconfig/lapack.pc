@@ -1,0 +1,10 @@
+prefix=${pcfiledir}/../..
+libdir=${prefix}/lib
+
+Name: LAPACK
+Description: Implementation of LAPACK
+Version: 0
+Requires: lapack-reference
+Libs: 
+Cflags: 
+

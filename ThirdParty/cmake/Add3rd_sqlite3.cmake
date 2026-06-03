@@ -1,9 +1,9 @@
 # 使用前需设置变量: ProjectName
 # 示例:
 #   set(ProjectName MyTarget)
-#   include(${ProjectRootDir}/cmake/ThirdParty/sqlite3.cmake)
+#   include(${ProjectRootDir}/ThirdParty/cmake/Add3rd_sqlite3.cmake)
 
-set(unofficial-sqlite3_DIR "${ProjectRootDir}/ThirdParty/sqlite3/installed/x64-windows/share/unofficial-sqlite3/")
+set(unofficial-sqlite3_DIR "${ProjectRootDir}/ThirdParty/install/sqlite3/installed/x64-windows/share/unofficial-sqlite3/")
 message("unofficial-sqlite3_DIR == ${unofficial-sqlite3_DIR}")
 
 find_package(unofficial-sqlite3 CONFIG REQUIRED)
