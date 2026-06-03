@@ -1,0 +1,74 @@
+## 图库AI检索系统开发完成
+
+### 编译产物
+- **`bin/ImageSearch.dll`** (710 KB) — 主 DLL，MSVC x64 Release
+- **`lib/ImageSearch.lib`** — 导入库
+
+### 项目结构
+```
+test/
+├── CMakeLists.txt              # CMake 构建配置
+├── src/
+│   ├── ImageSearch.h/cpp       # DLL 导出接口 + 主入口
+│   ├── Database.h/cpp          # SQLite3 数据库操作
+│   ├── FaissIndex.h/cpp        # Faiss 向量索引管理
+│   ├── HttpClient.h/cpp        # HTTP 客户端（调用 Python 微服务）
+│   └── HttpServer.h/cpp        # cpp-httplib 内嵌 HTTP 服务器
+└── python/
+    ├── clip_service.py         # Chinese-CLIP 服务 (端口 18081)
+    ├── wd14_service.py         # WD14-tagger 服务 (端口 18082)
+    ├── insightface_service.py  # InsightFace 服务 (端口 18083)
+    ├── requirements.txt        # Python 依赖
+    └── start_services.bat      # 一键启动所有 Python 服务
+```
+
+### 三方库集成
+| 库 | 用途 | 路径 |
+|---|---|---|
+| SQLite3 | 数据库 | ThirdParty/install/sqlite3 |
+| nlohmann/json | JSON 解析 | ThirdParty/install/nlohmann |
+| cpp-httplib | HTTP 服务器/客户端 | ThirdParty/install/cpp-httplib |
+| Faiss | 向量索引 | ThirdParty/install/faiss |
+
+### DLL 导出接口
+- `ImageSearch_Init(dbPath)` / `ImageSearch_Shutdown()`
+- `ImageSearch_Query(queryJson, outBuf, bufSize)` — 结构化检索
+- `ImageSearch_QueryByText(text, filter, topK, outBuf, bufSize)` — 向量语义检索
+- `ImageSearch_AddImage(imageJson)` / `ImageSearch_AddImageBatch(jsonLines)`
+- `ImageSearch_StartHttpServer(port)` / `ImageSearch_StopHttpServer()`
+- `ImageSearch_ScanDirectory(dirPath)` — 扫描目录入库
+- `ImageSearch_RegisterCoser(coserJson)` / `ImageSearch_IdentifyCoser(imagePath, outBuf, bufSize)`
+- `ImageSearch_RebuildIndex(indexType)` — 重建 Faiss 索引
+
+### HTTP 服务端点（端口 18080）
+- `POST /query` — 结构化检索（标签/日期/路径/评分）
+- `POST /query_by_text` — 文字→CLIP→Faiss ANN 语义检索
+- `POST /add_image` / `POST /add_batch` — 添加图片
+- `POST /scan_directory` — 扫描目录
+- `POST /register_coser` / `POST /identify_coser` — Coser 人脸管理
+- `POST /rebuild_index` — 重建索引
+- `GET /health` / `GET /stats` — 状态查询
+
+### 使用方式
+1. 启动 Python 微服务：`test/python/start_services.bat`
+2. 在代码中调用 `ImageSearch_Init("path/to/image_library.db")`
+3. 调用 `ImageSearch_StartHttpServer(18080)` 启动 HTTP 服务
+4. AnythingLLM Custom Agent 通过 `fetch` 调用 `http://localhost:18080/...`
+
+> **注意**：Python 微服务支持 Mock 模式（模型未安装时返回随机向量），可直接测试 DLL 功能。实际使用需安装 `cn_clip`、`onnxruntime`、`insightface` 等依赖。
+
+
+
+三个失败的 test case 涉及的测试函数：
+
+1. **`TestFaissIndex()`** — 失败点：`Loaded index count = 3`
+   - 保存索引后重新加载，`GetCount()` 返回 0 而非 3
+   - 根因：`FaissIndex::Load()` 未更新 `count_`
+
+2. **`TestDllApi()`** — 失败点：`ScanDirectory skips existing, adds 0 new`
+   - 3张图片已通过 `AddImage`/`AddImageBatch` 入库，再次扫描应跳过，但返回非0
+   - 根因：`AddImage` 存储相对路径，`ScanDirectory` 返回绝对路径，`ImageExists` 比较失败
+
+3. **`TestHttpServer()`** — 失败点：`POST /query count=3`
+   - HTTP 查询期望返回3条记录，但实际返回更多
+   - 根因：由 `TestDllApi()` 中 ScanDirectory 重复添加图片导致

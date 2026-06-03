@@ -59,12 +59,23 @@ static std::vector<float> RandomVec(int dim, unsigned seed = 42) {
 
 // ─── 测试目录（临时） ─────────────────────────────────────────────────────────
 
-static const std::string TEST_DIR  = "./test_tmp";
-static const std::string DB_PATH   = TEST_DIR + "/test.db";
-static const std::string IDX_DIR   = TEST_DIR + "/faiss";
-static const std::string SCAN_DIR  = TEST_DIR + "/images";
+// 使用绝对路径，避免 ScanDirectory 返回绝对路径而 AddImage 存储相对路径导致 ImageExists 不匹配
+// 注意：不能在静态初始化时调用 fs::absolute，需在 main() 中初始化
+static std::string TEST_DIR;
+static std::string DB_PATH;
+static std::string IDX_DIR;
+static std::string SCAN_DIR;
+
+static void InitPaths() {
+    TEST_DIR = fs::absolute("./test_tmp").string();
+    DB_PATH  = TEST_DIR + "/test.db";
+    IDX_DIR  = TEST_DIR + "/faiss";
+    SCAN_DIR = TEST_DIR + "/images";
+}
 
 static void SetupTestDir() {
+    // 先清理旧数据，确保每次测试从干净状态开始
+    fs::remove_all(TEST_DIR);
     fs::create_directories(TEST_DIR);
     fs::create_directories(IDX_DIR);
     fs::create_directories(SCAN_DIR);
@@ -468,6 +479,7 @@ int main() {
     printf("  ImageSearch DLL Test Suite\n");
     printf("========================================\n");
 
+    InitPaths();
     SetupTestDir();
 
     TestDatabase();

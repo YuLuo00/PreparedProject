@@ -6,12 +6,15 @@
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexIDMap.h>
 #include <faiss/index_io.h>
+#include <faiss/index_factory.h>
 
 /// 封装单个 Faiss IndexFlatIP（内积/余弦相似度）
+/// 注意：faiss 由 MinGW 编译，MSVC 不能跨堆 delete faiss 对象
+/// 使用 index_factory 在 faiss 内部堆创建，用 raw pointer 持有（不 delete）
 class FaissIndex {
 public:
     explicit FaissIndex(int dim);
-    ~FaissIndex() = default;
+    ~FaissIndex();  // 不 delete index_，避免跨堆崩溃
 
     /// 加载已有索引文件，不存在则创建空索引
     bool Load(const std::string& indexPath);
@@ -49,7 +52,8 @@ public:
 private:
     int dim_;
     std::string indexPath_;
-    std::unique_ptr<faiss::IndexIDMap> index_;
+    faiss::IndexIDMap* index_ = nullptr;  // raw ptr，不跨堆 delete
+    int64_t count_ = 0;                   // 自维护计数（避免跨堆读 ntotal）
     mutable std::mutex mutex_;
 };
 

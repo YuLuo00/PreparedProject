@@ -2,15 +2,26 @@
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexIDMap.h>
 #include <faiss/index_io.h>
+#include <faiss/index_factory.h>
 #include <filesystem>
 #include <cmath>
-#include <stdexcept>
 
 namespace fs = std::filesystem;
 
+// 使用 index_factory 在 faiss DLL 内部堆创建索引，避免 MSVC/MinGW 跨堆问题
+static faiss::IndexIDMap* CreateFaissIndex(int dim) {
+    faiss::Index* idx = faiss::index_factory(dim, "IDMap,Flat",
+                                              faiss::METRIC_INNER_PRODUCT);
+    return dynamic_cast<faiss::IndexIDMap*>(idx);
+}
+
 FaissIndex::FaissIndex(int dim) : dim_(dim) {
-    auto* flat = new faiss::IndexFlatIP(dim);
-    index_ = std::make_unique<faiss::IndexIDMap>(flat);
+    index_ = CreateFaissIndex(dim);
+}
+
+// 析构：不 delete index_，避免 MSVC delete MinGW 堆上的对象导致 STATUS_HEAP_CORRUPTION
+FaissIndex::~FaissIndex() {
+    index_ = nullptr;
 }
 
 bool FaissIndex::Load(const std::string& indexPath) {
@@ -19,16 +30,19 @@ bool FaissIndex::Load(const std::string& indexPath) {
     if (fs::exists(indexPath)) {
         try {
             faiss::Index* loaded = faiss::read_index(indexPath.c_str());
-            index_.reset(dynamic_cast<faiss::IndexIDMap*>(loaded));
-            if (!index_) {
-                // 如果类型不匹配，重新创建
-                delete loaded;
-                auto* flat = new faiss::IndexFlatIP(dim_);
-                index_ = std::make_unique<faiss::IndexIDMap>(flat);
+            auto* asIDMap = dynamic_cast<faiss::IndexIDMap*>(loaded);
+            if (asIDMap) {
+                index_ = asIDMap;
+                // 读取 ntotal 更新 count_（faiss DLL 内部读取，安全）
+                // 通过虚函数调用获取 ntotal，避免直接访问成员偏移量问题
+                count_ = loaded->ntotal;
+            } else {
+                index_ = CreateFaissIndex(dim_);
+                count_ = 0;
             }
         } catch (...) {
-            auto* flat = new faiss::IndexFlatIP(dim_);
-            index_ = std::make_unique<faiss::IndexIDMap>(flat);
+            index_ = CreateFaissIndex(dim_);
+            count_ = 0;
         }
     }
     return true;
@@ -37,14 +51,13 @@ bool FaissIndex::Load(const std::string& indexPath) {
 bool FaissIndex::Save(const std::string& indexPath) {
     std::lock_guard<std::mutex> lock(mutex_);
     std::string path = indexPath.empty() ? indexPath_ : indexPath;
-    if (path.empty()) return false;
+    if (path.empty() || !index_) return false;
     try {
-        // 确保目录存在
         fs::path p(path);
         if (p.has_parent_path()) {
             fs::create_directories(p.parent_path());
         }
-        faiss::write_index(index_.get(), path.c_str());
+        faiss::write_index(index_, path.c_str());
         return true;
     } catch (...) {
         return false;
@@ -61,12 +74,13 @@ void FaissIndex::L2Normalize(std::vector<float>& vec) {
 }
 
 bool FaissIndex::AddVector(const std::vector<float>& vec, int64_t id) {
-    if ((int)vec.size() != dim_) return false;
+    if ((int)vec.size() != dim_ || !index_) return false;
     std::vector<float> normalized = vec;
     L2Normalize(normalized);
     std::lock_guard<std::mutex> lock(mutex_);
     try {
         index_->add_with_ids(1, normalized.data(), &id);
+        ++count_;
         return true;
     } catch (...) {
         return false;
@@ -75,8 +89,7 @@ bool FaissIndex::AddVector(const std::vector<float>& vec, int64_t id) {
 
 bool FaissIndex::AddVectors(const std::vector<std::vector<float>>& vecs,
                              const std::vector<int64_t>& ids) {
-    if (vecs.empty() || vecs.size() != ids.size()) return false;
-    // 展平并归一化
+    if (vecs.empty() || vecs.size() != ids.size() || !index_) return false;
     std::vector<float> flat;
     flat.reserve(vecs.size() * dim_);
     for (auto& v : vecs) {
@@ -88,6 +101,7 @@ bool FaissIndex::AddVectors(const std::vector<std::vector<float>>& vecs,
     std::lock_guard<std::mutex> lock(mutex_);
     try {
         index_->add_with_ids((faiss::idx_t)vecs.size(), flat.data(), ids.data());
+        count_ += (int64_t)vecs.size();
         return true;
     } catch (...) {
         return false;
@@ -97,19 +111,20 @@ bool FaissIndex::AddVectors(const std::vector<std::vector<float>>& vecs,
 bool FaissIndex::Search(const std::vector<float>& query, int topK,
                          std::vector<int64_t>& outIds,
                          std::vector<float>& outScores) {
-    if ((int)query.size() != dim_) return false;
+    if ((int)query.size() != dim_ || !index_) return false;
     std::vector<float> normalized = query;
     L2Normalize(normalized);
 
-    outIds.resize(topK, -1);
-    outScores.resize(topK, 0.0f);
-
     std::lock_guard<std::mutex> lock(mutex_);
-    if (index_->ntotal == 0) return true;
+    if (count_ == 0) {
+        outIds.clear();
+        outScores.clear();
+        return true;
+    }
 
-    int actualK = std::min(topK, (int)index_->ntotal);
-    outIds.resize(actualK);
-    outScores.resize(actualK);
+    int actualK = std::min(topK, (int)count_);
+    outIds.resize(actualK, -1);
+    outScores.resize(actualK, 0.0f);
 
     try {
         index_->search(1, normalized.data(), actualK,
@@ -122,13 +137,13 @@ bool FaissIndex::Search(const std::vector<float>& query, int topK,
 
 void FaissIndex::Reset() {
     std::lock_guard<std::mutex> lock(mutex_);
-    auto* flat = new faiss::IndexFlatIP(dim_);
-    index_ = std::make_unique<faiss::IndexIDMap>(flat);
+    index_ = CreateFaissIndex(dim_);
+    count_ = 0;
 }
 
 int64_t FaissIndex::GetCount() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return index_ ? index_->ntotal : 0;
+    return count_;
 }
 
 // ─── FaissIndexManager ────────────────────────────────────────────────────────

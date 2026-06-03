@@ -53,6 +53,38 @@ include(${ProjectRootDir}/ThirdParty/cmake/Add3rd_cpp_httplib.cmake)
 # Faiss
 include(${ProjectRootDir}/ThirdParty/cmake/Add3rd_faiss.cmake)
 
+# ─── 测试可执行程序 ───────────────────────────────────────────────────────────
+
+add_executable(ImageSearchTest
+    test/test_main.cpp
+    src/Database.cpp
+    src/FaissIndex.cpp
+    src/HttpClient.cpp
+    src/HttpServer.cpp
+    src/ImageSearch.cpp
+)
+
+# 测试程序直接编译所有源文件（不链接 DLL），定义 IMAGESEARCH_EXPORTS 使函数可见
+target_compile_definitions(ImageSearchTest PRIVATE
+    IMAGESEARCH_EXPORTS
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN
+)
+
+target_compile_features(ImageSearchTest PRIVATE cxx_std_17)
+
+if(MSVC)
+    target_compile_options(ImageSearchTest PRIVATE /utf-8 /W3 /wd4996)
+endif()
+
+# 直接链接已经 find_package 过的目标（DLL 目标已经 include 过 cmake 文件）
+target_link_libraries(ImageSearchTest PRIVATE
+    unofficial::sqlite3::sqlite3
+    nlohmann_json::nlohmann_json
+    httplib::httplib
+    faiss
+)
+
 # ─── 安装 ─────────────────────────────────────────────────────────────────────
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
