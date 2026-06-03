@@ -1,0 +1,9 @@
+/.idea 
+/bin/ 
+/lib/ 
+/test/build/ 
+/.vscode/ 
+*.user 
+*.suo 
+__pycache__/ 
+*.pyc
