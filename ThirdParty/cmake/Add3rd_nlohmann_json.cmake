@@ -3,7 +3,7 @@
 #   set(ProjectName MyTarget)
 #   include(${ProjectRootDir}/cmake/ThirdParty/nlohmann_json.cmake)
 
-set(nlohmann_json_DIR "${ProjectRootDir}/ThirdParty/nlohmann/installed/x64-windows/share/nlohmann_json/")
+set(nlohmann_json_DIR "${ProjectRootDir}/ThirdParty/install/nlohmann/installed/x64-windows/share/nlohmann_json/")
 message("nlohmann_json_DIR == ${nlohmann_json_DIR}")
 
 find_package(nlohmann_json CONFIG REQUIRED)
