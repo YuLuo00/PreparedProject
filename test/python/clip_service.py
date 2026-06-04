@@ -35,7 +35,7 @@ def load_model():
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info(f"Loading Chinese-CLIP ViT-L/14 on {device}...")
-        model, preprocess = load_from_name("ViT-L/14", device=device, download_root="./models")
+        model, preprocess = load_from_name("ViT-L-14", device=device, download_root="./models")
         model.eval()
         tokenize = clip.tokenize
         logger.info("Chinese-CLIP model loaded successfully")
