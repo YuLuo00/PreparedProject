@@ -124,6 +124,40 @@ foreach(_dll ${_faiss_mingw_dlls})
     install(FILES "${_faiss_release_bin}/${_dll}" DESTINATION bin CONFIGURATIONS Release)
 endforeach()
 
+# ─── DLL Full Test（链接 import lib，不编译 DLL 源码）────────────────────────
+
+add_executable(ImageSearchDllTest
+    test/dll_full_test.cpp
+)
+
+target_compile_definitions(ImageSearchDllTest PRIVATE
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN
+)
+
+target_compile_features(ImageSearchDllTest PRIVATE cxx_std_17)
+
+if(MSVC)
+    target_compile_options(ImageSearchDllTest PRIVATE /utf-8 /W3 /wd4996)
+endif()
+
+# 链接 DLL 导入库（不编译源码）
+target_link_libraries(ImageSearchDllTest PRIVATE
+    ${ProjectRootDir}/lib/ImageSearch.lib
+    nlohmann_json::nlohmann_json
+    httplib::httplib
+)
+
+# 包含 DLL 公共头文件目录（include/ImageSearch/ImageSearch.h）
+target_include_directories(ImageSearchDllTest PRIVATE
+    ${ProjectRootDir}/include
+)
+
+# 安装 DLL Full Test 可执行文件
+install(TARGETS ImageSearchDllTest
+    RUNTIME DESTINATION bin
+)
+
 # ─── 输出信息 ─────────────────────────────────────────────────────────────────
 message(STATUS "=== ImageSearch DLL Configuration ===")
 message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
