@@ -104,6 +104,26 @@ install(FILES
     DESTINATION bin
 )
 
+# 额外安装 faiss 的间接依赖 DLL（openblas/lapack 及 MinGW 运行时，未被 Add_Imported_Location 捕获）
+set(_faiss_debug_bin "${ProjectRootDir}/ThirdParty/install/faiss/installed/x64-windows/debug/bin")
+set(_faiss_release_bin "${ProjectRootDir}/ThirdParty/install/faiss/installed/x64-windows/bin")
+set(_faiss_mingw_dlls
+    libgfortran-5.dll
+    libgcc_s_seh-1.dll
+    libquadmath-0.dll
+    libwinpthread-1.dll
+)
+
+install(FILES "${_faiss_debug_bin}/openblas.dll" "${_faiss_debug_bin}/liblapack.dll"
+    DESTINATION bin CONFIGURATIONS Debug)
+install(FILES "${_faiss_release_bin}/openblas.dll" "${_faiss_release_bin}/liblapack.dll"
+    DESTINATION bin CONFIGURATIONS Release)
+
+foreach(_dll ${_faiss_mingw_dlls})
+    install(FILES "${_faiss_debug_bin}/${_dll}"   DESTINATION bin CONFIGURATIONS Debug)
+    install(FILES "${_faiss_release_bin}/${_dll}" DESTINATION bin CONFIGURATIONS Release)
+endforeach()
+
 # ─── 输出信息 ─────────────────────────────────────────────────────────────────
 message(STATUS "=== ImageSearch DLL Configuration ===")
 message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
