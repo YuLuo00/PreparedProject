@@ -59,16 +59,33 @@ test/
 
 
 
-三个失败的 test case 涉及的测试函数：
+DLL Full Test 完成，**131 passed, 0 failed**。
 
-1. **`TestFaissIndex()`** — 失败点：`Loaded index count = 3`
-   - 保存索引后重新加载，`GetCount()` 返回 0 而非 3
-   - 根因：`FaissIndex::Load()` 未更新 `count_`
+## 完成内容
 
-2. **`TestDllApi()`** — 失败点：`ScanDirectory skips existing, adds 0 new`
-   - 3张图片已通过 `AddImage`/`AddImageBatch` 入库，再次扫描应跳过，但返回非0
-   - 根因：`AddImage` 存储相对路径，`ScanDirectory` 返回绝对路径，`ImageExists` 比较失败
+### 新增文件
+- **`test/test/dll_full_test.cpp`** — ImageSearch DLL 全功能测试，共 10 个 Section，131 个断言
 
-3. **`TestHttpServer()`** — 失败点：`POST /query count=3`
-   - HTTP 查询期望返回3条记录，但实际返回更多
-   - 根因：由 `TestDllApi()` 中 ScanDirectory 重复添加图片导致
+### 测试覆盖范围
+
+| Section | 内容 | 测试数 |
+|---------|------|--------|
+| 1 | DLL 生命周期（Init/Shutdown 幂等性、null 参数） | 7 |
+| 2 | AddImage（错误路径、null、无效JSON、正常添加） | 9 |
+| 3 | Query 结构化检索（top_k、rating_min、path_prefix、date_from/to、字段完整性） | 14 |
+| 4 | AddImageBatch（批量添加、混合路径、空输入） | 5 |
+| 5 | ScanDirectory（递归扫描、去重、非jpg跳过） | 4 |
+| 6 | RebuildIndex（clip/wd14/face/all/null/无效类型） | 6 |
+| 7 | QueryByText（CLIP不可用优雅降级） | 3 |
+| 8 | Coser 操作（RegisterCoser/IdentifyCoser，InsightFace不可用优雅降级） | 6 |
+| 9 | HTTP Server 全端点（GET /health、/stats，POST /query、/add_image、/add_batch、/scan_directory、/rebuild_index、/query_by_text、/register_coser、/identify_coser） | 67 |
+| 10 | 边界条件（未初始化调用、极大top_k、超小缓冲区） | 10 |
+
+### CMakeLists.txt 更新
+新增 `ImageSearchDllTest` 目标，链接 `ImageSearch.lib`（import lib），不编译 DLL 源码，通过 `cmake --target install` 自动部署到 `bin/`。
+
+### 关键设计
+- Python 服务（CLIP/WD14/InsightFace）不可用时优雅降级，不计为失败
+- 用 `nlohmann::json` 构建 JSON 对象，自动处理 Windows 路径反斜杠转义
+- HTTP 客户端读超时设为 120s，兼容 WD14 服务的 60s 读超时
+- `setvbuf(stdout, nullptr, _IONBF, 0)` 禁用输出缓冲，确保挂起时也能看到进度
