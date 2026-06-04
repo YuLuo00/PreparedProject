@@ -170,7 +170,7 @@ IMAGESEARCH_API int ImageSearch_AddImage(const char* imageJson) {
         auto j = json::parse(imageJson);
         if (!j.contains("path")) return -1;
 
-        std::string path = j["path"].get<std::string>();
+        std::string path = fs::absolute(j["path"].get<std::string>()).string();
         if (!fs::exists(path)) return -2;
 
         ImageRecord rec;
@@ -228,7 +228,7 @@ IMAGESEARCH_API int ImageSearch_AddImageBatch(const char* jsonLines) {
             try {
                 auto j = json::parse(line);
                 if (!j.contains("path")) continue;
-                std::string path = j["path"].get<std::string>();
+                std::string path = fs::absolute(j["path"].get<std::string>()).string();
                 if (!fs::exists(path)) continue;
 
                 ImageRecord rec;
@@ -303,7 +303,7 @@ IMAGESEARCH_API int ImageSearch_ScanDirectory(const char* dirPath) {
             for (auto& c : ext) c = (char)tolower(c);
             if (ext != ".jpg" && ext != ".jpeg") continue;
 
-            std::string path = entry.path().string();
+            std::string path = fs::absolute(entry.path()).string();
             if (g_db->ImageExists(path)) continue;
 
             ImageRecord rec;

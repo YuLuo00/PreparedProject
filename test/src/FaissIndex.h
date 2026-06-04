@@ -6,11 +6,12 @@
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexIDMap.h>
 #include <faiss/index_io.h>
-#include <faiss/index_factory.h>
 
 /// 封装单个 Faiss IndexFlatIP（内积/余弦相似度）
-/// 注意：faiss 由 MinGW 编译，MSVC 不能跨堆 delete faiss 对象
-/// 使用 index_factory 在 faiss 内部堆创建，用 raw pointer 持有（不 delete）
+/// 实现方式经过逐步验证（Step1-Step9 全部通过）：
+///   创建空索引：IndexFlatIP + IndexIDMap(栈上) + write_index → read_index
+///   加载索引：read_index → ntotal 可正常读取
+///   不 delete read_index 返回的指针（避免跨堆崩溃）
 class FaissIndex {
 public:
     explicit FaissIndex(int dim);
@@ -20,11 +21,9 @@ public:
     bool Load(const std::string& indexPath);
 
     /// 保存索引到文件
-    bool Save(const std::string& indexPath);
+    bool Save(const std::string& indexPath = "");
 
-    /// 添加向量（已 L2 归一化），返回分配的 faiss id
-    /// @param vec  float 向量（长度必须等于 dim_）
-    /// @param id   外部指定的 id（用于 IDMap）
+    /// 添加向量（自动 L2 归一化）
     bool AddVector(const std::vector<float>& vec, int64_t id);
 
     /// 批量添加
@@ -32,10 +31,6 @@ public:
                     const std::vector<int64_t>& ids);
 
     /// 搜索最近邻
-    /// @param query  查询向量（已 L2 归一化）
-    /// @param topK   返回数量
-    /// @param outIds     输出 id 列表
-    /// @param outScores  输出相似度分数列表
     bool Search(const std::vector<float>& query, int topK,
                 std::vector<int64_t>& outIds,
                 std::vector<float>& outScores);
@@ -53,7 +48,7 @@ private:
     int dim_;
     std::string indexPath_;
     faiss::IndexIDMap* index_ = nullptr;  // raw ptr，不跨堆 delete
-    int64_t count_ = 0;                   // 自维护计数（避免跨堆读 ntotal）
+    int64_t count_ = 0;
     mutable std::mutex mutex_;
 };
 
