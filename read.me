@@ -89,3 +89,21 @@ DLL Full Test 完成，**131 passed, 0 failed**。
 - 用 `nlohmann::json` 构建 JSON 对象，自动处理 Windows 路径反斜杠转义
 - HTTP 客户端读超时设为 120s，兼容 WD14 服务的 60s 读超时
 - `setvbuf(stdout, nullptr, _IONBF, 0)` 禁用输出缓冲，确保挂起时也能看到进度
+
+三个模型的下载链接：
+
+**1. Chinese-CLIP ViT-L-14（1.6GB）**
+- 文件：`clip_cn_vit-l-14.pt`
+- 下载：https://huggingface.co/OFA-Sys/chinese-clip-vit-large-patch14
+- 存放：`test/python/models/clip_cn_vit-l-14.pt`
+
+**2. WD14 ViT-L ONNX（~1.3GB）**
+- 模型：https://huggingface.co/SmilingWolf/wd-v1-4-vit-tagger-v2/resolve/main/model.onnx
+- 标签：https://huggingface.co/SmilingWolf/wd-v1-4-vit-tagger-v2/resolve/main/selected_tags.csv
+- 存放：`test/python/models/wd14/`
+
+**3. InsightFace buffalo_l（~500MB）**
+- 下载：https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip
+- 解压到：`test/python/models/insightface/models/buffalo_l/`
+
+或直接运行 `python test/python/download_models.py` 自动下载全部模型。
