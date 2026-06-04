@@ -1,0 +1,87 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 20, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_MAKE_PROGRAM": "C:/vcpkg/downloads/tools/ninja-1.13.2-windows/ninja.exe",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/.."
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "MSVC Release (Ninja)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "MSVC Debug (Ninja)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "vs-base",
+      "hidden": true,
+      "generator": "Visual Studio 17 2022",
+      "architecture": {
+        "value": "x64",
+        "strategy": "set"
+      },
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/.."
+      }
+    },
+    {
+      "name": "vs-debug",
+      "displayName": "MSVC Debug (Visual Studio 17 2022)",
+      "inherits": "vs-base",
+      "binaryDir": "${sourceDir}/build"
+    },
+    {
+      "name": "vs-release",
+      "displayName": "MSVC Release (Visual Studio 17 2022)",
+      "inherits": "vs-base",
+      "binaryDir": "${sourceDir}/build/vs-release"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "debug00",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "vs-debug",
+      "displayName": "VS Debug Build + Install",
+      "configurePreset": "vs-debug",
+      "configuration": "Debug",
+      "targets": ["install"]
+    },
+    {
+      "name": "vs-release",
+      "displayName": "VS Release Build + Install",
+      "configurePreset": "vs-release",
+      "configuration": "Release",
+      "targets": ["install"]
+    }
+  ]
+}
