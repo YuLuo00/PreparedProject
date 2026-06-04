@@ -1,6 +1,8 @@
 /.idea 
 /bin/ 
-/lib/ 
+/lib/
+/include
+/test_tmp
 /test/build/ 
 /.vscode/ 
 *.user 
