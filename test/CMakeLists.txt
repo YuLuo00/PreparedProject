@@ -96,6 +96,14 @@ install(FILES ${HEADERS} DESTINATION include/ImageSearch)
 # 安装运行时 DLL 依赖
 Install_Imported_Locations()
 
+# 额外安装 cpp-httplib 的 brotli DLL（httplib 依赖，但未被 Add_Imported_Location 捕获）
+install(FILES
+    "${ProjectRootDir}/ThirdParty/install/cpp-httplib/installed/x64-windows/bin/brotlicommon.dll"
+    "${ProjectRootDir}/ThirdParty/install/cpp-httplib/installed/x64-windows/bin/brotlidec.dll"
+    "${ProjectRootDir}/ThirdParty/install/cpp-httplib/installed/x64-windows/bin/brotlienc.dll"
+    DESTINATION bin
+)
+
 # ─── 输出信息 ─────────────────────────────────────────────────────────────────
 message(STATUS "=== ImageSearch DLL Configuration ===")
 message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
