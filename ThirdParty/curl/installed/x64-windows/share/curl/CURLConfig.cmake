@@ -47,16 +47,44 @@ endmacro()
 
 ####################################################################################
 
+if(NOT DEFINED CURL_USE_PKGCONFIG)
+  if(UNIX OR (MSVC AND VCPKG_TOOLCHAIN))  # Keep in sync with root CMakeLists.txt
+    set(CURL_USE_PKGCONFIG ON)
+  else()
+    set(CURL_USE_PKGCONFIG OFF)
+  endif()
+endif()
+
 include(CMakeFindDependencyMacro)
-if()
-  find_dependency(OpenSSL )
+if(ON)
+  find_dependency(OpenSSL 3)
 endif()
 if(ON)
   find_dependency(ZLIB 1)
 endif()
-if()
-  find_dependency(c-ares)
+
+if("")
+  find_dependency(c-ares CONFIG)
+endif()
+if("OFF")
+  find_dependency(Libssh2 CONFIG)
+endif()
+if("OFF")
+    find_dependency(unofficial-brotli CONFIG)
+endif()
+if("OFF")
+    find_dependency(zstd CONFIG)
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/CURLTargets.cmake")
 check_required_components("CURL")
+
+# Alias for either shared or static library
+if(NOT TARGET CURL::libcurl)
+  add_library(CURL::libcurl INTERFACE IMPORTED)
+  set_target_properties(CURL::libcurl PROPERTIES INTERFACE_LINK_LIBRARIES CURL::libcurl_shared)
+endif()
+
+# For compatibility with CMake's FindCURL.cmake
+set(CURL_LIBRARIES CURL::libcurl)
+set_and_check(CURL_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/include")
