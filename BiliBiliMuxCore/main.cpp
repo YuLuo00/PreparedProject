@@ -1,6 +1,7 @@
 ﻿#define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <shellapi.h>
 
 extern "C"
 {
@@ -251,18 +252,13 @@ void my_ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vl)
     // 一般建议关掉，否则会重复打印
     // av_log_default_callback(ptr, level, fmt, vl);
 }
-void GlobalInit()
+void GlobalInit(const Logger::Options &loggerOptions)
 {
-    Logger::Init();
-    LOG_INFO(LogGroup::MUX, "start muxing {}", 123);
-    LOG_DEBUG(LogGroup::DECODE, "frame pts={}", 456);
+    Logger::Init(loggerOptions);
     Logger::SetLevel(LogGroup::MUX, spdlog::level::info);
     Logger::SetLevel(LogGroup::DECODE, spdlog::level::err);
     Logger::SetLevel(LogGroup::FFMPEG, spdlog::level::debug);
     Logger::SetLevel(LogGroup::IO, spdlog::level::debug);
-
-    LOG_DEBUG(LogGroup::MUX, "不会打印");  // 被过滤
-    LOG_ERROR(LogGroup::DECODE, "会打印"); // ✔
     av_log_set_callback(my_ffmpeg_log_callback);
 }
 
@@ -469,45 +465,201 @@ int main_test()
 
 extern int add_cover_to_video(const char* output_filename, const char* input_filename, const char* image_filename);
 
-int main()
+struct AppOptions
 {
-    GlobalInit();
-    //return main_test();
+    fs::path root;
+    fs::path finished;
+    bool showHelp = false;
+    bool runTest = false;
+    Logger::Options logger;
+};
+
+std::vector<std::wstring> GetCommandLineArgs()
+{
+    std::vector<std::wstring> args;
+
+    int argc = 0;
+    LPWSTR *argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if (argv == nullptr) {
+        return args;
+    }
+
+    args.reserve(static_cast<size_t>(argc));
+    for (int i = 0; i < argc; ++i) {
+        args.emplace_back(argv[i]);
+    }
+    LocalFree(argv);
+    return args;
+}
+
+std::string ArgToUtf8(const std::wstring &arg)
+{
+    return Tools::wstring_to_utf8(arg);
+}
+
+void PrintUsage()
+{
+    std::cout
+        << "Usage:\n"
+        << "  BiliBiliMuxCore.exe --path <bilibili-cache-root> [options]\n\n"
+        << "Options:\n"
+        << "  --path <dir>             Root directory to scan. Required unless --test is used.\n"
+        << "  --finished <dir>         Directory for processed folders. Default: <path>\\..\\finished.\n"
+        << "  --log-file <file>        Log file path. Default: logs/app.log.\n"
+        << "  --console-level <level>  Console threshold: trace/debug/info/warn/err/critical/off.\n"
+        << "  --file-level <level>     File threshold: trace/debug/info/warn/err/critical/off.\n"
+        << "  --no-console-log         Disable console log output.\n"
+        << "  --no-file-log            Disable file log output.\n"
+        << "  --test                   Run the existing diagnostic test entry.\n"
+        << "  --help                   Show this help.\n";
+}
+
+bool ParseOptions(const std::vector<std::wstring> &args, AppOptions &options, std::string &error)
+{
+    for (size_t i = 1; i < args.size(); ++i) {
+        const std::wstring &arg = args[i];
+
+        auto requireValue = [&](const char *name) -> const std::wstring * {
+            if (i + 1 >= args.size()) {
+                error = std::string("Missing value for ") + name;
+                return nullptr;
+            }
+            return &args[++i];
+        };
+
+        if (arg == L"--help" || arg == L"-h") {
+            options.showHelp = true;
+        }
+        else if (arg == L"--test") {
+            options.runTest = true;
+        }
+        else if (arg == L"--path") {
+            const std::wstring *value = requireValue("--path");
+            if (value == nullptr) {
+                return false;
+            }
+            options.root = fs::path(*value);
+        }
+        else if (arg == L"--finished") {
+            const std::wstring *value = requireValue("--finished");
+            if (value == nullptr) {
+                return false;
+            }
+            options.finished = fs::path(*value);
+        }
+        else if (arg == L"--log-file") {
+            const std::wstring *value = requireValue("--log-file");
+            if (value == nullptr) {
+                return false;
+            }
+            options.logger.file_path = Tools::wstring_to_utf8(*value);
+        }
+        else if (arg == L"--console-level") {
+            const std::wstring *value = requireValue("--console-level");
+            if (value == nullptr) {
+                return false;
+            }
+            options.logger.console_level = Logger::ParseLevel(ArgToUtf8(*value), options.logger.console_level);
+        }
+        else if (arg == L"--file-level") {
+            const std::wstring *value = requireValue("--file-level");
+            if (value == nullptr) {
+                return false;
+            }
+            options.logger.file_level = Logger::ParseLevel(ArgToUtf8(*value), options.logger.file_level);
+        }
+        else if (arg == L"--no-console-log") {
+            options.logger.enable_console = false;
+        }
+        else if (arg == L"--no-file-log") {
+            options.logger.enable_file = false;
+        }
+        else {
+            error = "Unknown argument: " + ArgToUtf8(arg);
+            return false;
+        }
+    }
+
+    if (!options.showHelp && !options.runTest && options.root.empty()) {
+        error = "Missing required argument: --path <dir>";
+        return false;
+    }
+
+    if (options.finished.empty() && !options.root.empty()) {
+        const fs::path parent = options.root.has_parent_path() ? options.root.parent_path() : fs::current_path();
+        options.finished = parent / "finished";
+    }
+
+    return true;
+}
+
+int RunMux(const AppOptions &options)
+{
     LOG_INFO(LogGroup::DEFAULT, "--------------------------------------run begin-----------------------------------");
+    LOG_INFO(LogGroup::IO, "Scan path: {}", LOGUTF8(options.root.wstring()));
+    LOG_INFO(LogGroup::IO, "Finished path: {}", LOGUTF8(options.finished.wstring()));
 
+    if (!fs::exists(options.root) || !fs::is_directory(options.root)) {
+        LOG_ERROR(LogGroup::IO, "Path does not exist or is not a directory: {}", LOGUTF8(options.root.wstring()));
+        return 2;
+    }
 
-    //return add_cover_to_video(R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\cover.mp4)",
-    //    R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\【小巫】不行啊♥不故作欢笑是不行的.mp4)",
-    //    R"(C:\Users\Administrator\Desktop\bili_zip_1\type1-1\13369929\【小巫】不行啊♥不故作欢笑是不行的\80\【小巫】不行啊♥不故作欢笑是不行的_cover.jpg)");
+    fs::create_directories(options.finished);
 
-    fs::path root = R"(C:\Users\Administrator\Desktop\bili_zip_1\00)";
-    auto matches = BiliCache::CollectBiliFoldersStructured(root);
-    MediaSubdir aimSub;
-    MatchCollector col(R"(C:\Users\Administrator\Desktop\bili_zip_1\finished)");
+    auto matches = BiliCache::CollectBiliFoldersStructured(options.root);
+    MatchCollector col(options.finished);
+    int lastError = 0;
+
     for (const auto &m : matches) {
         std::string title = BiliCache::GetTitle(m);
-        std::wstring titleWstr = Tools::utf8_to_wstring(title);
         LOG_INFO(LogGroup::IO, "{}", LOGUTF8(title));
-        for (size_t i = 0; i < m.media_subdirs.size(); i++) {
+
+        for (size_t i = 0; i < m.media_subdirs.size(); ++i) {
             MediaSubdir sub = m.media_subdirs[i];
-            mainPipeline(sub);
-            col.RecordDone(&sub);
-        }
-        if (titleWstr == LR"(【小巫】不行啊♥不故作欢笑是不行的)") {
-            if (!m.media_subdirs.empty()) {
-                aimSub = m.media_subdirs.front();
+            const int ret = mainPipeline(sub);
+            if (ret != 0) {
+                lastError = ret;
+                LOG_ERROR(LogGroup::MUX, "Pipeline failed: ret={}, subdir={}", ret, LOGUTF8(sub.dir.wstring()));
             }
-            //break;
+            col.RecordDone(&sub);
         }
     }
 
     LOG_INFO(LogGroup::IO, "Found {} matching folders.", matches.size());
-
-    if (aimSub.match == nullptr) {
-        LOG_ERROR(LogGroup::MUX, "没有找到目标 MediaSubdir");
-        return -1;
+    if (matches.empty()) {
+        LOG_WARN(LogGroup::IO, "No matching folders found.");
     }
 
-        return -1;
-    //return mainPipeline(aimSub);
+    LOG_INFO(LogGroup::DEFAULT, "--------------------------------------run end-----------------------------------");
+    return lastError;
+}
+
+int main()
+{
+    AppOptions options;
+    std::string error;
+    const std::vector<std::wstring> args = GetCommandLineArgs();
+
+    if (!ParseOptions(args, options, error)) {
+        std::cout << "Error: " << error << "\n\n";
+        PrintUsage();
+        return 2;
+    }
+
+    if (options.showHelp) {
+        PrintUsage();
+        return 0;
+    }
+
+    try {
+        GlobalInit(options.logger);
+        if (options.runTest) {
+            return main_test();
+        }
+        return RunMux(options);
+    }
+    catch (const std::exception &e) {
+        LOG_CRITICAL(LogGroup::DEFAULT, "Unhandled exception: {}", e.what());
+        return 1;
+    }
 }
