@@ -40,6 +40,7 @@ extern "C"
 #include <fstream>
 #include <iostream>
 #include <thread>
+#include <memory>
 using namespace std;
 
 #include <libavformat/avformat.h>
@@ -525,7 +526,7 @@ void PrintUsage()
         << "Options:\n"
         << "  --path <dir>             Root directory to scan. Required unless --test is used.\n"
         << "  --output <dir>           Directory for generated mp4 files. Default: each source media folder.\n"
-        << "  --finished <dir>         Directory for processed folders. Default: <path>\\..\\finished.\n"
+        << "  --finished <dir>         Move processed folders to this directory. Disabled when omitted.\n"
         << "  --log-file <file>        Log file path. Default: logs/app.log.\n"
         << "  --console-level <level>  Console threshold: trace/debug/info/warn/err/critical/off.\n"
         << "  --file-level <level>     File threshold: trace/debug/info/warn/err/critical/off.\n"
@@ -613,11 +614,6 @@ bool ParseOptions(const std::vector<std::wstring> &args, AppOptions &options, st
         return false;
     }
 
-    if (options.finished.empty() && !options.root.empty()) {
-        const fs::path parent = options.root.has_parent_path() ? options.root.parent_path() : fs::current_path();
-        options.finished = parent / "finished";
-    }
-
     return true;
 }
 
@@ -627,20 +623,24 @@ int RunMux(const AppOptions &options)
     LOG_INFO(LogGroup::IO, "Scan path: {}", LOGUTF8(options.root.wstring()));
     const std::string outputLogPath = options.output.empty() ? std::string("<source media folder>") : LOGUTF8(options.output.wstring());
     LOG_INFO(LogGroup::IO, "Output path: {}", outputLogPath);
-    LOG_INFO(LogGroup::IO, "Finished path: {}", LOGUTF8(options.finished.wstring()));
+    const std::string finishedLogPath = options.finished.empty() ? std::string("<disabled>") : LOGUTF8(options.finished.wstring());
+    LOG_INFO(LogGroup::IO, "Finished path: {}", finishedLogPath);
 
     if (!fs::exists(options.root) || !fs::is_directory(options.root)) {
         LOG_ERROR(LogGroup::IO, "Path does not exist or is not a directory: {}", LOGUTF8(options.root.wstring()));
         return 2;
     }
 
-    fs::create_directories(options.finished);
+    std::unique_ptr<MatchCollector> col;
+    if (!options.finished.empty()) {
+        fs::create_directories(options.finished);
+        col = std::make_unique<MatchCollector>(options.finished);
+    }
     if (!options.output.empty()) {
         fs::create_directories(options.output);
     }
 
     auto matches = BiliCache::CollectBiliFoldersStructured(options.root);
-    MatchCollector col(options.finished);
     int lastError = 0;
 
     for (const auto &m : matches) {
@@ -654,7 +654,9 @@ int RunMux(const AppOptions &options)
                 lastError = ret;
                 LOG_ERROR(LogGroup::MUX, "Pipeline failed: ret={}, subdir={}", ret, LOGUTF8(sub.dir.wstring()));
             }
-            col.RecordDone(&sub);
+            if (col) {
+                col->RecordDone(&sub);
+            }
         }
     }
 
