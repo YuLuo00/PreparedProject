@@ -194,6 +194,24 @@ std::filesystem::path BuildCoverFilePathImpl(const MediaInfo &mediaInfo,
     return outputDir / std::filesystem::path(fileNameUtf8);
 }
 
+fs::path BuildUniqueOutputPath(const fs::path &outputDir, const std::wstring &baseName, const std::wstring &extension)
+{
+    fs::path candidate = outputDir / (baseName + extension);
+    if (!fs::exists(candidate)) {
+        return candidate;
+    }
+
+    for (int i = 2; i < 10000; ++i) {
+        candidate = outputDir / (baseName + L"_" + std::to_wstring(i) + extension);
+        if (!fs::exists(candidate)) {
+            return candidate;
+        }
+    }
+
+    return outputDir / (baseName + L"_" + std::to_wstring(
+        std::chrono::system_clock::now().time_since_epoch().count()) + extension);
+}
+
 
 #include <mutex>
 #include <cstdarg>
@@ -262,7 +280,7 @@ void GlobalInit(const Logger::Options &loggerOptions)
     av_log_set_callback(my_ffmpeg_log_callback);
 }
 
-int mainPipeline(const MediaSubdir &sub)
+int mainPipeline(const MediaSubdir &sub, const fs::path &outputRoot = fs::path())
 {
     const Match *match = sub.match;
     if (match == nullptr) {
@@ -306,15 +324,16 @@ int mainPipeline(const MediaSubdir &sub)
     }
 
     const std::wstring safeTitle = Tools::sanitize_windows_filename(outBase);
-    const fs::path outputDir = sub.dir.empty() ? fs::current_path() : sub.dir;
-    const fs::path outputPath = outputDir / (safeTitle + L".mp4");
+    const fs::path outputDir = outputRoot.empty() ? (sub.dir.empty() ? fs::current_path() : sub.dir) : outputRoot;
+    fs::create_directories(outputDir);
+    const fs::path outputPath = BuildUniqueOutputPath(outputDir, safeTitle, L".mp4");
     const std::set<std::string> files = {
         Tools::wstring_to_utf8(sub.audio.wstring()),
         Tools::wstring_to_utf8(sub.video.wstring()),
     };
 
     LOG_INFO(LogGroup::MUX, "开始混流: {}", LOGUTF8(title));
-    LOG_INFO(LogGroup::MUX, "输出文件: {}", LOGUTF8(outputPath.filename().wstring()));
+    LOG_INFO(LogGroup::MUX, "输出文件: {}", LOGUTF8(outputPath.wstring()));
 
     MediaMux mux;
     std::wstring outputPathU8 = outputPath.wstring();
@@ -468,6 +487,7 @@ extern int add_cover_to_video(const char* output_filename, const char* input_fil
 struct AppOptions
 {
     fs::path root;
+    fs::path output;
     fs::path finished;
     bool showHelp = false;
     bool runTest = false;
@@ -504,6 +524,7 @@ void PrintUsage()
         << "  BiliBiliMuxCore.exe --path <bilibili-cache-root> [options]\n\n"
         << "Options:\n"
         << "  --path <dir>             Root directory to scan. Required unless --test is used.\n"
+        << "  --output <dir>           Directory for generated mp4 files. Default: each source media folder.\n"
         << "  --finished <dir>         Directory for processed folders. Default: <path>\\..\\finished.\n"
         << "  --log-file <file>        Log file path. Default: logs/app.log.\n"
         << "  --console-level <level>  Console threshold: trace/debug/info/warn/err/critical/off.\n"
@@ -539,6 +560,13 @@ bool ParseOptions(const std::vector<std::wstring> &args, AppOptions &options, st
                 return false;
             }
             options.root = fs::path(*value);
+        }
+        else if (arg == L"--output") {
+            const std::wstring *value = requireValue("--output");
+            if (value == nullptr) {
+                return false;
+            }
+            options.output = fs::path(*value);
         }
         else if (arg == L"--finished") {
             const std::wstring *value = requireValue("--finished");
@@ -597,6 +625,8 @@ int RunMux(const AppOptions &options)
 {
     LOG_INFO(LogGroup::DEFAULT, "--------------------------------------run begin-----------------------------------");
     LOG_INFO(LogGroup::IO, "Scan path: {}", LOGUTF8(options.root.wstring()));
+    const std::string outputLogPath = options.output.empty() ? std::string("<source media folder>") : LOGUTF8(options.output.wstring());
+    LOG_INFO(LogGroup::IO, "Output path: {}", outputLogPath);
     LOG_INFO(LogGroup::IO, "Finished path: {}", LOGUTF8(options.finished.wstring()));
 
     if (!fs::exists(options.root) || !fs::is_directory(options.root)) {
@@ -605,6 +635,9 @@ int RunMux(const AppOptions &options)
     }
 
     fs::create_directories(options.finished);
+    if (!options.output.empty()) {
+        fs::create_directories(options.output);
+    }
 
     auto matches = BiliCache::CollectBiliFoldersStructured(options.root);
     MatchCollector col(options.finished);
@@ -616,7 +649,7 @@ int RunMux(const AppOptions &options)
 
         for (size_t i = 0; i < m.media_subdirs.size(); ++i) {
             MediaSubdir sub = m.media_subdirs[i];
-            const int ret = mainPipeline(sub);
+            const int ret = mainPipeline(sub, options.output);
             if (ret != 0) {
                 lastError = ret;
                 LOG_ERROR(LogGroup::MUX, "Pipeline failed: ret={}, subdir={}", ret, LOGUTF8(sub.dir.wstring()));
