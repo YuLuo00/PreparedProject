@@ -41,6 +41,7 @@ extern "C"
 #include <iostream>
 #include <thread>
 #include <memory>
+#include <system_error>
 using namespace std;
 
 #include <libavformat/avformat.h>
@@ -211,6 +212,129 @@ fs::path BuildUniqueOutputPath(const fs::path &outputDir, const std::wstring &ba
 
     return outputDir / (baseName + L"_" + std::to_wstring(
         std::chrono::system_clock::now().time_since_epoch().count()) + extension);
+}
+
+bool WriteUtf8TextFile(const fs::path &path, const std::string &content, std::string *error = nullptr)
+{
+    try {
+        if (!path.parent_path().empty()) {
+            fs::create_directories(path.parent_path());
+        }
+
+        std::ofstream ofs(path, std::ios::out | std::ios::binary | std::ios::trunc);
+        if (!ofs) {
+            if (error) {
+                *error = "Failed to open output file: " + Tools::wstring_to_utf8(path.wstring());
+            }
+            return false;
+        }
+
+        ofs.write(content.data(), static_cast<std::streamsize>(content.size()));
+        if (!ofs) {
+            if (error) {
+                *error = "Failed to write output file: " + Tools::wstring_to_utf8(path.wstring());
+            }
+            return false;
+        }
+        return true;
+    }
+    catch (const std::exception &e) {
+        if (error) {
+            *error = e.what();
+        }
+        return false;
+    }
+}
+
+int ExtractDocumentsFromMp4(const fs::path &mp4Path, const fs::path &outputRoot)
+{
+    fs::path outputDir = outputRoot.empty() ? mp4Path.parent_path() : outputRoot;
+    if (outputDir.empty()) {
+        outputDir = fs::current_path();
+    }
+    if (outputDir.empty()) {
+        LOG_ERROR(LogGroup::IO, "Extract output directory is empty.");
+        return 2;
+    }
+
+    AVFormatContext *fmt = nullptr;
+    const std::string inputPath = Tools::wstring_to_utf8(mp4Path.wstring());
+    int ret = avformat_open_input(&fmt, inputPath.c_str(), nullptr, nullptr);
+    if (ret < 0) {
+        char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+        av_strerror(ret, errMsg, sizeof(errMsg));
+        LOG_ERROR(LogGroup::IO, "Open mp4 failed: {}, {}", LOGUTF8(mp4Path.wstring()), errMsg);
+        return ret;
+    }
+
+    ret = avformat_find_stream_info(fmt, nullptr);
+    if (ret < 0) {
+        char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+        av_strerror(ret, errMsg, sizeof(errMsg));
+        LOG_ERROR(LogGroup::IO, "Read mp4 stream info failed: {}, {}", LOGUTF8(mp4Path.wstring()), errMsg);
+        avformat_close_input(&fmt);
+        return ret;
+    }
+
+    const AVDictionaryEntry *commentEntry = av_dict_get(fmt->metadata, "comment", nullptr, 0);
+    if (!commentEntry || !commentEntry->value || commentEntry->value[0] == '\0') {
+        LOG_ERROR(LogGroup::IO, "No embedded document metadata found in mp4 comment tag: {}", LOGUTF8(mp4Path.wstring()));
+        avformat_close_input(&fmt);
+        return 3;
+    }
+
+    json documentJson;
+    try {
+        documentJson = json::parse(commentEntry->value);
+    }
+    catch (const std::exception &e) {
+        LOG_ERROR(LogGroup::IO, "Embedded document metadata is not valid JSON: {}", e.what());
+        avformat_close_input(&fmt);
+        return 4;
+    }
+    avformat_close_input(&fmt);
+
+    std::string error;
+    fs::create_directories(outputDir);
+
+    const fs::path combinedPath = outputDir / "bilibili_metadata.json";
+    if (!WriteUtf8TextFile(combinedPath, documentJson.dump(4), &error)) {
+        LOG_ERROR(LogGroup::IO, "Write metadata failed: {}", error);
+        return 5;
+    }
+    LOG_INFO(LogGroup::IO, "Extracted metadata: {}", LOGUTF8(combinedPath.wstring()));
+
+    bool wroteDocument = false;
+    if (documentJson.contains("entry")) {
+        const fs::path entryPath = outputDir / "entry.json";
+        if (!WriteUtf8TextFile(entryPath, documentJson["entry"].dump(4), &error)) {
+            LOG_ERROR(LogGroup::IO, "Write entry.json failed: {}", error);
+            return 5;
+        }
+        wroteDocument = true;
+        LOG_INFO(LogGroup::IO, "Extracted entry.json: {}", LOGUTF8(entryPath.wstring()));
+    }
+
+    if (documentJson.contains("index")) {
+        const fs::path indexPath = outputDir / "index.json";
+        if (!WriteUtf8TextFile(indexPath, documentJson["index"].dump(4), &error)) {
+            LOG_ERROR(LogGroup::IO, "Write index.json failed: {}", error);
+            return 5;
+        }
+        wroteDocument = true;
+        LOG_INFO(LogGroup::IO, "Extracted index.json: {}", LOGUTF8(indexPath.wstring()));
+    }
+
+    if (!wroteDocument) {
+        const fs::path mediaInfoPath = outputDir / "media_info.json";
+        if (!WriteUtf8TextFile(mediaInfoPath, documentJson.dump(4), &error)) {
+            LOG_ERROR(LogGroup::IO, "Write media_info.json failed: {}", error);
+            return 5;
+        }
+        LOG_WARN(LogGroup::IO, "No entry/index document keys found; wrote metadata JSON instead: {}", LOGUTF8(mediaInfoPath.wstring()));
+    }
+
+    return 0;
 }
 
 
@@ -490,6 +614,8 @@ struct AppOptions
     fs::path root;
     fs::path output;
     fs::path finished;
+    fs::path extractMp4;
+    fs::path extractOutput;
     bool showHelp = false;
     bool runTest = false;
     Logger::Options logger;
@@ -523,10 +649,13 @@ void PrintUsage()
     std::cout
         << "Usage:\n"
         << "  BiliBiliMuxCore.exe --path <bilibili-cache-root> [options]\n\n"
+        << "  BiliBiliMuxCore.exe --extract <mp4> [--extract-output <dir>] [log options]\n\n"
         << "Options:\n"
         << "  --path <dir>             Root directory to scan. Required unless --test is used.\n"
         << "  --output <dir>           Directory for generated mp4 files. Default: each source media folder.\n"
         << "  --finished <dir>         Move processed folders to this directory. Disabled when omitted.\n"
+        << "  --extract <mp4>          Extract embedded document metadata from an mp4.\n"
+        << "  --extract-output <dir>   Directory for extracted JSON files. Default: mp4 directory.\n"
         << "  --log-file <file>        Log file path. Default: logs/app.log.\n"
         << "  --console-level <level>  Console threshold: trace/debug/info/warn/err/critical/off.\n"
         << "  --file-level <level>     File threshold: trace/debug/info/warn/err/critical/off.\n"
@@ -576,6 +705,20 @@ bool ParseOptions(const std::vector<std::wstring> &args, AppOptions &options, st
             }
             options.finished = fs::path(*value);
         }
+        else if (arg == L"--extract") {
+            const std::wstring *value = requireValue("--extract");
+            if (value == nullptr) {
+                return false;
+            }
+            options.extractMp4 = fs::path(*value);
+        }
+        else if (arg == L"--extract-output") {
+            const std::wstring *value = requireValue("--extract-output");
+            if (value == nullptr) {
+                return false;
+            }
+            options.extractOutput = fs::path(*value);
+        }
         else if (arg == L"--log-file") {
             const std::wstring *value = requireValue("--log-file");
             if (value == nullptr) {
@@ -609,8 +752,13 @@ bool ParseOptions(const std::vector<std::wstring> &args, AppOptions &options, st
         }
     }
 
-    if (!options.showHelp && !options.runTest && options.root.empty()) {
+    if (!options.showHelp && !options.runTest && options.extractMp4.empty() && options.root.empty()) {
         error = "Missing required argument: --path <dir>";
+        return false;
+    }
+
+    if (!options.extractMp4.empty() && !options.root.empty()) {
+        error = "--extract cannot be used together with --path";
         return false;
     }
 
@@ -690,6 +838,9 @@ int main()
         GlobalInit(options.logger);
         if (options.runTest) {
             return main_test();
+        }
+        if (!options.extractMp4.empty()) {
+            return ExtractDocumentsFromMp4(options.extractMp4, options.extractOutput);
         }
         return RunMux(options);
     }
