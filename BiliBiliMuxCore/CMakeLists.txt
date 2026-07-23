@@ -37,6 +37,7 @@ include("${ProjectRootDir}/ThirdParty/cmake/Add3rd_tbb.cmake")
 include("${ProjectRootDir}/ThirdParty/cmake/Add3rd_ffmpeg.cmake")
 include("${ProjectRootDir}/ThirdParty/cmake/Add3rd_spdlog.cmake")
 include("${ProjectRootDir}/ThirdParty/cmake/Add3rd_curl.cmake")
+include("${ProjectRootDir}/ThirdParty/cmake/Add3rd_sqlite3.cmake")
 
 # 包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -57,6 +58,8 @@ target_sources_group(${PROJECT_NAME} "src" PRIVATE
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliApiCache.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliCache.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliCache.h"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliDatabase.cpp"
+    "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/BiliDatabase.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/common.cpp"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/common.h"
     "${ProjectRootDir}/${CURRENT_FOLDER_NAME}/ffmpegMsg.cpp"
