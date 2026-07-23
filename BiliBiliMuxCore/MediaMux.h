@@ -16,6 +16,7 @@ public:
     ~MediaMux()
     {
         Close();
+        CloseInputStreams();
     }
 
     static std::multimap<AVFormatContext *, AVStream *> GetInputStreams(const std::set<std::string> &files,
@@ -36,4 +37,8 @@ public:
     std::set<std::string> m_files;
     std::string m_outputFile = "result.mp4";
     std::multimap<AVFormatContext *, AVStream *> inputStreams;
+
+private:
+    // 关闭 inputStreams 中记录的所有输入 AVFormatContext（按 ctx 去重，只关闭一次），并清空 inputStreams
+    void CloseInputStreams();
 };

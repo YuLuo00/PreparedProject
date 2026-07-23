@@ -24,7 +24,7 @@
 
 namespace
 {
-void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
+bool DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
 {
     SetThreadDescription(GetCurrentThread(), L"deal ");
     std::ostringstream oss;
@@ -32,6 +32,7 @@ void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
     LOG_INFO(LogGroup::MUX, "{}", oss.str());
 
     bool finished = false;
+    bool writeFailed = false;
     PacketsBatch pktBatch;
     while (!finished) {
         pktsRead.pop(pktBatch);
@@ -42,12 +43,19 @@ void DealPkts(AVFormatContext *outCtx, PacketBatchQueue &pktsRead)
             }
 
             pkt->stream_index = pktBatch.m_outCtxStmIdx;
+            // av_interleaved_write_frame 无论成功还是失败都会释放 pkt 持有的数据缓冲区，
+            // 但 pkt 本身（av_packet_alloc 分配的容器）仍需调用方自行 free，否则每个包都会泄漏。
             const int ret = av_interleaved_write_frame(outCtx, pkt);
             if (ret != 0) {
-                LOG_ERROR(LogGroup::MUX, "严重错误，数据包写入失败");
+                char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+                av_strerror(ret, errMsg, sizeof(errMsg));
+                LOG_ERROR(LogGroup::MUX, "严重错误，数据包写入失败: stream_index={}, ret={}, msg={}", pkt->stream_index, ret, errMsg);
+                writeFailed = true;
             }
+            av_packet_free(&pkt);
         }
     }
+    return !writeFailed;
 }
 
 int remux_copy_stream_info(AVStream *in, AVStream *out)
@@ -186,27 +194,26 @@ void MediaMux::Close()
             av_strerror(ret, errMsg, sizeof(errMsg));
             av_log(nullptr, AV_LOG_WARNING, "av_write_trailer error: ret=%d, msg=%s\n", ret, errMsg);
         }
-        avio_close(m_outCtx->pb);
+        if (m_outCtx->pb) {
+            avio_close(m_outCtx->pb);
+            m_outCtx->pb = nullptr;
+        }
         m_outCtx = nullptr;
     }
+}
 
-    //for (auto it = inputStreams.begin(); it != inputStreams.end(); )
-    //{
-    //    AVFormatContext* ctx = it->first;
-
-    //    // 找到这一组（同一个 ctx 的所有 stream）
-    //    auto [begin, end] = inputStreams.equal_range(ctx);
-
-    //    // ⚠️ 只关闭一次 ctx（关键点）
-    //    if (ctx)
-    //    {
-    //        avformat_close_input(&ctx);
-    //        // 注意：这里 ctx 已经被置为 nullptr（FFmpeg内部会做）
-    //    }
-
-    //    // 跳到下一个 ctx
-    //    it = end;
-    //}
+void MediaMux::CloseInputStreams()
+{
+    // 关闭所有输入流对应的 AVFormatContext（同一个 ctx 可能挂了多条 stream，按 ctx 去重只关闭一次）
+    for (auto it = inputStreams.begin(); it != inputStreams.end();) {
+        AVFormatContext *ctx = it->first;
+        auto range = inputStreams.equal_range(ctx);
+        if (ctx) {
+            avformat_close_input(&ctx);
+        }
+        it = range.second;
+    }
+    inputStreams.clear();
 }
 
 int MediaMux::mux(bool autoCloseOutput)
@@ -389,8 +396,13 @@ int MediaMux::mux(bool autoCloseOutput)
 
         PacketBatchQueue pktsRead;
         std::atomic<int> counter = 0;
+        bool writeSucceeded = true;
+        std::atomic<bool> readSucceeded = true;
 
-        function_node<int, continue_msg> counter_node(g, serial, [&](int) -> continue_msg {
+        function_node<int, continue_msg> counter_node(g, serial, [&](int readRet) -> continue_msg {
+            if (readRet != 0) {
+                readSucceeded = false;
+            }
             counter.fetch_add(1);
             if (counter.load() >= static_cast<int>(readNodes.size())) {
                 PacketsBatch eosBatch;
@@ -413,21 +425,28 @@ int MediaMux::mux(bool autoCloseOutput)
 
         function_node<PktsPtr> deal(g, unlimited, [&](PktsPtr pktsPtr) {
             PacketBatchQueue &pkts = *pktsPtr;
-            DealPkts(m_outCtx, pkts);
+            writeSucceeded = DealPkts(m_outCtx, pkts);
         });
         make_edge(start, deal);
 
         pktsRead.set_capacity(10);
         start.try_put(&pktsRead);
         g.wait_for_all();
+
+        if (!writeSucceeded || !readSucceeded) {
+            LOG_ERROR(LogGroup::MUX, "混流失败：{}", !writeSucceeded ? "写入数据包过程中发生错误" : "读取数据包过程中发生错误");
+            if (autoCloseOutput) {
+                Close();
+            }
+            CloseInputStreams();
+            return -5;
+        }
     }
 
     if (autoCloseOutput) {
         Close();
     }
-    for (AVFormatContext *ctx : ctsx) {
-        avformat_close_input(&ctx);
-    }
+    CloseInputStreams();
 
     LOG_INFO(LogGroup::MUX, "All done!");
     return 0;

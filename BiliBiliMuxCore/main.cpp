@@ -246,6 +246,80 @@ bool WriteUtf8TextFile(const fs::path &path, const std::string &content, std::st
     }
 }
 
+// 调试用：打印 mp4 的时长/码率/各条流信息/format 级 metadata，用于人工核对混流结果是否正确。
+int ProbeMp4(const fs::path &mp4Path)
+{
+    AVFormatContext *fmt = nullptr;
+    const std::string inputPath = Tools::wstring_to_utf8(mp4Path.wstring());
+    int ret = avformat_open_input(&fmt, inputPath.c_str(), nullptr, nullptr);
+    if (ret < 0) {
+        char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+        av_strerror(ret, errMsg, sizeof(errMsg));
+        std::cout << "Open failed: " << errMsg << "\n";
+        return ret;
+    }
+
+    ret = avformat_find_stream_info(fmt, nullptr);
+    if (ret < 0) {
+        char errMsg[AV_ERROR_MAX_STRING_SIZE] = {'\0'};
+        av_strerror(ret, errMsg, sizeof(errMsg));
+        std::cout << "avformat_find_stream_info failed: " << errMsg << "\n";
+        avformat_close_input(&fmt);
+        return ret;
+    }
+
+    std::error_code ec;
+    const uintmax_t fileSize = fs::file_size(mp4Path, ec);
+
+    std::cout << "===== Probe: " << inputPath << " =====\n";
+    std::cout << "File size: " << (ec ? 0 : fileSize) << " bytes\n";
+    std::cout << "Format: " << (fmt->iformat && fmt->iformat->name ? fmt->iformat->name : "?") << "\n";
+    std::cout << "Duration: " << (fmt->duration != AV_NOPTS_VALUE ? (fmt->duration / static_cast<double>(AV_TIME_BASE)) : -1.0) << " s\n";
+    std::cout << "Bit rate: " << fmt->bit_rate << " bps\n";
+    std::cout << "Stream count: " << fmt->nb_streams << "\n";
+
+    for (unsigned int i = 0; i < fmt->nb_streams; ++i) {
+        AVStream *st = fmt->streams[i];
+        const AVCodecParameters *par = st->codecpar;
+        const char *typeName = av_get_media_type_string(par->codec_type);
+        const AVCodecDescriptor *desc = avcodec_descriptor_get(par->codec_id);
+        const bool isAttachedPic = (st->disposition & AV_DISPOSITION_ATTACHED_PIC) != 0;
+
+        std::cout << "  Stream #" << i
+                   << " type=" << (typeName ? typeName : "?")
+                   << " codec=" << (desc ? desc->name : "?")
+                   << " attached_pic=" << (isAttachedPic ? "yes" : "no")
+                   << " duration=" << (st->duration != AV_NOPTS_VALUE
+                                            ? (st->duration * av_q2d(st->time_base))
+                                            : -1.0)
+                   << "s";
+
+        if (par->codec_type == AVMEDIA_TYPE_VIDEO) {
+            std::cout << " " << par->width << "x" << par->height;
+        }
+        else if (par->codec_type == AVMEDIA_TYPE_AUDIO) {
+            std::cout << " sample_rate=" << par->sample_rate << " channels=" << par->ch_layout.nb_channels;
+        }
+        if (isAttachedPic) {
+            std::cout << " attached_pic_size=" << st->attached_pic.size;
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << "Format metadata:\n";
+    const AVDictionaryEntry *entry = nullptr;
+    while ((entry = av_dict_get(fmt->metadata, "", entry, AV_DICT_IGNORE_SUFFIX)) != nullptr) {
+        std::string value = entry->value ? entry->value : "";
+        if (value.size() > 200) {
+            value = value.substr(0, 200) + "...(truncated)";
+        }
+        std::cout << "  " << entry->key << " = " << value << "\n";
+    }
+
+    avformat_close_input(&fmt);
+    return 0;
+}
+
 int ExtractDocumentsFromMp4(const fs::path &mp4Path, const fs::path &outputRoot)
 {
     fs::path outputDir = outputRoot.empty() ? mp4Path.parent_path() : outputRoot;
@@ -616,6 +690,7 @@ struct AppOptions
     fs::path finished;
     fs::path extractMp4;
     fs::path extractOutput;
+    fs::path probeMp4;
     bool showHelp = false;
     bool runTest = false;
     Logger::Options logger;
@@ -650,12 +725,14 @@ void PrintUsage()
         << "Usage:\n"
         << "  BiliBiliMuxCore.exe --path <bilibili-cache-root> [options]\n\n"
         << "  BiliBiliMuxCore.exe --extract <mp4> [--extract-output <dir>] [log options]\n\n"
+        << "  BiliBiliMuxCore.exe --probe <mp4>\n\n"
         << "Options:\n"
         << "  --path <dir>             Root directory to scan. Required unless --test is used.\n"
         << "  --output <dir>           Directory for generated mp4 files. Default: each source media folder.\n"
         << "  --finished <dir>         Move processed folders to this directory. Disabled when omitted.\n"
         << "  --extract <mp4>          Extract embedded document metadata from an mp4.\n"
         << "  --extract-output <dir>   Directory for extracted JSON files. Default: mp4 directory.\n"
+        << "  --probe <mp4>            Print duration/bitrate/streams/metadata for an mp4.\n"
         << "  --log-file <file>        Log file path. Default: logs/app.log.\n"
         << "  --console-level <level>  Console threshold: trace/debug/info/warn/err/critical/off.\n"
         << "  --file-level <level>     File threshold: trace/debug/info/warn/err/critical/off.\n"
@@ -719,6 +796,13 @@ bool ParseOptions(const std::vector<std::wstring> &args, AppOptions &options, st
             }
             options.extractOutput = fs::path(*value);
         }
+        else if (arg == L"--probe") {
+            const std::wstring *value = requireValue("--probe");
+            if (value == nullptr) {
+                return false;
+            }
+            options.probeMp4 = fs::path(*value);
+        }
         else if (arg == L"--log-file") {
             const std::wstring *value = requireValue("--log-file");
             if (value == nullptr) {
@@ -752,13 +836,18 @@ bool ParseOptions(const std::vector<std::wstring> &args, AppOptions &options, st
         }
     }
 
-    if (!options.showHelp && !options.runTest && options.extractMp4.empty() && options.root.empty()) {
+    if (!options.showHelp && !options.runTest && options.extractMp4.empty() && options.probeMp4.empty() && options.root.empty()) {
         error = "Missing required argument: --path <dir>";
         return false;
     }
 
     if (!options.extractMp4.empty() && !options.root.empty()) {
         error = "--extract cannot be used together with --path";
+        return false;
+    }
+
+    if (!options.probeMp4.empty() && (!options.root.empty() || !options.extractMp4.empty())) {
+        error = "--probe cannot be used together with --path or --extract";
         return false;
     }
 
@@ -841,6 +930,9 @@ int main()
         }
         if (!options.extractMp4.empty()) {
             return ExtractDocumentsFromMp4(options.extractMp4, options.extractOutput);
+        }
+        if (!options.probeMp4.empty()) {
+            return ProbeMp4(options.probeMp4);
         }
         return RunMux(options);
     }

@@ -54,6 +54,12 @@ using namespace tbb::flow;
 #include "Logger.h"
 
 
+namespace
+{
+// 视频批次在等不到关键帧时允许攒到的批大小上限，为 g_BatchDealPktCount 的倍数。
+constexpr size_t kVideoBatchHardLimitMultiplier = 10;
+} // namespace
+
 int ReadNode::ReadPackets(AVFormatContext *inCtx,
                           const std::map<AVFormatContext *, std::map<int, int>> &streamIndexMap,
                           PacketBatchQueue &pktsRead)
@@ -67,6 +73,7 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
     map<int, int> streamsIdx; // <输入流流序号，输出流流序号>
     char errors[1024];
     int ret = 0;
+    bool readFailed = false;
 
     std::vector<AVPacket *> buffer;
     //avformat_find_stream_info(inCtx, NULL);
@@ -119,6 +126,7 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
                 LOG_ERROR(LogGroup::MUX, "读取数据包错误: {}", errbuf);
 
                 av_packet_free(&avPacket);
+                readFailed = true;
                 break;
             }
             if (avPacket->dts < 0) {
@@ -133,7 +141,10 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
             //}
             if (pktBatch.m_pkts.size() >= g_BatchDealPktCount) {
                 if (isVedioPacket(avPacket)) {
-                    if (isIFrame) {
+                    // 视频包优先在关键帧处切批，避免把一个 GOP 切断到两个批次里；
+                    // 但如果迟迟等不到关键帧（例如码流异常/GOP 过长），达到硬上限后也要强制 flush，
+                    // 否则该批次会无限增长，造成内存占用不断攀升。
+                    if (isIFrame || pktBatch.m_pkts.size() >= g_BatchDealPktCount * kVideoBatchHardLimitMultiplier) {
                         pktsRead.push(pktBatch);
                         pktBatch.m_pkts.clear();
                     }
@@ -163,5 +174,5 @@ int ReadNode::ReadPackets(AVFormatContext *inCtx,
     //pktsRead.push(pktBatches[0]);
 
     LOG_INFO(LogGroup::MUX, " >>>>>>>>>> Finish for Read  {}", inCtx->url);
-    return 0;
+    return readFailed ? -1 : 0;
 };
