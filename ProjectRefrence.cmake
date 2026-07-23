@@ -34,173 +34,68 @@ macro(target_sources_group TargetName GroupName PERMISSION)
 endmacro()
 
 # 添加运行时依赖文件
-macro(Add_Interface_Imported_Location ProjectName)
-    get_target_property(_locs ${ProjectName} INTERFACE_IMPORTED_LOCATION)
-    if(NOT _locs STREQUAL "_locs-NOTFOUND")
-        message(STATUS "MY_VAR is _locs-NOTFOUND")
-        list(APPEND ALL_IMPORTED_LOCATION ${_locs})
-    endif()
-    
-    get_target_property(_locs ${ProjectName} INTERFACE_IMPORTED_LOCATION_DEBUG)
-    if(NOT _locs STREQUAL "_locs-NOTFOUND")
-        message(STATUS "MY_VAR is _locs-NOTFOUND")
-        list(APPEND ALL_IMPORTED_LOCATION_Debug ${_locs})
-    endif()
+macro(Add_Interface_Imported_Location)
+    foreach(ProjectName IN ITEMS ${ARGV})
+        get_target_property(_locs ${ProjectName} INTERFACE_IMPORTED_LOCATION)
+        if(NOT _locs STREQUAL "_locs-NOTFOUND")
+            message(STATUS "MY_VAR is _locs-NOTFOUND")
+            list(APPEND ALL_IMPORTED_LOCATION ${_locs})
+        endif()
 
-    get_target_property(_locs ${ProjectName} INTERFACE_IMPORTED_LOCATION_RELEASE)
-    if(NOT _locs STREQUAL "_locs-NOTFOUND")
-        message(STATUS "MY_VAR is _locs-NOTFOUND")
-        list(APPEND ALL_IMPORTED_LOCATION_Release ${_locs})
-    endif()
+        get_target_property(_locs ${ProjectName} INTERFACE_IMPORTED_LOCATION_DEBUG)
+        if(NOT _locs STREQUAL "_locs-NOTFOUND")
+            message(STATUS "MY_VAR is _locs-NOTFOUND")
+            list(APPEND ALL_IMPORTED_LOCATION_Debug ${_locs})
+        endif()
+
+        get_target_property(_locs ${ProjectName} INTERFACE_IMPORTED_LOCATION_RELEASE)
+        if(NOT _locs STREQUAL "_locs-NOTFOUND")
+            message(STATUS "MY_VAR is _locs-NOTFOUND")
+            list(APPEND ALL_IMPORTED_LOCATION_Release ${_locs})
+        endif()
+    endforeach()
 endmacro()
 
 # 添加运行时依赖文件
-macro(Add_Imported_Location ProjectName)
-    get_target_property(_locs ${ProjectName} IMPORTED_LOCATION)
-    if(NOT _locs STREQUAL "_locs-NOTFOUND")
-        message(STATUS "MY_VAR is _locs-NOTFOUND")
-        list(APPEND ALL_IMPORTED_LOCATION ${_locs})
-    endif()
-    
-    get_target_property(_locs ${ProjectName} IMPORTED_LOCATION_DEBUG)
-    if(NOT _locs STREQUAL "_locs-NOTFOUND")
-        message(STATUS "MY_VAR is _locs-NOTFOUND")
-        list(APPEND ALL_IMPORTED_LOCATION_Debug ${_locs})
-    endif()
+macro(Add_Imported_Location)
+    foreach(ProjectName IN ITEMS ${ARGV})
+        get_target_property(_locs ${ProjectName} IMPORTED_LOCATION)
+        if(NOT _locs STREQUAL "_locs-NOTFOUND")
+            message(STATUS "MY_VAR is _locs-NOTFOUND")
+            list(APPEND ALL_IMPORTED_LOCATION ${_locs})
+        endif()
 
-    get_target_property(_locs ${ProjectName} IMPORTED_LOCATION_RELEASE)
-    if(NOT _locs STREQUAL "_locs-NOTFOUND")
-        message(STATUS "MY_VAR is _locs-NOTFOUND")
-        list(APPEND ALL_IMPORTED_LOCATION_Release ${_locs})
-    endif()
+        get_target_property(_locs ${ProjectName} IMPORTED_LOCATION_DEBUG)
+        if(NOT _locs STREQUAL "_locs-NOTFOUND")
+            message(STATUS "MY_VAR is _locs-NOTFOUND")
+            list(APPEND ALL_IMPORTED_LOCATION_Debug ${_locs})
+        endif()
+
+        get_target_property(_locs ${ProjectName} IMPORTED_LOCATION_RELEASE)
+        if(NOT _locs STREQUAL "_locs-NOTFOUND")
+            message(STATUS "MY_VAR is _locs-NOTFOUND")
+            list(APPEND ALL_IMPORTED_LOCATION_Release ${_locs})
+        endif()
+    endforeach()
+endmacro()
+
+# 统一安装收集到的运行时依赖文件
+macro(Install_Imported_Locations)
+    foreach(_dll ${ALL_IMPORTED_LOCATION})
+        if(NOT _dll STREQUAL "_locs-NOTFOUND")
+            install(FILES ${_dll} DESTINATION bin)
+        endif()
+    endforeach()
+    foreach(_dll ${ALL_IMPORTED_LOCATION_Debug})
+        if(NOT _dll STREQUAL "_locs-NOTFOUND")
+            install(FILES $<$<CONFIG:Debug>:${_dll}> DESTINATION bin)
+        endif()
+    endforeach()
+    foreach(_dll ${ALL_IMPORTED_LOCATION_Release})
+        if(NOT _dll STREQUAL "_locs-NOTFOUND")
+            install(FILES $<$<CONFIG:Release>:${_dll}> DESTINATION bin)
+        endif()
+    endforeach()
 endmacro()
 # -------------------------------------------------------------------------------- 导入三方库 -------------------------------------
-
-macro(Add3rd_spdlog ProjectName)
-    set(fmt_DIR "${ProjectRootDir}/ThirdParty/spdlog/installed/x64-windows/share/fmt")
-    set(spdlog_DIR "${ProjectRootDir}/ThirdParty/spdlog/installed/x64-windows/share/spdlog")
-    message("spdlog_DIR == ${spdlog_DIR}")
-
-    find_package(spdlog CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE spdlog::spdlog)
-
-    Add_Interface_Imported_Location(spdlog::spdlog fmt::fmt)
-    Add_Imported_Location(spdlog::spdlog)
-    Add_Imported_Location(fmt::fmt)
-endmacro()
-
-macro(Add3rd_nlohmann_json ProjectName)
-    set(nlohmann_json_DIR "${ProjectRootDir}/ThirdParty/nlohmann/installed/x64-windows/share/nlohmann_json/")
-    message("nlohmann_json_DIR == ${nlohmann_json_DIR}")
-    # this is heuristically generated, and may not be correct
-    find_package(nlohmann_json CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE nlohmann_json::nlohmann_json)
-    Add_Interface_Imported_Location(nlohmann_json::nlohmann_json)
-endmacro()
-
-macro(Add3rd_sqlite3 ProjectName)
-    set(unofficial-sqlite3_DIR "${ProjectRootDir}/ThirdParty/sqlite3/installed/x64-windows/share/unofficial-sqlite3/")
-    message("unofficial-sqlite3_DIR == ${unofficial-sqlite3_DIR}")
-
-    find_package(unofficial-sqlite3 CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE unofficial::sqlite3::sqlite3)
-    
-    Add_Interface_Imported_Location(unofficial::sqlite3::sqlite3)
-    Add_Imported_Location(unofficial::sqlite3::sqlite3)
-endmacro()
-
-macro(Add3rd_TBB ProjectName)
-    set(TBB_DIR "${ProjectRootDir}/ThirdParty/tbb/installed/x64-windows/share/tbb//")
-    message("TBB_DIR == ${TBB_DIR}")
-
-    find_package(TBB CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE TBB::tbb)
-    
-    Add_Interface_Imported_Location(TBB::tbb)
-    Add_Imported_Location(TBB::tbb)
-endmacro()
-
-# ThirdParty/ffmpeg/installed/x64-windows/share/ffmpeg/FindFFMPEG.cmake
-# FFmpeg::avcodec FFmpeg::avformat FFmpeg::avutil FFmpeg::swresample
-macro(Add3rd_FFmpeg ProjectName)
-    set(FFmpeg_DIR "${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/share/ffmpeg/")
-    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/share/ffmpeg/")
-    message("FFmpeg_DIR == ${FFmpeg_DIR}")
-
-    find_package(FFmpeg REQUIRED)
-    
-    message("
-        FFMPEG_FOUND == ${FFMPEG_FOUND}
-        FFMPEG_INCLUDE_DIRS == ${FFMPEG_INCLUDE_DIRS}
-        FFMPEG_LIBRARY_DIRS == ${FFMPEG_LIBRARY_DIRS}
-        FFMPEG_LIBRARIES == ${FFMPEG_LIBRARIES}
-    ")
-
-    # ✅ 绑定头文件
-    target_include_directories(${ProjectName} PRIVATE
-        ${FFMPEG_INCLUDE_DIRS}
-    )
-
-    # ✅ 绑定库
-    target_link_directories(${ProjectName} PRIVATE
-        $<$<CONFIG:Debug>:${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/lib/>
-        $<$<CONFIG:Release>:${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/lib>
-    )
-
-    target_link_libraries(${ProjectName} PRIVATE
-        avcodec.lib
-        avdevice.lib
-        avfilter.lib
-        avformat.lib
-        avutil.lib
-        pkgconf.lib
-        swresample.lib
-        swscale.lib
-    )
-    list(APPEND ALL_IMPORTED_LOCATION_Debug
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avcodec-61.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avdevice-61.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avfilter-10.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avformat-61.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/avutil-59.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/pkgconf-3.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/swresample-5.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/debug/bin/swscale-8.dll
-    )
-    list(APPEND ALL_IMPORTED_LOCATION_Release
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avcodec-61.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avdevice-61.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avfilter-10.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avformat-61.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/avutil-59.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/pkgconf-3.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/swresample-5.dll
-        ${ProjectRootDir}/ThirdParty/ffmpeg/installed/x64-windows/bin/swscale-8.dll
-    )
-endmacro()
-
-
-macro(Add3rd_CURL ProjectName)
-    set(CURL_DIR "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/share/curl/")
-    set(OpenSSL_DIR "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/share/openssl/")
-    set(OPENSSL_ROOT_DIR "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/")
-    message("CURL_DIR == ${CURL_DIR}")
-    set(ZLIB_INCLUDE_DIR "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/include")
-    set(ZLIB_LIBRARY_DEBUG "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/debug/lib/zlibd.lib")
-    set(ZLIB_LIBRARY_RELEASE "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/lib/zlib.lib")
-
-    find_package(CURL CONFIG REQUIRED)
-    target_link_libraries(${ProjectName} PRIVATE CURL::libcurl)
-
-    file(GLOB CURL_RUNTIME_DLLS_DEBUG
-        "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/debug/bin/*.dll"
-    )
-    file(GLOB CURL_RUNTIME_DLLS_RELEASE
-        "${ProjectRootDir}/ThirdParty/curl/installed/x64-windows/bin/*.dll"
-    )
-    
-    Add_Interface_Imported_Location(CURL::libcurl)
-    Add_Imported_Location(CURL::libcurl)
-    list(APPEND ALL_IMPORTED_LOCATION_Debug ${CURL_RUNTIME_DLLS_DEBUG})
-    list(APPEND ALL_IMPORTED_LOCATION_Release ${CURL_RUNTIME_DLLS_RELEASE})
-endmacro()
+# 各三方库的驱动脚本已拆分到 ThirdParty/cmake/Add3rd_<lib>.cmake，使用前需设置变量 PROJECT_NAME，随后 include() 对应文件即可。

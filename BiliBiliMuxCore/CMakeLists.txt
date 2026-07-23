@@ -32,12 +32,11 @@ endif()
 
 
 # 三方库
-# Add3rd_Xlnt(${PROJECT_NAME})
-Add3rd_nlohmann_json(${PROJECT_NAME})
-Add3rd_TBB(${PROJECT_NAME})
-Add3rd_FFmpeg(${PROJECT_NAME})
-Add3rd_spdlog(${PROJECT_NAME})
-Add3rd_CURL(${PROJECT_NAME})
+include("${ProjectRootDir}/ThirdParty/cmake/Add3rd_nlohmann_json.cmake")
+include("${ProjectRootDir}/ThirdParty/cmake/Add3rd_tbb.cmake")
+include("${ProjectRootDir}/ThirdParty/cmake/Add3rd_ffmpeg.cmake")
+include("${ProjectRootDir}/ThirdParty/cmake/Add3rd_spdlog.cmake")
+include("${ProjectRootDir}/ThirdParty/cmake/Add3rd_curl.cmake")
 
 # 包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -105,12 +104,5 @@ install(DIRECTORY
 #     DESTINATION bin
 # )
 
-# 循环安装 Debug 文件
-foreach(file IN LISTS ALL_IMPORTED_LOCATION_Debug)
-    install(FILES $<$<CONFIG:Debug>:${file}> DESTINATION bin)
-endforeach()
-
-# 循环安装 Release 文件
-foreach(file IN LISTS ALL_IMPORTED_LOCATION_Release)
-    install(FILES $<$<CONFIG:Release>:${file}> DESTINATION bin)
-endforeach()
+# 统一安装运行时依赖文件
+Install_Imported_Locations()
