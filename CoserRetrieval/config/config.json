@@ -9,5 +9,9 @@
         "det_score_threshold": 0.5,
         "det_nms_threshold": 0.4,
         "embedding_dim": 512
+    },
+    "clip": {
+        "vision_model": "clip_vision_quantized.onnx",
+        "input_size": 224
     }
 }

@@ -3,6 +3,7 @@
 #include "../L2/MetadataStore.h"
 #include "../L3/IDetector.h"
 #include "../L3/IEmbeddingExtractor.h"
+#include "../L3/PhotoAuthenticityChecker.h"
 #include <memory>
 #include <opencv2/core.hpp>
 
@@ -15,15 +16,21 @@ struct PipelineMatch {
     float score = 0.0f;
 };
 
+struct IngestResult {
+    bool ok = false;
+    std::string reason;
+};
+
 class FaceRecognitionPipeline {
 public:
     FaceRecognitionPipeline(IDetector* detector,
                              IEmbeddingExtractor* extractor,
                              IVectorIndex* index,
-                             MetadataStore* store);
+                             MetadataStore* store,
+                             PhotoAuthenticityChecker* authChecker = nullptr);
 
-    /// 检测最高分人脸 -> 对齐 -> 提取 -> 写入 index/metadata
-    bool Ingest(const cv::Mat& image, int64_t imageId);
+    /// 检测最高分人脸 -> (可选)真人照过滤 -> 对齐 -> 提取 -> 写入 index/metadata
+    IngestResult Ingest(const cv::Mat& image, int64_t imageId);
 
     std::vector<PipelineMatch> Query(const cv::Mat& image, int topK);
 
@@ -32,6 +39,7 @@ private:
     IEmbeddingExtractor* extractor_;
     IVectorIndex* index_;
     MetadataStore* store_;
+    PhotoAuthenticityChecker* authChecker_;
 };
 
 }  // namespace coser

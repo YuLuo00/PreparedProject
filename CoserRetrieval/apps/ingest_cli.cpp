@@ -7,6 +7,7 @@
 #include "../src/L2/FaissFlatIpIndex.h"
 #include "../src/L3/ScrfdFaceDetector.h"
 #include "../src/L3/ArcFaceExtractor.h"
+#include "../src/L3/PhotoAuthenticityChecker.h"
 #include "../src/L4/FaceRecognitionPipeline.h"
 
 using namespace coser;
@@ -62,7 +63,8 @@ int main(int argc, char** argv) {
 
     ScrfdFaceDetector detector(modelsDir + "/det_10g.onnx");
     ArcFaceExtractor extractor(modelsDir + "/w600k_r50.onnx");
-    FaceRecognitionPipeline pipeline(&detector, &extractor, &index, &store);
+    PhotoAuthenticityChecker authChecker(get("clip-model", modelsDir + "/../clip/clip_vision_quantized.onnx"));
+    FaceRecognitionPipeline pipeline(&detector, &extractor, &index, &store, &authChecker);
 
     int64_t personId = store.InsertPerson(personName);
     if (personId < 0) {
@@ -82,10 +84,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    bool ok = pipeline.Ingest(image, imageId);
-    store.UpdateImageStatus(imageId, ok ? "committed" : "failed", ok ? "" : "no face detected");
-    if (!ok) {
-        std::cerr << "Ingest failed: no face detected in " << imagePath << "\n";
+    IngestResult result = pipeline.Ingest(image, imageId);
+    store.UpdateImageStatus(imageId, result.ok ? "committed" : "failed", result.ok ? "" : result.reason);
+    if (!result.ok) {
+        std::cerr << "Ingest failed: " << result.reason << " in " << imagePath << "\n";
         return 1;
     }
 

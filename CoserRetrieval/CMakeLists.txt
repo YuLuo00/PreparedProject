@@ -12,6 +12,7 @@ set(CORE_SOURCES
     src/L3/ScrfdFaceDetector.cpp
     src/L3/ArcFaceExtractor.cpp
     src/L3/FaceAlign.cpp
+    src/L3/PhotoAuthenticityChecker.cpp
     src/L4/FaceRecognitionPipeline.cpp
 )
 
@@ -25,6 +26,7 @@ set(CORE_HEADERS
     src/L3/ScrfdFaceDetector.h
     src/L3/ArcFaceExtractor.h
     src/L3/FaceAlign.h
+    src/L3/PhotoAuthenticityChecker.h
     src/L4/FaceRecognitionPipeline.h
 )
 

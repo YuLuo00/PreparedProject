@@ -1,5 +1,6 @@
 #include "FaceRecognitionPipeline.h"
 #include <algorithm>
+#include <sstream>
 #include "../L3/FaceAlign.h"
 
 namespace coser {
@@ -7,17 +8,30 @@ namespace coser {
 FaceRecognitionPipeline::FaceRecognitionPipeline(IDetector* detector,
                                                   IEmbeddingExtractor* extractor,
                                                   IVectorIndex* index,
-                                                  MetadataStore* store)
-    : detector_(detector), extractor_(extractor), index_(index), store_(store) {}
+                                                  MetadataStore* store,
+                                                  PhotoAuthenticityChecker* authChecker)
+    : detector_(detector), extractor_(extractor), index_(index), store_(store),
+      authChecker_(authChecker) {}
 
-bool FaceRecognitionPipeline::Ingest(const cv::Mat& image, int64_t imageId) {
+IngestResult FaceRecognitionPipeline::Ingest(const cv::Mat& image, int64_t imageId) {
     auto dets = detector_->Detect(image);
-    if (dets.empty()) return false;
+    if (dets.empty()) return {false, "no face detected"};
 
     auto best = std::max_element(dets.begin(), dets.end(),
         [](const FaceDetection& a, const FaceDetection& b) { return a.score < b.score; });
 
     cv::Mat aligned = AlignFace(image, best->keypoints);
+
+    if (authChecker_) {
+        float clipScore = 0.0f;
+        bool isReal = authChecker_->IsRealPhoto(aligned, &clipScore);
+        if (!isReal) {
+            std::ostringstream oss;
+            oss << "rejected: not a real photo (clip_score=" << clipScore << ")";
+            return {false, oss.str()};
+        }
+    }
+
     std::vector<float> emb = extractor_->Extract(aligned);
 
     FaceEmbeddingRef ref;
@@ -29,9 +43,10 @@ bool FaceRecognitionPipeline::Ingest(const cv::Mat& image, int64_t imageId) {
     ref.det_score = best->score;
 
     int64_t embId = store_->InsertFaceEmbeddingRef(ref);
-    if (embId < 0) return false;
+    if (embId < 0) return {false, "metadata insert failed"};
 
-    return index_->Add(embId, emb);
+    if (!index_->Add(embId, emb)) return {false, "index add failed"};
+    return {true, ""};
 }
 
 std::vector<PipelineMatch> FaceRecognitionPipeline::Query(const cv::Mat& image, int topK) {
