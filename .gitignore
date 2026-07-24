@@ -11,3 +11,13 @@ __pycache__/
 *.pyc
 /build
 /.cache
+/CoserRetrieval/build/
+/build_root/
+/cache/
+/faiss_index/
+/logs/
+*.log
+test.db
+test_face.index
+diag.db-shm
+diag.db-wal

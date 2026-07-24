@@ -1,0 +1,13 @@
+{
+    "db_path": "coser.db",
+    "index_path": "coser_face.index",
+    "models_dir": "models/face",
+    "face": {
+        "det_model": "det_10g.onnx",
+        "rec_model": "w600k_r50.onnx",
+        "det_input_size": 640,
+        "det_score_threshold": 0.5,
+        "det_nms_threshold": 0.4,
+        "embedding_dim": 512
+    }
+}
