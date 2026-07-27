@@ -12,7 +12,7 @@ run_queries() {
   local noface=0
   for f in "$QUERY_DIR"/$pattern; do
     base=$(basename "$f")
-    out=$(./bin/query_cli.exe --db "$DB" --index "$INDEX" --models-dir "$MODELS" --image "$f" --topk 1 2>&1)
+    out=$(./bin/coser_cli.exe query --db "$DB" --index "$INDEX" --models-dir "$MODELS" --image "$f" --topk 1 2>&1)
     if echo "$out" | grep -q "No matches"; then
       noface=$((noface+1))
       echo "NOFACE: $base"

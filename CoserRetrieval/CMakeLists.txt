@@ -77,29 +77,30 @@ include(${ProjectRootDir}/ThirdParty/cmake/Add3rd_onnxruntime.cmake)
 
 set(PROJECT_NAME CoserRetrieval)
 
-# ─── CLI 可执行程序 ───────────────────────────────────────────────────────────
-add_executable(ingest_cli apps/ingest_cli.cpp)
-add_executable(query_cli apps/query_cli.cpp)
-add_executable(scan_authenticity_cli apps/scan_authenticity_cli.cpp)
+# ─── CLI 可执行程序（单一 coser_cli，子命令 ingest/query/scan 分发） ──────────
+add_executable(coser_cli
+    apps/coser_cli.cpp
+    apps/cmd_ingest.cpp
+    apps/cmd_query.cpp
+    apps/cmd_scan.cpp
+)
 
-foreach(_exe ingest_cli query_cli scan_authenticity_cli)
-    target_compile_features(${_exe} PRIVATE cxx_std_17)
-    target_compile_definitions(${_exe} PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
-    if(MSVC)
-        target_compile_options(${_exe} PRIVATE /utf-8 /W3 /wd4996)
-    endif()
-    target_link_libraries(${_exe} PRIVATE
-        CoserRetrievalCore
-        opencv_world
-        unofficial::sqlite3::sqlite3
-        faiss
-        onnxruntime::onnxruntime
-        onnxruntime::providers_shared
-    )
-endforeach()
+target_compile_features(coser_cli PRIVATE cxx_std_17)
+target_compile_definitions(coser_cli PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+if(MSVC)
+    target_compile_options(coser_cli PRIVATE /utf-8 /W3 /wd4996)
+endif()
+target_link_libraries(coser_cli PRIVATE
+    CoserRetrievalCore
+    opencv_world
+    unofficial::sqlite3::sqlite3
+    faiss
+    onnxruntime::onnxruntime
+    onnxruntime::providers_shared
+)
 
 # ─── 安装 ─────────────────────────────────────────────────────────────────────
-install(TARGETS ingest_cli query_cli scan_authenticity_cli
+install(TARGETS coser_cli
     RUNTIME DESTINATION bin
 )
 

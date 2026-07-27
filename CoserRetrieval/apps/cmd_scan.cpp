@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <opencv2/imgcodecs.hpp>
 
+#include "commands.h"
 #include "../src/L3/PhotoAuthenticityChecker.h"
 
 using namespace coser;
@@ -28,7 +29,7 @@ bool IsImageFile(const fs::path& p) {
 }
 }  // namespace
 
-int main(int argc, char** argv) try {
+int RunScan(int argc, char** argv) try {
     auto args = ParseArgs(argc, argv);
     auto get = [&](const std::string& key, const std::string& def = "") {
         auto it = args.find(key);
@@ -39,7 +40,7 @@ int main(int argc, char** argv) try {
     std::string clipModel = get("clip-model");
 
     if (dir.empty() || clipModel.empty()) {
-        std::cerr << "Usage: scan_authenticity_cli --dir <directory> --clip-model <path>\n";
+        std::cerr << "Usage: coser_cli scan --dir <directory> --clip-model <path>\n";
         return 1;
     }
 

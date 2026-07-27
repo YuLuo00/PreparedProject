@@ -9,7 +9,7 @@ run_queries() {
   local expected="$2"
   for f in "$QUERY_DIR"/$pattern; do
     base=$(basename "$f")
-    out=$(./bin/query_cli.exe --db "$DB" --index "$INDEX" --models-dir "$MODELS" --image "$f" --topk 1 2>&1)
+    out=$(./bin/coser_cli.exe query --db "$DB" --index "$INDEX" --models-dir "$MODELS" --image "$f" --topk 1 2>&1)
     line=$(echo "$out" | grep "person_id=")
     if echo "$out" | grep -q "No matches"; then
       echo "$base NOFACE"

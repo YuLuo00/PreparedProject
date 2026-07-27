@@ -29,7 +29,7 @@ SCRFD 人脸检测 → ArcFace 512维特征提取 → FAISS 向量检索 → SQL
 评测数据集中混入了角色原画/插画，ArcFace 是在真人照片上训练的，对插画提取出的向量语义分布与真人照片不同，
 会拉低相似度、污染索引质量。新增 `PhotoAuthenticityChecker`（`src/L3/PhotoAuthenticityChecker.h/.cpp`），
 在 `FaceRecognitionPipeline::Ingest` 中人脸对齐之后、ArcFace 特征提取之前跑一次 CLIP zero-shot 判断，
-拒绝非真人照片的图片入库（`query_cli` 查询路径不受影响，仍然接受任意输入）。
+拒绝非真人照片的图片入库（`coser_cli query` 查询路径不受影响，仍然接受任意输入）。
 
 ### 实现方式
 
@@ -54,7 +54,7 @@ L2 归一化后硬编码进 `src/L3/clip_text_embeddings.inc` 的两个 `std::ar
   - **误判（真人照被判定为插画）**：经过大幅磨皮/美颜滤镜处理、瞳孔美瞳效果强烈的真人 cosplay 摄影，
     或叠加了游戏特效/合成元素的真人摄影，画面质感被拉向插画一侧从而被误拒。
   出现上述误杀/漏杀是启发式方法的预期内局限，不是 bug，需要人工复核被拒绝的图片而不是全信过滤器结果。
-- **实测边界样本占比偏高，人工复核后确认过滤器实际可用误判率极高**：新增 `apps/scan_authenticity_cli.cpp`
+- **实测边界样本占比偏高，人工复核后确认过滤器实际可用误判率极高**：新增 `coser_cli scan` 子命令
   （独立小工具，只跑 CLIP 判定不做完整 ingest，用于批量扫描目录）对 `testdata_eval` 全量扫描：
   `store`（83张）23张判定为插画/CG（~28%），`query`（81张）23张判定为插画/CG（~28%）。
   经人工逐张目测复核全部46张被标记的图片，结果：
@@ -76,7 +76,8 @@ L2 归一化后硬编码进 `src/L3/clip_text_embeddings.inc` 的两个 `std::ar
 
 按 HLD 完整三路架构补完剩余部分：路线B（YOLOv8n-pose 裁剪 + DINOv2 特征 + FAISS）、
 路线C（pHash 粗筛 + ORB 精确确认）、以及统一入口 `RetrievalOrchestrator`（带结果融合 `ResultFusion`）。
-`ingest_cli`/`query_cli` 默认三路联动，`query_cli` 新增 `--mode exact|face|clothing|all` 可选单路调试。
+`coser_cli ingest`/`coser_cli query` 默认三路联动，`coser_cli query` 新增
+`--mode exact|face|clothing|all` 可选单路调试。
 
 ### 路线B：服装/角色识别
 
@@ -120,7 +121,8 @@ box/关键点解码到像素空间，不需要像 SCRFD 那样按 stride 做网�
 
 ### 已知问题：Git LFS 指针文件未 smudge 会导致 `abort()`
 
-`ingest_cli.exe`/`query_cli.exe` 早期版本没有捕获 `Ort::Exception`，当模型文件是未拉取内容的
+`ingest_cli.exe`/`query_cli.exe`（现已合并为 `coser_cli.exe ingest`/`coser_cli.exe query`）
+早期版本没有捕获 `Ort::Exception`，当模型文件是未拉取内容的
 Git LFS 指针占位文本（而不是真实二进制）时，ONNX Runtime 的 protobuf 解析会抛未捕获异常，
 触发 MSVC CRT 的 `abort()` 弹窗（"abort() has been called"）。修复了两处：
 1. `main()` 现在包一层 `try/catch`，异常改为打印 `"Unhandled exception: ..."` 并 `return 2`，不再崩溃。
@@ -144,3 +146,19 @@ rioko 42/45 正确（3 张跨人误判，误判对象 person_id 分数明显偏�
 - `face_weight`/`clothing_weight`/`exact_score_threshold`/`phash_max_hamming`/`orb_min_inliers`
   均为初始猜测默认值，待真实数据调优。
 - Ingest 阶段三路顺序执行，非并行，见上方"已知简化"。
+
+## CLI 合并：三个可执行文件 → 单一 `coser_cli`
+
+原先 `ingest_cli.exe`/`query_cli.exe`/`scan_authenticity_cli.exe` 是三个独立可执行文件，现已合并为
+单一的 `coser_cli.exe`，用子命令区分功能（类似 `git <subcommand>` 的风格）：
+
+```
+coser_cli ingest --db <path> --index <path> --models-dir <dir> --person "<Name>" --image <path> [--clothing-index <path>]
+coser_cli query  --db <path> --index <path> --models-dir <dir> --image <path> --topk <N> [--mode exact|face|clothing|all] [--clothing-index <path>]
+coser_cli scan   --dir <directory> --clip-model <path>
+coser_cli help | --help | -h        # 或不带任何参数
+```
+
+参数和行为与合并前完全一致，只是调用方式从 `ingest_cli.exe --db ...` 变为
+`coser_cli.exe ingest --db ...`（`query_cli.exe`/`scan_authenticity_cli.exe` 同理）。
+合并的目的是减少构建产物数量、统一入口，不涉及功能变更。

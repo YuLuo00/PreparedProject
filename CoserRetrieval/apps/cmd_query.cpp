@@ -3,12 +3,12 @@
 #include <unordered_map>
 #include <opencv2/imgcodecs.hpp>
 
+#include "commands.h"
 #include "../src/L2/MetadataStore.h"
 #include "../src/L2/FaissFlatIpIndex.h"
 #include "../src/L2/PHashIndex.h"
 #include "../src/L3/ScrfdFaceDetector.h"
 #include "../src/L3/ArcFaceExtractor.h"
-#include "../src/L3/PhotoAuthenticityChecker.h"
 #include "../src/L3/YoloPoseDetector.h"
 #include "../src/L3/DinoV2Extractor.h"
 #include "../src/L3/PHasher.h"
@@ -32,9 +32,26 @@ std::unordered_map<std::string, std::string> ParseArgs(int argc, char** argv) {
     }
     return args;
 }
+
+QueryMode ParseMode(const std::string& mode) {
+    if (mode == "exact") return QueryMode::ExactOnly;
+    if (mode == "face") return QueryMode::FaceOnly;
+    if (mode == "clothing") return QueryMode::ClothingOnly;
+    return QueryMode::AllLinked;
+}
+
+void PrintMatches(const std::string& label, const std::vector<PipelineMatch>& matches) {
+    std::cout << "-- " << label << " (" << matches.size() << ") --\n";
+    for (const auto& m : matches) {
+        std::cout << "  person_id=" << m.person_id
+                   << " display_name=" << m.display_name
+                   << " image_id=" << m.image_id
+                   << " score=" << m.score << "\n";
+    }
+}
 }  // namespace
 
-int main(int argc, char** argv) try {
+int RunQuery(int argc, char** argv) try {
     auto args = ParseArgs(argc, argv);
     auto get = [&](const std::string& key, const std::string& def = "") {
         auto it = args.find(key);
@@ -45,13 +62,14 @@ int main(int argc, char** argv) try {
     std::string faceIndexPath = get("index");
     std::string clothingIndexPath = get("clothing-index", "coser_clothing.index");
     std::string modelsDir = get("models-dir");
-    std::string personName = get("person");
     std::string imagePath = get("image");
+    int topK = std::stoi(get("topk", "5"));
+    QueryMode mode = ParseMode(get("mode", "all"));
 
-    if (dbPath.empty() || faceIndexPath.empty() || modelsDir.empty() || personName.empty() || imagePath.empty()) {
-        std::cerr << "Usage: ingest_cli --db <path> --index <path> --models-dir <dir> --person \"<Name>\" --image <path> "
-                     "[--clothing-index <path>]\n"
-                     "  <models-dir> must contain face/, pose/, clothing/, clip/ subdirectories.\n";
+    if (dbPath.empty() || faceIndexPath.empty() || modelsDir.empty() || imagePath.empty()) {
+        std::cerr << "Usage: coser_cli query --db <path> --index <path> --models-dir <dir> --image <path> --topk <N> "
+                     "[--mode exact|face|clothing|all] [--clothing-index <path>]\n"
+                     "  <models-dir> must contain face/, pose/, clothing/ subdirectories.\n";
         return 1;
     }
 
@@ -69,13 +87,13 @@ int main(int argc, char** argv) try {
 
     FaissFlatIpIndex faceIndex(512);
     if (!faceIndex.Load(faceIndexPath)) {
-        std::cerr << "Failed to load/create face index: " << faceIndexPath << "\n";
+        std::cerr << "Failed to load face index: " << faceIndexPath << "\n";
         return 1;
     }
 
     FaissFlatIpIndex clothingIndex(384);
     if (!clothingIndex.Load(clothingIndexPath)) {
-        std::cerr << "Failed to load/create clothing index: " << clothingIndexPath << "\n";
+        std::cerr << "Failed to load clothing index: " << clothingIndexPath << "\n";
         return 1;
     }
 
@@ -84,8 +102,7 @@ int main(int argc, char** argv) try {
 
     ScrfdFaceDetector faceDetector(modelsDir + "/face/det_10g.onnx");
     ArcFaceExtractor faceExtractor(modelsDir + "/face/w600k_r50.onnx");
-    PhotoAuthenticityChecker authChecker(get("clip-model", modelsDir + "/clip/clip_vision_quantized.onnx"));
-    FaceRecognitionPipeline facePipeline(&faceDetector, &faceExtractor, &faceIndex, &store, &authChecker);
+    FaceRecognitionPipeline facePipeline(&faceDetector, &faceExtractor, &faceIndex, &store);
 
     YoloPoseDetector poseDetector(modelsDir + "/pose/yolov8n-pose.onnx");
     DinoV2Extractor dinoExtractor(modelsDir + "/clothing/dinov2_vits14.onnx");
@@ -98,43 +115,21 @@ int main(int argc, char** argv) try {
     ResultFusion fusion;
     RetrievalOrchestrator orchestrator(&facePipeline, &clothingPipeline, &imageMatchPipeline, &store, &fusion);
 
-    int64_t personId = store.InsertPerson(personName);
-    if (personId < 0) {
-        std::cerr << "Failed to insert person: " << store.GetLastError() << "\n";
-        return 1;
-    }
+    QueryRequest request;
+    request.image = image;
+    request.mode = mode;
+    request.topK = topK;
 
-    ImageRow row;
-    row.person_id = personId;
-    row.file_path = imagePath;
-    row.width = image.cols;
-    row.height = image.rows;
-    row.ingest_status = "pending";
-    int64_t imageId = store.InsertImage(row);
-    if (imageId < 0) {
-        std::cerr << "Failed to insert image: " << store.GetLastError() << "\n";
-        return 1;
-    }
+    QueryResponse response = orchestrator.Query(request);
 
-    IngestResult result = orchestrator.IngestImage(image, imageId);
-    if (!result.ok) {
-        std::cerr << "Ingest failed: " << result.reason << " in " << imagePath << "\n";
-        return 1;
-    }
-    if (!result.reason.empty()) {
-        std::cerr << "Ingest committed with partial route failures: " << result.reason << "\n";
-    }
+    PrintMatches("exact", response.exactMatches);
+    PrintMatches("face", response.faceMatches);
+    PrintMatches("clothing", response.clothingMatches);
+    PrintMatches("fused", response.fused);
 
-    if (!faceIndex.Save(faceIndexPath)) {
-        std::cerr << "Failed to save face index: " << faceIndexPath << "\n";
-        return 1;
+    if (response.exactMatches.empty() && response.faceMatches.empty() && response.clothingMatches.empty()) {
+        std::cout << "No matches (no face/person detected or all indices empty)\n";
     }
-    if (!clothingIndex.Save(clothingIndexPath)) {
-        std::cerr << "Failed to save clothing index: " << clothingIndexPath << "\n";
-        return 1;
-    }
-
-    std::cout << "Ingested person_id=" << personId << " image_id=" << imageId << "\n";
     return 0;
 } catch (const std::exception& e) {
     std::cerr << "Unhandled exception: " << e.what() << "\n";

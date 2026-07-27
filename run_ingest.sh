@@ -8,7 +8,7 @@ ok=0
 fail=0
 for f in "$STORE_DIR"/rioko_store_*; do
   base=$(basename "$f")
-  ./bin/ingest_cli.exe --db "$DB" --index "$INDEX" --models-dir "$MODELS" --person "rioko" --image "$f" > /tmp/ingest_log.txt 2>&1
+  ./bin/coser_cli.exe ingest --db "$DB" --index "$INDEX" --models-dir "$MODELS" --person "rioko" --image "$f" > /tmp/ingest_log.txt 2>&1
   if grep -q "Ingested" /tmp/ingest_log.txt; then
     ok=$((ok+1))
   else
@@ -22,7 +22,7 @@ ok=0
 fail=0
 for f in "$STORE_DIR"/chichi_store_*; do
   base=$(basename "$f")
-  ./bin/ingest_cli.exe --db "$DB" --index "$INDEX" --models-dir "$MODELS" --person "chichi" --image "$f" > /tmp/ingest_log.txt 2>&1
+  ./bin/coser_cli.exe ingest --db "$DB" --index "$INDEX" --models-dir "$MODELS" --person "chichi" --image "$f" > /tmp/ingest_log.txt 2>&1
   if grep -q "Ingested" /tmp/ingest_log.txt; then
     ok=$((ok+1))
   else
