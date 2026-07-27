@@ -80,8 +80,9 @@ set(PROJECT_NAME CoserRetrieval)
 # ─── CLI 可执行程序 ───────────────────────────────────────────────────────────
 add_executable(ingest_cli apps/ingest_cli.cpp)
 add_executable(query_cli apps/query_cli.cpp)
+add_executable(scan_authenticity_cli apps/scan_authenticity_cli.cpp)
 
-foreach(_exe ingest_cli query_cli)
+foreach(_exe ingest_cli query_cli scan_authenticity_cli)
     target_compile_features(${_exe} PRIVATE cxx_std_17)
     target_compile_definitions(${_exe} PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
     if(MSVC)
@@ -98,7 +99,7 @@ foreach(_exe ingest_cli query_cli)
 endforeach()
 
 # ─── 安装 ─────────────────────────────────────────────────────────────────────
-install(TARGETS ingest_cli query_cli
+install(TARGETS ingest_cli query_cli scan_authenticity_cli
     RUNTIME DESTINATION bin
 )
 
