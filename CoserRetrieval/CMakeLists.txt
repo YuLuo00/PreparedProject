@@ -9,11 +9,20 @@ set(CORE_SOURCES
     src/L1/ConfigManager.cpp
     src/L2/FaissFlatIpIndex.cpp
     src/L2/MetadataStore.cpp
+    src/L2/PHashIndex.cpp
     src/L3/ScrfdFaceDetector.cpp
     src/L3/ArcFaceExtractor.cpp
     src/L3/FaceAlign.cpp
     src/L3/PhotoAuthenticityChecker.cpp
+    src/L3/PHasher.cpp
+    src/L3/OrbCropMatcher.cpp
+    src/L3/YoloPoseDetector.cpp
+    src/L3/DinoV2Extractor.cpp
     src/L4/FaceRecognitionPipeline.cpp
+    src/L4/ImageMatchPipeline.cpp
+    src/L4/ClothingRecognitionPipeline.cpp
+    src/L5/ResultFusion.cpp
+    src/L5/RetrievalOrchestrator.cpp
 )
 
 set(CORE_HEADERS
@@ -21,13 +30,23 @@ set(CORE_HEADERS
     src/L2/IVectorIndex.h
     src/L2/FaissFlatIpIndex.h
     src/L2/MetadataStore.h
+    src/L2/PHashIndex.h
     src/L3/IDetector.h
     src/L3/IEmbeddingExtractor.h
     src/L3/ScrfdFaceDetector.h
     src/L3/ArcFaceExtractor.h
     src/L3/FaceAlign.h
     src/L3/PhotoAuthenticityChecker.h
+    src/L3/PHasher.h
+    src/L3/OrbCropMatcher.h
+    src/L3/IPoseDetector.h
+    src/L3/YoloPoseDetector.h
+    src/L3/DinoV2Extractor.h
     src/L4/FaceRecognitionPipeline.h
+    src/L4/ImageMatchPipeline.h
+    src/L4/ClothingRecognitionPipeline.h
+    src/L5/ResultFusion.h
+    src/L5/RetrievalOrchestrator.h
 )
 
 add_library(CoserRetrievalCore STATIC ${CORE_SOURCES} ${CORE_HEADERS})

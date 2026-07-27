@@ -79,6 +79,15 @@ bool MetadataStore::CreateTables() {
             created_at    INTEGER NOT NULL DEFAULT (strftime('%s','now'))
         );
         CREATE INDEX IF NOT EXISTS idx_face_emb_image ON face_embeddings(image_id);
+
+        CREATE TABLE IF NOT EXISTS clothing_embeddings (
+            embedding_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+            image_id       INTEGER NOT NULL REFERENCES images(image_id),
+            bbox_x REAL, bbox_y REAL, bbox_w REAL, bbox_h REAL,
+            pose_keypoints BLOB,
+            created_at     INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_cloth_emb_image ON clothing_embeddings(image_id);
     )";
     return Execute(sql);
 }
@@ -189,6 +198,139 @@ std::optional<FaceMatchRow> MetadataStore::ResolveFaceEmbedding(int64_t embeddin
     row.image_id = sqlite3_column_int64(stmt, 1);
     row.person_id = sqlite3_column_int64(stmt, 2);
     const char* name = (const char*)sqlite3_column_text(stmt, 3);
+    row.display_name = name ? name : "";
+    sqlite3_finalize(stmt);
+    return row;
+}
+
+int64_t MetadataStore::InsertClothingEmbeddingRef(const ClothingEmbeddingRef& ref) {
+    const char* sql = R"(
+        INSERT INTO clothing_embeddings(image_id, bbox_x, bbox_y, bbox_w, bbox_h, pose_keypoints)
+        VALUES(?,?,?,?,?,?)
+    )";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        lastError_ = sqlite3_errmsg(db_);
+        return -1;
+    }
+    sqlite3_bind_int64(stmt, 1, ref.image_id);
+    sqlite3_bind_double(stmt, 2, ref.bbox_x);
+    sqlite3_bind_double(stmt, 3, ref.bbox_y);
+    sqlite3_bind_double(stmt, 4, ref.bbox_w);
+    sqlite3_bind_double(stmt, 5, ref.bbox_h);
+    if (ref.pose_keypoints.empty()) {
+        sqlite3_bind_null(stmt, 6);
+    } else {
+        sqlite3_bind_blob(stmt, 6, ref.pose_keypoints.data(),
+                           static_cast<int>(ref.pose_keypoints.size() * sizeof(float)), SQLITE_TRANSIENT);
+    }
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    if (rc != SQLITE_DONE) {
+        lastError_ = sqlite3_errmsg(db_);
+        return -1;
+    }
+    return sqlite3_last_insert_rowid(db_);
+}
+
+std::optional<ClothingMatchRow> MetadataStore::ResolveClothingEmbedding(int64_t embeddingId) {
+    const char* sql = R"(
+        SELECT ce.embedding_id, ce.image_id, i.person_id, p.display_name
+        FROM clothing_embeddings ce
+        JOIN images i ON ce.image_id = i.image_id
+        LEFT JOIN persons p ON i.person_id = p.person_id
+        WHERE ce.embedding_id = ?
+    )";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        lastError_ = sqlite3_errmsg(db_);
+        return std::nullopt;
+    }
+    sqlite3_bind_int64(stmt, 1, embeddingId);
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        sqlite3_finalize(stmt);
+        return std::nullopt;
+    }
+    ClothingMatchRow row;
+    row.embedding_id = sqlite3_column_int64(stmt, 0);
+    row.image_id = sqlite3_column_int64(stmt, 1);
+    row.person_id = sqlite3_column_int64(stmt, 2);
+    const char* name = (const char*)sqlite3_column_text(stmt, 3);
+    row.display_name = name ? name : "";
+    sqlite3_finalize(stmt);
+    return row;
+}
+
+bool MetadataStore::UpdateImagePHash(int64_t imageId, int64_t phash) {
+    const char* sql = "UPDATE images SET phash=? WHERE image_id=?";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        lastError_ = sqlite3_errmsg(db_);
+        return false;
+    }
+    sqlite3_bind_int64(stmt, 1, phash);
+    sqlite3_bind_int64(stmt, 2, imageId);
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    return rc == SQLITE_DONE;
+}
+
+std::vector<std::pair<int64_t, int64_t>> MetadataStore::LoadAllPHashes() {
+    std::vector<std::pair<int64_t, int64_t>> result;
+    const char* sql = "SELECT image_id, phash FROM images WHERE phash IS NOT NULL";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        lastError_ = sqlite3_errmsg(db_);
+        return result;
+    }
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        int64_t imageId = sqlite3_column_int64(stmt, 0);
+        int64_t phash = sqlite3_column_int64(stmt, 1);
+        result.emplace_back(imageId, phash);
+    }
+    sqlite3_finalize(stmt);
+    return result;
+}
+
+std::optional<std::string> MetadataStore::GetImageFilePath(int64_t imageId) {
+    const char* sql = "SELECT file_path FROM images WHERE image_id = ?";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        lastError_ = sqlite3_errmsg(db_);
+        return std::nullopt;
+    }
+    sqlite3_bind_int64(stmt, 1, imageId);
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        sqlite3_finalize(stmt);
+        return std::nullopt;
+    }
+    const char* path = (const char*)sqlite3_column_text(stmt, 0);
+    std::string result = path ? path : "";
+    sqlite3_finalize(stmt);
+    return result;
+}
+
+std::optional<ImagePersonRow> MetadataStore::GetPersonByImageId(int64_t imageId) {
+    const char* sql = R"(
+        SELECT i.image_id, i.person_id, p.display_name
+        FROM images i
+        LEFT JOIN persons p ON i.person_id = p.person_id
+        WHERE i.image_id = ?
+    )";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        lastError_ = sqlite3_errmsg(db_);
+        return std::nullopt;
+    }
+    sqlite3_bind_int64(stmt, 1, imageId);
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        sqlite3_finalize(stmt);
+        return std::nullopt;
+    }
+    ImagePersonRow row;
+    row.image_id = sqlite3_column_int64(stmt, 0);
+    row.person_id = sqlite3_column_int64(stmt, 1);
+    const char* name = (const char*)sqlite3_column_text(stmt, 2);
     row.display_name = name ? name : "";
     sqlite3_finalize(stmt);
     return row;

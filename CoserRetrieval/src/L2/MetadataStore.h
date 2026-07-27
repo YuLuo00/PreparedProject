@@ -38,6 +38,26 @@ struct FaceMatchRow {
     std::string display_name;
 };
 
+struct ClothingEmbeddingRef {
+    int64_t embedding_id = 0;
+    int64_t image_id = 0;
+    float bbox_x = 0, bbox_y = 0, bbox_w = 0, bbox_h = 0;
+    std::vector<float> pose_keypoints;  // flattened 17x3 (x,y,score) from YOLOv8-pose
+};
+
+struct ClothingMatchRow {
+    int64_t embedding_id = 0;
+    int64_t image_id = 0;
+    int64_t person_id = 0;
+    std::string display_name;
+};
+
+struct ImagePersonRow {
+    int64_t image_id = 0;
+    int64_t person_id = 0;
+    std::string display_name;
+};
+
 class MetadataStore {
 public:
     MetadataStore();
@@ -52,6 +72,14 @@ public:
 
     int64_t InsertFaceEmbeddingRef(const FaceEmbeddingRef& ref);
     std::optional<FaceMatchRow> ResolveFaceEmbedding(int64_t embeddingId);
+
+    int64_t InsertClothingEmbeddingRef(const ClothingEmbeddingRef& ref);
+    std::optional<ClothingMatchRow> ResolveClothingEmbedding(int64_t embeddingId);
+
+    bool UpdateImagePHash(int64_t imageId, int64_t phash);
+    std::vector<std::pair<int64_t, int64_t>> LoadAllPHashes();  // (image_id, phash)
+    std::optional<std::string> GetImageFilePath(int64_t imageId);
+    std::optional<ImagePersonRow> GetPersonByImageId(int64_t imageId);  // used by exact-match route (no embedding involved)
 
     std::string GetLastError() const { return lastError_; }
 
