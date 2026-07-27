@@ -54,3 +54,76 @@ L2 归一化后硬编码进 `src/L3/clip_text_embeddings.inc` 的两个 `std::ar
   - **误判（真人照被判定为插画）**：经过大幅磨皮/美颜滤镜处理、瞳孔美瞳效果强烈的真人 cosplay 摄影，
     或叠加了游戏特效/合成元素的真人摄影，画面质感被拉向插画一侧从而被误拒。
   出现上述误杀/漏杀是启发式方法的预期内局限，不是 bug，需要人工复核被拒绝的图片而不是全信过滤器结果。
+
+## 里程碑 3：路线B（服装/角色识别）+ 路线C（原图匹配）+ L5 编排层
+
+按 HLD 完整三路架构补完剩余部分：路线B（YOLOv8n-pose 裁剪 + DINOv2 特征 + FAISS）、
+路线C（pHash 粗筛 + ORB 精确确认）、以及统一入口 `RetrievalOrchestrator`（带结果融合 `ResultFusion`）。
+`ingest_cli`/`query_cli` 默认三路联动，`query_cli` 新增 `--mode exact|face|clothing|all` 可选单路调试。
+
+### 路线B：服装/角色识别
+
+`src/L3/IPoseDetector.h`（新接口，不复用人脸的 `IDetector`——17点人体关键点和5点人脸关键点语义不同，
+强行复用会两头打补丁）+ `YoloPoseDetector`（YOLOv8n-pose，anchor-free，Ultralytics 导出的 ONNX 已经把
+box/关键点解码到像素空间，不需要像 SCRFD 那样按 stride 做网格解码）+ `DinoV2Extractor`（**ViT-S/14，384维**，
+而非 HLD 原定的 ViT-B/14/768维——本机磁盘仅剩~19G，ViT-S/14 导出约88MB 对比 ViT-B/14 约340MB，
+且 HLD §9.2 本身已把"换 ViT-S/14"列为 CPU 推理延迟超预算时的第一优化选项）+ `ClothingRecognitionPipeline`
+（结构镜像 `FaceRecognitionPipeline`：整框裁剪，不做精细分割）。
+
+模型来源：`tools/export_yolov8n_pose_onnx.py`（`ultralytics` 包一键导出）、
+`tools/export_dinov2_onnx.py`（`transformers.Dinov2Model` + `torch.onnx.export`，`facebook/dinov2-small`
+经 hf-mirror.com 镜像下载）。两个脚本均为一次性离线操作，不进 CMake 构建，产物模型文件随脚本一起提交。
+
+**DINOv2 导出产物是两个文件**：`dinov2_vits14.onnx`（~1.5MB 图结构）+
+`dinov2_vits14.onnx.data`（~88MB，PyTorch 导出时外置的权重）。ONNX Runtime 要求两者在同一目录下才能加载，
+移动/提交模型时必须两个文件一起处理——`.gitattributes` 已加 `*.onnx.data` 的 LFS 规则。
+
+### 路线C：原图匹配
+
+`src/L3/PHasher`（DCT-based 64位感知哈希）+ `src/L3/OrbCropMatcher`（ORB+BFMatcher 内点数确认）+
+`src/L2/PHashIndex`（内存暴力扫描，几万级规模 <1ms，不需要 BK-tree）+ `src/L4/ImageMatchPipeline`。
+
+### L5 编排层
+
+`src/L5/ResultFusion`：exact 命中且达阈值直接短路；否则按 `person_id` 聚合 face/clothing 加权分
+（默认 `face_weight=0.7, clothing_weight=0.3`，`config.json` 的 `fusion` 段，**未经真实数据调优，
+仅为初始猜测值**）。`src/L5/RetrievalOrchestrator`：`IngestImage` 顺序跑三路（不引入线程池——当前是
+单图 CLI 工具而非常驻服务，并行价值有限，见下方已知简化）；`Query` 按 `QueryMode` 决定实际调用哪几路。
+
+### 已知简化（相对 HLD 字面设计的取舍，非疏漏）
+
+- **不引入线程池**：HLD 设想三路并行执行，本里程碑改为顺序执行。当前产物是单张图片的 CLI 工具，
+  真正的并行价值有限；如果后续做成常驻服务，需要重新引入线程池把三路并行化。
+- **不单独建 `IngestionCoordinator` 类**：直接内联进 `RetrievalOrchestrator::IngestImage`，
+  因为它在 HLD 里只是"落 pending → 三路 → 落 committed/failed"的薄封装，没有独立职责。
+- exact 路线的 `PipelineMatch.score` 是 ORB 原始内点数（例如自匹配 500），不是归一化到 0-1 的置信度，
+  和 `fusion.exact_score_threshold`（默认0.85）字面上不是同一量级——但因为 `ImageMatchPipeline::Query`
+  已经用 `orb_min_inliers` 自己预过滤了候选，实际效果上"exact 有结果就短路"仍然成立，只是这个阈值配置项
+  目前形同虚设。后续如果要让该阈值真正生效，需要把 exact score 归一化。
+
+### 已知问题：Git LFS 指针文件未 smudge 会导致 `abort()`
+
+`ingest_cli.exe`/`query_cli.exe` 早期版本没有捕获 `Ort::Exception`，当模型文件是未拉取内容的
+Git LFS 指针占位文本（而不是真实二进制）时，ONNX Runtime 的 protobuf 解析会抛未捕获异常，
+触发 MSVC CRT 的 `abort()` 弹窗（"abort() has been called"）。修复了两处：
+1. `main()` 现在包一层 `try/catch`，异常改为打印 `"Unhandled exception: ..."` 并 `return 2`，不再崩溃。
+2. 根因是本机工作区里几个模型文件停留在 LFS 指针状态（`git lfs ls-files` 可确认对象已在本地缓存但工作树
+   未 smudge），用 `git lfs checkout <path>` 手动拉取解决。如果克隆/切换分支后模型文件读不出来，
+   先检查 `head -c 60 <model>.onnx` 是不是 `version https://git-lfs.github.com/spec/v1` 文本，
+   是的话跑 `git lfs pull` 或 `git lfs checkout`。
+
+### 端到端验证
+
+用 `testdata_eval/store`（83张）全量 ingest（三路，Debug 配置）：全部 83 张无崩溃、无异常提交
+（人脸检测失败的图片走 face 路线非致命失败，clothing/exact 路线仍然成功写入）。
+用 `testdata_eval/query`（80张 + 1 张误放的 `.csv`）全量 query（`mode=all`），检查 `fused` 结果 top-1：
+rioko 42/45 正确（3 张跨人误判，误判对象 person_id 分数明显偏低），chichi 32/34 正确
+（1 张 `.csv` 非图片文件按预期读取失败计入 nomatch，不计入分母）。整体 fused top-1 准确率 ~92.5%，
+不低于里程碑1单纯人脸路线的水平。
+
+### 已知限制
+
+- clothing 向量维度是 384（ViT-S/14）不是 HLD 原定的 768（ViT-B/14），见上方模型选型说明。
+- `face_weight`/`clothing_weight`/`exact_score_threshold`/`phash_max_hamming`/`orb_min_inliers`
+  均为初始猜测默认值，待真实数据调优。
+- Ingest 阶段三路顺序执行，非并行，见上方"已知简化"。

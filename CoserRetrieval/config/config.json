@@ -13,5 +13,21 @@
     "clip": {
         "vision_model": "clip_vision_quantized.onnx",
         "input_size": 224
+    },
+    "clothing": {
+        "pose_model": "yolov8n-pose.onnx",
+        "dino_model": "dinov2_vits14.onnx",
+        "det_input_size": 640,
+        "dino_input_size": 224,
+        "embedding_dim": 384
+    },
+    "image_match": {
+        "phash_max_hamming": 10,
+        "orb_min_inliers": 15
+    },
+    "fusion": {
+        "face_weight": 0.7,
+        "clothing_weight": 0.3,
+        "exact_score_threshold": 0.85
     }
 }
