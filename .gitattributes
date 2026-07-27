@@ -1,3 +1,4 @@
 *.onnx filter=lfs diff=lfs merge=lfs -text
+*.onnx.data filter=lfs diff=lfs merge=lfs -text
 ThirdParty/install/opencv4/build/x64/vc16/bin/*.dll filter=lfs diff=lfs merge=lfs -text
 ThirdParty/install/opencv4/build/x64/vc16/bin/*.pdb filter=lfs diff=lfs merge=lfs -text
