@@ -162,3 +162,25 @@ coser_cli help | --help | -h        # 或不带任何参数
 参数和行为与合并前完全一致，只是调用方式从 `ingest_cli.exe --db ...` 变为
 `coser_cli.exe ingest --db ...`（`query_cli.exe`/`scan_authenticity_cli.exe` 同理）。
 合并的目的是减少构建产物数量、统一入口，不涉及功能变更。
+
+## 回归测试：`run_regression_tests.sh`
+
+改动代码后想快速确认没有把已知行为跑坏，用 `CoserRetrieval/run_regression_tests.sh`（先 build 出
+`bin/coser_cli.exe`，再 `cd CoserRetrieval && ./run_regression_tests.sh`）。这不是精度评测
+（精度评测见上面里程碑2/3小节，用 `testdata_eval` 全量数据），只是黑盒跑一遍 `coser_cli`，
+检查几个已知场景的预期行为有没有被打破：
+
+- 正常真人照 ingest 三路全部成功、无 partial failure
+- 无人脸图片 ingest 时 face/clothing 非致命失败但整体仍 commit（exact 路线兜底）
+- 插画被 CLIP 门禁拒绝（face 路线），但不影响 clothing/exact 路线
+- 同人不同照片查询，face 路线正确命中且不与另一人混淆
+- 原图自匹配、轻裁剪转发图仍被识别为同一原图（exact 路线的 pHash+ORB 容忍度）
+- 未入库图片查询不崩溃、正确报告无匹配
+
+用到的 case file 是 `testdata/regression/` 下 7 张图（`rioko_ref.jpg`/`rioko_query.jpg`/
+`chichi_ref.jpg`/`chichi_query.jpg`/`illustration_reject.jpg`/`blank_noface.jpg`/
+`rioko_ref_repost.jpg`），从 `testdata_eval`、`removed_illustrations/` 里挑出来的代表性样本
+（`rioko_ref_repost.jpg` 是脚本生成的 ~5% 裁剪+重新编码变体，用于验证转发图容忍度），复制进
+`testdata/regression/` 独立成一份固定不变的小测试集，不依赖体量大、会持续变动的 `testdata_eval`。
+脚本自身在 `CoserRetrieval/` 目录下生成/清理临时 db 和 index 文件，不产生持久产物；
+失败时打印 `[FAIL]` 并以非零退出码结束。
