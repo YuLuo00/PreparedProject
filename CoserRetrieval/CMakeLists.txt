@@ -8,6 +8,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../ProjectRefrence.cmake)
 set(CORE_SOURCES
     src/L1/ConfigManager.cpp
     src/L1/FileHasher.cpp
+    src/L1/TaskProgress.cpp
     src/L2/FaissFlatIpIndex.cpp
     src/L2/MetadataStore.cpp
     src/L2/PHashIndex.cpp
@@ -31,6 +32,7 @@ set(CORE_SOURCES
 set(CORE_HEADERS
     src/L1/ConfigManager.h
     src/L1/FileHasher.h
+    src/L1/TaskProgress.h
     src/L2/IVectorIndex.h
     src/L2/FaissFlatIpIndex.h
     src/L2/MetadataStore.h

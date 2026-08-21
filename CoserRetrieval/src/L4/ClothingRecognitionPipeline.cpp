@@ -17,6 +17,7 @@ cv::Mat CropBox(const cv::Mat& image, const cv::Rect2f& box) {
 
 struct AppearanceCrop {
     cv::Mat image;
+    cv::Mat mask;
     bool hasApparel = false;
 };
 
@@ -25,17 +26,15 @@ AppearanceCrop CropAppearance(const cv::Mat& image, const PersonDetection& detec
     cv::Mat crop = CropBox(image, detection.box);
     if (crop.empty()) return {};
 
-    cv::Mat apparelMask = parser->ExtractApparelMask(crop);
+    cv::Mat labels = parser->ParseLabels(crop);
+    cv::Mat apparelMask = parser->BuildApparelMask(labels);
     // A few isolated misclassified pixels are not clothing. Require both a
     // minimum absolute area and 1% of the detected person crop.
     const int apparelPixels = apparelMask.empty() ? 0 : cv::countNonZero(apparelMask);
     const int minimumPixels = std::max(512, static_cast<int>(crop.total() * 0.01));
-    if (apparelPixels < minimumPixels) return {cv::Mat{}, false};
+    if (apparelPixels < minimumPixels) return {cv::Mat{}, cv::Mat{}, false};
 
-    cv::Mat appearanceMask = parser->ExtractAppearanceMask(crop);
-    cv::Mat appearance(crop.size(), crop.type(), cv::Scalar::all(0));
-    crop.copyTo(appearance, appearanceMask);
-    return {appearance, true};
+    return {crop, parser->BuildAppearanceMask(labels), true};
 }
 
 std::vector<float> FlattenKeypoints(const std::vector<Keypoint>& keypoints) {
@@ -67,7 +66,8 @@ IngestResult ClothingRecognitionPipeline::Ingest(const cv::Mat& image, int64_t i
     AppearanceCrop crop = CropAppearance(image, *best, parser_);
     if (!crop.hasApparel) return {false, "no clothing detected"};
 
-    std::vector<float> emb = extractor_->Extract(crop.image);
+    std::vector<float> emb = extractor_->ExtractMasked(crop.image, crop.mask);
+    if (emb.empty()) return {false, "no semantic appearance tokens"};
 
     ClothingEmbeddingRef ref;
     ref.image_id = imageId;
@@ -96,7 +96,8 @@ std::vector<PipelineMatch> ClothingRecognitionPipeline::Query(const cv::Mat& ima
     AppearanceCrop crop = CropAppearance(image, *best, parser_);
     if (!crop.hasApparel) return results;
 
-    std::vector<float> emb = extractor_->Extract(crop.image);
+    std::vector<float> emb = extractor_->ExtractMasked(crop.image, crop.mask);
+    if (emb.empty()) return results;
 
     std::vector<int64_t> ids;
     std::vector<float> scores;
@@ -126,7 +127,8 @@ std::vector<PipelineMatch> ClothingRecognitionPipeline::QueryRoles(const cv::Mat
     AppearanceCrop crop = CropAppearance(image, *best, parser_);
     if (!crop.hasApparel) return results;
 
-    std::vector<float> emb = extractor_->Extract(crop.image);
+    std::vector<float> emb = extractor_->ExtractMasked(crop.image, crop.mask);
+    if (emb.empty()) return results;
     std::vector<int64_t> ids;
     std::vector<float> scores;
     // Fetch extra reference images so several photos of one role do not crowd

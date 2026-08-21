@@ -12,6 +12,7 @@ public:
     explicit DinoV2Extractor(const std::string& modelPath, int inputSize = 224, int dim = 384);
 
     std::vector<float> Extract(const cv::Mat& crop) override;
+    std::vector<float> ExtractMasked(const cv::Mat& crop, const cv::Mat& mask) override;
     int GetDim() const override { return dim_; }
 
 private:
@@ -20,6 +21,8 @@ private:
     Ort::MemoryInfo memInfo_;
     int inputSize_;
     int dim_;
+
+    std::vector<float> Run(const cv::Mat& crop, const cv::Mat* mask);
 };
 
 }  // namespace coser

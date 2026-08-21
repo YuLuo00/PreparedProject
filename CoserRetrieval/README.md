@@ -79,6 +79,17 @@ AdaFace IR-18 为 `67/79 = 84.81%`。因此 ArcFace 保持默认，AdaFace 仅�
 批量入库使用 oneTBB `parallel_pipeline`，最多同时保留 7 个图片任务：MD5 与解码并行，重复检查与基础
 元数据建档串行，三条模型路线并行，结果汇总串行；任一任务完成后立即补入下一张。
 
+### 进度回调
+
+供后续 UI 或常驻服务使用，核心库提供进程内 `TaskProgressHub`。外部模块通过
+`TaskProgressHub::Instance().Register(callback)` 注册，保留返回的订阅 ID，并在销毁时调用
+`Unregister(subscriptionId)`。每个 `TaskProgressEvent` 包含任务 ID、操作 (`ingest`/`query`)、
+`Started`/`Running`/`Completed`/`Failed` 状态、总数、完成数、成功/跳过/失败数、当前路径和消息。
+
+`ingest` 与 `query` 通过 `--task-id <id>` 设置任务 ID，默认分别为 `ingest`、`query`；后台同时启动多个
+任务时必须传入不同 ID。回调在发出事件的工作线程同步调用，UI 回调必须尽快将事件投递到自身 UI 线程，
+不能在回调内阻塞或执行耗时工作。CLI 进程本身没有 UI 订阅者，但同一进程内嵌核心库的服务/桌面模块可直接订阅。
+
 ```powershell
 .\bin\coser_cli.exe ingest `
   --db .\data\coser.db `
@@ -137,6 +148,11 @@ MD5 只用于完全相同文件的去重；经过裁剪、重编码或加水印�
 时，图片判定为 `no clothing detected`：仍可写入原图匹配和人脸特征，但不会写入 clothing 向量，也不会
 参与 `clothing` 或 `role` 查询。这能排除脚部、皮肤局部、裸体或无服装主体图片，避免黑色掩码产生
 虚假的 `1.0` 相似度。
+
+服装/发型向量使用 DINOv2 `last_hidden_state` 的 `16x16` patch token 网格。LIP 的外观 mask 按面积
+下采样到该网格，只有被头发或服饰覆盖的 patch 会进入加权平均；mask 外的 patch 不参与最终 embedding。
+人脸向量则只使用检测、对齐后的脸部裁剪。注意 DINOv2 的自注意力仍会使保留 patch 感知全图上下文；若
+要连上下文也完全隔离，必须替换为支持 attention mask 的 DINO ONNX 导出。
 
 查询结果会输出候选人物、路线、分数和对应的入库参考图片路径；没有候选时输出 `No matches`。
 
@@ -367,8 +383,8 @@ rioko 42/45 正确（3 张跨人误判，误判对象 person_id 分数明显偏�
 单一的 `coser_cli.exe`，用子命令区分功能（类似 `git <subcommand>` 的风格）：
 
 ```
-coser_cli ingest --db <path> [--index <path>] --models-dir <dir> (--image <path> | --dir <directory>) [--person "<Name>"] [--role "<Character>"] [--face-model arcface|adaface] [--file-prefix <prefix>] [--clothing-index <path>]
-coser_cli query  --db <path> [--index <path>] --models-dir <dir> (--image <path> | --dir <directory>) --topk <N> [--mode exact|face|clothing|role|all] [--face-model arcface|adaface] [--clothing-index <path>] [--report <csv>]
+coser_cli ingest --db <path> [--index <path>] --models-dir <dir> (--image <path> | --dir <directory>) [--person "<Name>"] [--role "<Character>"] [--face-model arcface|adaface] [--task-id <id>] [--file-prefix <prefix>] [--clothing-index <path>]
+coser_cli query  --db <path> [--index <path>] --models-dir <dir> (--image <path> | --dir <directory>) --topk <N> [--mode exact|face|clothing|role|all] [--face-model arcface|adaface] [--task-id <id>] [--clothing-index <path>] [--report <csv>]
 coser_cli scan   --dir <directory> --clip-model <path>
 coser_cli visualize --models-dir <dir> --image <path> --output <png>
 coser_cli help | --help | -h        # 或不带任何参数

@@ -10,6 +10,7 @@
 #include <opencv2/imgcodecs.hpp>
 
 #include "commands.h"
+#include "../src/L1/TaskProgress.h"
 #include "../src/L2/MetadataStore.h"
 #include "../src/L2/FaissFlatIpIndex.h"
 #include "../src/L2/PHashIndex.h"
@@ -140,6 +141,7 @@ int RunQuery(int argc, char** argv) try {
     std::string dirPath = get("dir");
     std::string reportPath = get("report");
     std::string faceModel = get("face-model", "arcface");
+    std::string taskId = get("task-id", "query");
     int topK = std::stoi(get("topk", "5"));
     QueryMode mode = ParseMode(get("mode", "all"));
 
@@ -249,6 +251,13 @@ int RunQuery(int argc, char** argv) try {
     int processed = 0;
     int unreadable = 0;
     int matched = 0;
+    auto reportProgress = [&](TaskStatus status, const std::string& path = "",
+                              const std::string& message = "") {
+        TaskProgressHub::Instance().Notify({taskId, "query", status,
+            static_cast<int>(imagePaths.size()), processed + unreadable,
+            matched, 0, unreadable, path, message});
+    };
+    reportProgress(TaskStatus::Started, "", "Batch query started");
     for (const auto& path : imagePaths) {
         std::string pathString = path.string();
         cv::Mat image = cv::imread(pathString);
@@ -257,6 +266,7 @@ int RunQuery(int argc, char** argv) try {
             ++unreadable;
             if (report) report << CsvEscape(pathString) << ',' << CsvEscape(get("mode", "all"))
                                << ",,,,,false\n";
+            reportProgress(TaskStatus::Running, pathString, "Failed to read image");
             continue;
         }
 
@@ -286,6 +296,7 @@ int RunQuery(int argc, char** argv) try {
             report << ',' << (top ? "true" : "false") << '\n';
         }
         ++processed;
+        reportProgress(TaskStatus::Running, pathString, top ? "Matched" : "No match");
     }
 
     if (!dirPath.empty()) {
@@ -293,7 +304,10 @@ int RunQuery(int argc, char** argv) try {
                   << " processed=" << processed << " matched=" << matched
                   << " unreadable=" << unreadable << "\n";
     }
-    return unreadable == 0 ? 0 : 1;
+    const bool success = unreadable == 0;
+    reportProgress(success ? TaskStatus::Completed : TaskStatus::Failed, "",
+                   success ? "Batch query completed" : "Batch query completed with unreadable files");
+    return success ? 0 : 1;
 } catch (const std::exception& e) {
     std::cerr << "Unhandled exception: " << e.what() << "\n";
     return 2;

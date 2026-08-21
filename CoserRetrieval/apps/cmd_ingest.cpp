@@ -12,6 +12,7 @@
 
 #include "commands.h"
 #include "../src/L1/FileHasher.h"
+#include "../src/L1/TaskProgress.h"
 #include "../src/L2/MetadataStore.h"
 #include "../src/L2/FaissFlatIpIndex.h"
 #include "../src/L2/PHashIndex.h"
@@ -71,6 +72,7 @@ int RunIngest(int argc, char** argv) try {
     std::string imagePath = get("image");
     std::string dirPath = get("dir");
     std::string filePrefix = get("file-prefix");
+    std::string taskId = get("task-id", "ingest");
 
     bool includeFace = !personName.empty();
     if (faceModel != "arcface" && faceModel != "adaface") {
@@ -203,6 +205,13 @@ int RunIngest(int argc, char** argv) try {
     int skipped = 0;
     int failed = 0;
     std::mutex outputMutex;
+    auto reportProgress = [&](TaskStatus status, const std::string& path = "",
+                              const std::string& message = "") {
+        TaskProgressHub::Instance().Notify({taskId, "ingest", status,
+            static_cast<int>(imagePaths.size()), succeeded + skipped + failed,
+            succeeded, skipped, failed, path, message});
+    };
+    reportProgress(TaskStatus::Started, "", "Batch ingest started");
 
     // Seven in-flight tokens bound memory and ONNX CPU contention. A completed
     // token immediately frees a slot for the next source image.
@@ -292,6 +301,7 @@ int RunIngest(int argc, char** argv) try {
                               << " path=" << item.pathString << "\n";
                     ++succeeded;
                 }
+                reportProgress(TaskStatus::Running, item.pathString, item.error);
             }));
 
     if (faceIndex && !faceIndex->Save(faceIndexPath)) {
@@ -307,7 +317,10 @@ int RunIngest(int argc, char** argv) try {
         std::cout << "Batch complete: total=" << imagePaths.size()
                   << " succeeded=" << succeeded << " skipped=" << skipped << " failed=" << failed << "\n";
     }
-    return failed == 0 ? 0 : 1;
+    const bool success = failed == 0;
+    reportProgress(success ? TaskStatus::Completed : TaskStatus::Failed, "",
+                   success ? "Batch ingest completed" : "Batch ingest completed with failures");
+    return success ? 0 : 1;
 } catch (const std::exception& e) {
     std::cerr << "Unhandled exception: " << e.what() << "\n";
     return 2;

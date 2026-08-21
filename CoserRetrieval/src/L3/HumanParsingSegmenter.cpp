@@ -106,7 +106,10 @@ cv::Mat HumanParsingSegmenter::ParseLabels(const cv::Mat& personCrop) {
 }
 
 cv::Mat HumanParsingSegmenter::ExtractAppearanceMask(const cv::Mat& personCrop) {
-    cv::Mat labels = ParseLabels(personCrop);
+    return BuildAppearanceMask(ParseLabels(personCrop));
+}
+
+cv::Mat HumanParsingSegmenter::BuildAppearanceMask(const cv::Mat& labels) const {
     if (labels.empty()) return {};
     cv::Mat mask(labels.size(), CV_8U, cv::Scalar(0));
     for (int y = 0; y < mask.rows; ++y) {
@@ -120,7 +123,10 @@ cv::Mat HumanParsingSegmenter::ExtractAppearanceMask(const cv::Mat& personCrop) 
 }
 
 cv::Mat HumanParsingSegmenter::ExtractApparelMask(const cv::Mat& personCrop) {
-    cv::Mat labels = ParseLabels(personCrop);
+    return BuildApparelMask(ParseLabels(personCrop));
+}
+
+cv::Mat HumanParsingSegmenter::BuildApparelMask(const cv::Mat& labels) const {
     if (labels.empty()) return {};
     cv::Mat mask(labels.size(), CV_8U, cv::Scalar(0));
     for (int y = 0; y < mask.rows; ++y) {

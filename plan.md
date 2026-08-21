@@ -31,10 +31,12 @@
 - [x] 合并 CLI 为 `coser_cli ingest|query|scan`。
 - [x] 支持目录批量查询与 top-1 CSV 报告，批量任务复用一次模型加载。
 - [x] 接入 vcpkg oneTBB，并将批量 `ingest` 改为 7 个在途 token 的 TBB pipeline：预处理/模型解析并行，SQLite 建档和结果汇总串行。
+- [x] 提供进程内任务进度回调中心：`ingest`/`query` 发送开始、运行中、完成或失败事件，供后续 UI/服务按任务 ID 刷新。
 - [x] 支持 `--role` 角色标签与 `query --mode role`；角色模式使用 LIP 像素级人体解析，仅匹配头发与可穿戴服饰，排除脸、皮肤、肢体和背景，不调用人脸或原图路线。
 - [x] 提供 `visualize` 诊断命令，渲染 LIP 实际判定的头发/服装区域和脸部区域。
 - [x] 下载、校验并接入 LIP ResNet-101 ONNX 人体语义分割权重。
 - [x] 对 clothing/role 路线增加“无衣服”判定：仅头发或少量误分割像素不会生成服装向量，防止黑色掩码造成假高相似度。
+- [x] clothing/role 向量改为按 LIP mask 覆盖的 DINO patch token 加权池化；mask 外 patch 不参与最终 embedding。
 - [x] 准备 face、CLIP、YOLO Pose、DINOv2 本地 ONNX 模型。
 - [x] 编写固定样本回归测试脚本和 7 张测试图片。
 - [ ] 将 CoserRetrieval 的三路检索与融合接入 `ImageSearch.dll`。
