@@ -1,6 +1,186 @@
 # CoserRetrieval
 
-纯 C++ 图像检索系统（替代 `test/` 下已废弃的 Python 微服务 + DLL 架构）。
+纯 C++ 图像检索系统。
+
+> **项目状态（2026-08）**：当前只维护和使用本目录的 `CoserRetrieval`（通过
+> `bin/coser_cli.exe` 运行）。根目录 `test/`、`bin/ImageSearch.dll` 及其 Python 微服务
+> 属于旧架构，已停止开发和验证；仅为保留历史代码、模型与接口参考而留在仓库中，不能作为当前
+> 图库功能的交付入口。
+
+> **维护约定**：任何功能、CLI 参数、数据表或检索规则的规格变更，必须在同一改动中同步更新本 README、
+> `plan.md` 及相应回归测试说明。
+
+## 快速使用
+
+以下命令均在**项目根目录**执行，使用 Windows PowerShell。首次使用前确认
+`CoserRetrieval/models/` 下的模型文件完整；尤其 DINOv2 必须同时存在
+`dinov2_vits14.onnx` 和 `dinov2_vits14.onnx.data`。
+
+### 1. 构建
+
+```powershell
+cmake --build .\CoserRetrieval\build --config Debug --target coser_cli
+```
+
+生成的程序为 `bin/coser_cli.exe`。当前 Release 配置存在已知的 faiss 崩溃问题，日常使用和验证请先使用 Debug。
+
+### 人脸模型选择
+
+默认人脸模型是 InsightFace ArcFace（`w600k_r50.onnx`）。可通过 `--face-model adaface` 试用
+AdaFace IR-18 WebFace4M（`models/face/adaface_ir18_webface4m.onnx`）；该模型使用 **BGR** 输入，
+代码已使用独立预处理器，不能复用 ArcFace 的 RGB 预处理。
+
+不同人脸模型的 embedding 空间不兼容，AdaFace 必须使用独立的数据库和人脸索引，不能与 ArcFace
+的 `db`/`index` 混用：
+
+```powershell
+.\bin\coser_cli.exe ingest `
+  --db .\data\coser_adaface.db `
+  --index .\data\coser_adaface_face.index `
+  --clothing-index .\data\coser_adaface_clothing.index `
+  --models-dir .\CoserRetrieval\models `
+  --face-model adaface `
+  --person "rioko" `
+  --image .\photos\rioko_ref.jpg
+```
+
+在当前 `testdata_eval` 人物-only 评测（79 张有效 query）中：ArcFace 为 `72/79 = 91.14%`，
+AdaFace IR-18 为 `67/79 = 84.81%`。因此 ArcFace 保持默认，AdaFace 仅作为备用 A/B 方案；后续
+更换 AdaFace 的更大 backbone 或重新校准参考图后，应再次评测再决定是否启用。
+
+### 2. 入库图片
+
+每张图片至少指定人物名称或角色名。以下示例将人脸、服装/角色和原图匹配三条路线同时写入同一套 SQLite/索引文件：
+
+```powershell
+.\bin\coser_cli.exe ingest `
+  --db .\data\coser.db `
+  --index .\data\coser_face.index `
+  --clothing-index .\data\coser_clothing.index `
+  --models-dir .\CoserRetrieval\models `
+  --face-model arcface `
+  --person "rioko" `
+  --role "角色A" `
+  --image .\photos\rioko_ref.jpg
+```
+
+首次使用时请先创建保存数据库和索引的目录：`New-Item -ItemType Directory -Force .\data`。
+同一人可多次执行 `ingest`，分别加入不同角色、妆容或拍摄条件的参考图。只建设角色库时，
+可省略 `--person`，仅提供 `--role`。
+`--role` 为可选参数；需要按 Cos 角色检索时，同一角色的每张参考图都应使用完全相同的角色名。
+
+> 升级到角色检索版本后，请使用新数据库/索引重新执行 `ingest`。旧 clothing 索引保存的是未遮蔽
+> 脸部的向量，不能与新的服装/发型特征混用。
+
+### 3. 批量入库目录
+
+将 `--image` 换为 `--dir` 可递归导入目录下的 `jpg`、`jpeg`、`png`、`bmp`、`webp` 图片。
+模型和索引在整批任务中只加载一次，索引在全部处理完成后保存一次，适合大批量入库。
+
+```powershell
+.\bin\coser_cli.exe ingest `
+  --db .\data\coser.db `
+  --clothing-index .\data\coser_clothing.index `
+  --models-dir .\CoserRetrieval\models `
+  --role "角色A" `
+  --dir .\photos\role_a
+```
+
+同一批图片使用同一个 `--person` 和 `--role` 标签。角色-only 批次可省略 `--person` 和 `--index`；
+此时不会加载或写入人脸模型/索引。命令结束时会输出 `total`、`succeeded`、`failed` 汇总。
+
+当平铺目录中包含多个模特或角色时，可用 `--file-prefix` 仅导入指定文件名前缀，再分别传入对应标签：
+
+```powershell
+.\bin\coser_cli.exe ingest --db .\data\coser.db --index .\data\face.index `
+  --clothing-index .\data\coser_clothing.index --models-dir .\CoserRetrieval\models `
+  --person "rioko" --file-prefix "rioko_" --dir .\photos\mixed_store
+```
+
+批量任务会继续处理单张不可读或路线部分失败的图片；只有基础原图记录无法写入时才计为失败。
+
+### MD5 重复保护
+
+每个待入库文件都会计算内容 MD5，并保存到 SQLite 的 `images.md5`。再次导入字节内容
+完全相同的文件时，系统会在加载图片和运行模型前输出 `Duplicate skipped`，引用已有 `image_id`，
+并在批量汇总中计入 `skipped`，不会重复写入向量或索引。
+
+MD5 只用于完全相同文件的去重；经过裁剪、重编码或加水印后的文件 MD5 会变化，仍由 `query --mode exact`
+中的 pHash + ORB 判断是否属于同一原图。已有的旧数据库没有 MD5 值，需重新入库后才能受到该规则保护。
+
+### 4. 查询图片
+
+```powershell
+.\bin\coser_cli.exe query `
+  --db .\data\coser.db `
+  --index .\data\coser_face.index `
+  --clothing-index .\data\coser_clothing.index `
+  --models-dir .\CoserRetrieval\models `
+  --image .\photos\unknown.jpg `
+  --topk 5 `
+  --mode all
+```
+
+`--mode` 可选值：
+
+- `all`：三路查询并融合结果，日常默认使用。
+- `face`：仅按人脸身份查询。
+- `clothing`：仅按服装/角色外观查询。
+- `exact`：仅匹配相同原图或轻微裁剪、重编码后的转发图。
+- `role`：仅按已标注角色的服装与发型外观查询，不运行人脸或原图匹配。人体关键点会定位并遮蔽
+  脸部像素，保留头发和服装区域；未在入库时传入 `--role` 的图片不会出现在此模式的结果中。
+
+查询结果会输出候选人物、路线、分数和对应的入库参考图片路径；没有候选时输出 `No matches`。
+
+### 5. 批量查询与 CSV 报告
+
+将 `--image` 换为 `--dir` 可递归查询目录中的所有支持图片。模型和索引在整批中只加载一次；
+`--report` 输出每张图片的 top-1 结果，字段为 `file_path`、`mode`、`top1_label`、`top1_image_id`、
+`top1_reference_path`、`top1_score`、`matched`，可直接追溯最佳参考图。
+
+```powershell
+.\bin\coser_cli.exe query `
+  --db .\data\coser.db `
+  --index .\data\coser_face.index `
+  --clothing-index .\data\coser_clothing.index `
+  --models-dir .\CoserRetrieval\models `
+  --dir .\photos\query_set `
+  --topk 1 `
+  --mode face `
+  --report .\query_report.csv
+```
+
+批量完成时输出 `total`、`processed`、`matched` 和 `unreadable`。发现不可读取文件时仍会继续处理
+其他图片，但命令以非零退出码结束，便于自动化任务发现输入问题。
+
+### 6. 服装/发型区域可视化
+
+使用 `visualize` 生成当前 clothing/role 路线的实际输入区域示意图：红色半透明是 YOLO Pose 的完整
+人体框，白色半透明椭圆是按关键点遮蔽、不会送入 DINOv2 的脸部区域。
+
+```powershell
+.\bin\coser_cli.exe visualize `
+  --models-dir .\CoserRetrieval\models `
+  --image .\photos\example.jpg `
+  --output .\visualizations\example_mask.png
+```
+
+**注意**：当前是人体框裁剪加脸部遮蔽，不是服装语义分割。红色区域也包含框内背景、手部和身体，
+头发位于红色区域中。这是当前服装/发型相似度受姿势、背景和裁剪影响的直接原因。
+
+### 7. 批量扫描可疑插画/CG
+
+`scan` 仅标记可能不是真人照片的文件，供人工复核；**不要**据此自动删除或拒绝图片。
+
+```powershell
+.\bin\coser_cli.exe scan `
+  --dir .\photos `
+  --clip-model .\CoserRetrieval\models\clip\clip_vision_quantized.onnx
+```
+
+### 8. 回归测试
+
+固定样本位于 `CoserRetrieval/testdata/regression/`。现有 `run_regression_tests.sh` 需要 Bash；在纯 Windows 环境可按上面的 ingest/query 命令执行，或后续补充 PowerShell/CTest 测试入口。
 
 ## 里程碑 1：人脸识别路径
 
@@ -153,15 +333,16 @@ rioko 42/45 正确（3 张跨人误判，误判对象 person_id 分数明显偏�
 单一的 `coser_cli.exe`，用子命令区分功能（类似 `git <subcommand>` 的风格）：
 
 ```
-coser_cli ingest --db <path> --index <path> --models-dir <dir> --person "<Name>" --image <path> [--clothing-index <path>]
-coser_cli query  --db <path> --index <path> --models-dir <dir> --image <path> --topk <N> [--mode exact|face|clothing|all] [--clothing-index <path>]
+coser_cli ingest --db <path> [--index <path>] --models-dir <dir> (--image <path> | --dir <directory>) [--person "<Name>"] [--role "<Character>"] [--face-model arcface|adaface] [--file-prefix <prefix>] [--clothing-index <path>]
+coser_cli query  --db <path> [--index <path>] --models-dir <dir> (--image <path> | --dir <directory>) --topk <N> [--mode exact|face|clothing|role|all] [--face-model arcface|adaface] [--clothing-index <path>] [--report <csv>]
 coser_cli scan   --dir <directory> --clip-model <path>
+coser_cli visualize --models-dir <dir> --image <path> --output <png>
 coser_cli help | --help | -h        # 或不带任何参数
 ```
 
-参数和行为与合并前完全一致，只是调用方式从 `ingest_cli.exe --db ...` 变为
-`coser_cli.exe ingest --db ...`（`query_cli.exe`/`scan_authenticity_cli.exe` 同理）。
-合并的目的是减少构建产物数量、统一入口，不涉及功能变更。
+`--index` 在人物人脸路线中必填；角色-only 入库/查询可省略。不同人脸模型的 embedding 空间不兼容，
+AdaFace 必须使用单独的数据库和人脸索引。批量 `ingest`/`query` 会复用一次模型加载；`query --report`
+可输出 top-1 参考图路径用于离线评测和人工复核。
 
 ## 回归测试：`run_regression_tests.sh`
 

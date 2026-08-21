@@ -7,11 +7,13 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../ProjectRefrence.cmake)
 # ─── 核心库源文件（L1~L4） ────────────────────────────────────────────────────
 set(CORE_SOURCES
     src/L1/ConfigManager.cpp
+    src/L1/FileHasher.cpp
     src/L2/FaissFlatIpIndex.cpp
     src/L2/MetadataStore.cpp
     src/L2/PHashIndex.cpp
     src/L3/ScrfdFaceDetector.cpp
     src/L3/ArcFaceExtractor.cpp
+    src/L3/AdaFaceExtractor.cpp
     src/L3/FaceAlign.cpp
     src/L3/PhotoAuthenticityChecker.cpp
     src/L3/PHasher.cpp
@@ -27,6 +29,7 @@ set(CORE_SOURCES
 
 set(CORE_HEADERS
     src/L1/ConfigManager.h
+    src/L1/FileHasher.h
     src/L2/IVectorIndex.h
     src/L2/FaissFlatIpIndex.h
     src/L2/MetadataStore.h
@@ -35,6 +38,7 @@ set(CORE_HEADERS
     src/L3/IEmbeddingExtractor.h
     src/L3/ScrfdFaceDetector.h
     src/L3/ArcFaceExtractor.h
+    src/L3/AdaFaceExtractor.h
     src/L3/FaceAlign.h
     src/L3/PhotoAuthenticityChecker.h
     src/L3/PHasher.h
@@ -83,6 +87,7 @@ add_executable(coser_cli
     apps/cmd_ingest.cpp
     apps/cmd_query.cpp
     apps/cmd_scan.cpp
+    apps/cmd_visualize.cpp
 )
 
 target_compile_features(coser_cli PRIVATE cxx_std_17)
@@ -97,6 +102,7 @@ target_link_libraries(coser_cli PRIVATE
     faiss
     onnxruntime::onnxruntime
     onnxruntime::providers_shared
+    bcrypt
 )
 
 # ─── 安装 ─────────────────────────────────────────────────────────────────────

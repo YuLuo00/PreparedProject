@@ -56,10 +56,18 @@ bool MetadataStore::CreateTables() {
             created_at    INTEGER NOT NULL DEFAULT (strftime('%s','now'))
         );
 
+        CREATE TABLE IF NOT EXISTS roles (
+            role_id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            display_name  TEXT NOT NULL UNIQUE,
+            created_at    INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+        );
+
         CREATE TABLE IF NOT EXISTS images (
             image_id      INTEGER PRIMARY KEY AUTOINCREMENT,
             person_id     INTEGER REFERENCES persons(person_id),
+            role_id       INTEGER REFERENCES roles(role_id),
             file_path     TEXT NOT NULL UNIQUE,
+            md5           TEXT,
             width         INTEGER,
             height        INTEGER,
             format        TEXT,
@@ -89,7 +97,38 @@ bool MetadataStore::CreateTables() {
         );
         CREATE INDEX IF NOT EXISTS idx_cloth_emb_image ON clothing_embeddings(image_id);
     )";
-    return Execute(sql);
+    if (!Execute(sql)) return false;
+
+    // Databases created before role recognition do not have images.role_id.
+    if (!ColumnExists("images", "role_id") &&
+        !Execute("ALTER TABLE images ADD COLUMN role_id INTEGER REFERENCES roles(role_id);")) {
+        return false;
+    }
+    if (!ColumnExists("images", "md5") && !Execute("ALTER TABLE images ADD COLUMN md5 TEXT;")) {
+        return false;
+    }
+    return Execute("CREATE INDEX IF NOT EXISTS idx_images_role ON images(role_id);") &&
+           Execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_images_md5_unique "
+                   "ON images(md5) WHERE md5 IS NOT NULL;");
+}
+
+bool MetadataStore::ColumnExists(const std::string& table, const std::string& column) {
+    sqlite3_stmt* stmt = nullptr;
+    std::string sql = "PRAGMA table_info(" + table + ")";
+    if (sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        lastError_ = sqlite3_errmsg(db_);
+        return false;
+    }
+    bool found = false;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        if (name && column == name) {
+            found = true;
+            break;
+        }
+    }
+    sqlite3_finalize(stmt);
+    return found;
 }
 
 int64_t MetadataStore::InsertPerson(const std::string& displayName, const std::string& category) {
@@ -110,22 +149,55 @@ int64_t MetadataStore::InsertPerson(const std::string& displayName, const std::s
     return sqlite3_last_insert_rowid(db_);
 }
 
+int64_t MetadataStore::InsertRole(const std::string& displayName) {
+    const char* insertSql = "INSERT OR IGNORE INTO roles(display_name) VALUES(?)";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, insertSql, -1, &stmt, nullptr) != SQLITE_OK) {
+        lastError_ = sqlite3_errmsg(db_);
+        return -1;
+    }
+    sqlite3_bind_text(stmt, 1, displayName.c_str(), -1, SQLITE_TRANSIENT);
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    if (rc != SQLITE_DONE) {
+        lastError_ = sqlite3_errmsg(db_);
+        return -1;
+    }
+
+    const char* selectSql = "SELECT role_id FROM roles WHERE display_name=?";
+    if (sqlite3_prepare_v2(db_, selectSql, -1, &stmt, nullptr) != SQLITE_OK) {
+        lastError_ = sqlite3_errmsg(db_);
+        return -1;
+    }
+    sqlite3_bind_text(stmt, 1, displayName.c_str(), -1, SQLITE_TRANSIENT);
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        lastError_ = sqlite3_errmsg(db_);
+        sqlite3_finalize(stmt);
+        return -1;
+    }
+    int64_t roleId = sqlite3_column_int64(stmt, 0);
+    sqlite3_finalize(stmt);
+    return roleId;
+}
+
 int64_t MetadataStore::InsertImage(const ImageRow& row) {
     const char* sql = R"(
-        INSERT INTO images(person_id, file_path, width, height, format, ingest_status)
-        VALUES(?,?,?,?,?,?)
+        INSERT INTO images(person_id, role_id, file_path, md5, width, height, format, ingest_status)
+        VALUES(?,?,?,?,?,?,?,?)
     )";
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
         lastError_ = sqlite3_errmsg(db_);
         return -1;
     }
-    sqlite3_bind_int64(stmt, 1, row.person_id);
-    sqlite3_bind_text(stmt, 2, row.file_path.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt, 3, row.width);
-    sqlite3_bind_int(stmt, 4, row.height);
-    sqlite3_bind_text(stmt, 5, row.format.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 6, row.ingest_status.c_str(), -1, SQLITE_TRANSIENT);
+    if (row.person_id > 0) sqlite3_bind_int64(stmt, 1, row.person_id); else sqlite3_bind_null(stmt, 1);
+    if (row.role_id > 0) sqlite3_bind_int64(stmt, 2, row.role_id); else sqlite3_bind_null(stmt, 2);
+    sqlite3_bind_text(stmt, 3, row.file_path.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 4, row.md5.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 5, row.width);
+    sqlite3_bind_int(stmt, 6, row.height);
+    sqlite3_bind_text(stmt, 7, row.format.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 8, row.ingest_status.c_str(), -1, SQLITE_TRANSIENT);
     int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
     if (rc != SQLITE_DONE) {
@@ -133,6 +205,26 @@ int64_t MetadataStore::InsertImage(const ImageRow& row) {
         return -1;
     }
     return sqlite3_last_insert_rowid(db_);
+}
+
+std::optional<ImageMd5Row> MetadataStore::FindImageByMd5(const std::string& md5) {
+    const char* sql = "SELECT image_id, file_path FROM images WHERE md5=? LIMIT 1";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        lastError_ = sqlite3_errmsg(db_);
+        return std::nullopt;
+    }
+    sqlite3_bind_text(stmt, 1, md5.c_str(), -1, SQLITE_TRANSIENT);
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        sqlite3_finalize(stmt);
+        return std::nullopt;
+    }
+    ImageMd5Row row;
+    row.image_id = sqlite3_column_int64(stmt, 0);
+    const char* path = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+    row.file_path = path ? path : "";
+    sqlite3_finalize(stmt);
+    return row;
 }
 
 bool MetadataStore::UpdateImageStatus(int64_t imageId, const std::string& status, const std::string& failReason) {
@@ -235,10 +327,11 @@ int64_t MetadataStore::InsertClothingEmbeddingRef(const ClothingEmbeddingRef& re
 
 std::optional<ClothingMatchRow> MetadataStore::ResolveClothingEmbedding(int64_t embeddingId) {
     const char* sql = R"(
-        SELECT ce.embedding_id, ce.image_id, i.person_id, p.display_name
+        SELECT ce.embedding_id, ce.image_id, i.person_id, p.display_name, i.role_id, r.display_name
         FROM clothing_embeddings ce
         JOIN images i ON ce.image_id = i.image_id
         LEFT JOIN persons p ON i.person_id = p.person_id
+        LEFT JOIN roles r ON i.role_id = r.role_id
         WHERE ce.embedding_id = ?
     )";
     sqlite3_stmt* stmt = nullptr;
@@ -257,6 +350,9 @@ std::optional<ClothingMatchRow> MetadataStore::ResolveClothingEmbedding(int64_t 
     row.person_id = sqlite3_column_int64(stmt, 2);
     const char* name = (const char*)sqlite3_column_text(stmt, 3);
     row.display_name = name ? name : "";
+    row.role_id = sqlite3_column_int64(stmt, 4);
+    const char* roleName = (const char*)sqlite3_column_text(stmt, 5);
+    row.role_name = roleName ? roleName : "";
     sqlite3_finalize(stmt);
     return row;
 }

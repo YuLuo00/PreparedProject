@@ -1,6 +1,7 @@
 # 图库项目实施计划
 
 本文按当前仓库的实际实现状态整理。勾选项表示已有对应代码或构建产物；未勾选项表示尚未实现、尚未接入，或尚未完成验证。
+功能、CLI 参数、数据表或检索规则变更时，必须同步更新本计划、`CoserRetrieval/README.md` 和对应测试说明。
 
 ## 1. 原始图库系统（ImageSearch DLL）
 
@@ -21,11 +22,16 @@
 ## 2. CoserRetrieval 检索扩展
 
 - [x] 实现纯 C++ 人脸检索路径：SCRFD 检测、人脸对齐、ArcFace 特征、Faiss 检索和元数据存储。
+- [x] 接入 AdaFace IR-18 作为可选备用人脸模型并完成同集 A/B；当前准确率低于 ArcFace，保持 ArcFace 默认。
 - [x] 实现 CLIP 真人照片/插画候选标记工具与批量扫描命令。
 - [x] 实现服装/角色识别路径：YOLOv8 Pose 人体检测、DINOv2 特征和 Faiss 检索。
 - [x] 实现原图匹配路径：pHash 粗筛和 ORB 精确确认。
+- [x] 为入库文件记录 MD5，并在模型推理前跳过字节内容完全重复的文件。
 - [x] 实现 L5 `RetrievalOrchestrator` 与 face/clothing/exact 结果融合。
 - [x] 合并 CLI 为 `coser_cli ingest|query|scan`。
+- [x] 支持目录批量查询与 top-1 CSV 报告，批量任务复用一次模型加载。
+- [x] 支持 `--role` 角色标签与 `query --mode role`；角色模式仅匹配遮蔽脸部后的服装/发型特征，不调用人脸或原图路线。
+- [x] 提供 `visualize` 诊断命令，渲染人体框、头发/服装外观区域和脸部遮蔽区域。
 - [x] 准备 face、CLIP、YOLO Pose、DINOv2 本地 ONNX 模型。
 - [x] 编写固定样本回归测试脚本和 7 张测试图片。
 - [ ] 将 CoserRetrieval 的三路检索与融合接入 `ImageSearch.dll`。

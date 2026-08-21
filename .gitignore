@@ -21,3 +21,6 @@ test.db
 test_face.index
 diag.db-shm
 diag.db-wal
+/CoserRetrieval/eval_*.db
+/CoserRetrieval/eval_*.index
+/CoserRetrieval/eval_*.csv

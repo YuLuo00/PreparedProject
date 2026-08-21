@@ -16,7 +16,9 @@ struct Person {
 struct ImageRow {
     int64_t image_id = 0;
     int64_t person_id = 0;
+    int64_t role_id = 0;
     std::string file_path;
+    std::string md5;
     int width = 0;
     int height = 0;
     std::string format;
@@ -50,12 +52,19 @@ struct ClothingMatchRow {
     int64_t image_id = 0;
     int64_t person_id = 0;
     std::string display_name;
+    int64_t role_id = 0;
+    std::string role_name;
 };
 
 struct ImagePersonRow {
     int64_t image_id = 0;
     int64_t person_id = 0;
     std::string display_name;
+};
+
+struct ImageMd5Row {
+    int64_t image_id = 0;
+    std::string file_path;
 };
 
 class MetadataStore {
@@ -67,7 +76,9 @@ public:
     void Close();
 
     int64_t InsertPerson(const std::string& displayName, const std::string& category = "");
+    int64_t InsertRole(const std::string& displayName);
     int64_t InsertImage(const ImageRow& row);
+    std::optional<ImageMd5Row> FindImageByMd5(const std::string& md5);
     bool UpdateImageStatus(int64_t imageId, const std::string& status, const std::string& failReason = "");
 
     int64_t InsertFaceEmbeddingRef(const FaceEmbeddingRef& ref);
@@ -89,6 +100,7 @@ private:
 
     bool Execute(const std::string& sql);
     bool CreateTables();
+    bool ColumnExists(const std::string& table, const std::string& column);
 };
 
 }  // namespace coser

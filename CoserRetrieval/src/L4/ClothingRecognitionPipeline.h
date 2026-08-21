@@ -15,10 +15,16 @@ public:
                                  IVectorIndex* index,
                                  MetadataStore* store);
 
-    /// 检测最高分人体框 -> 整框裁剪 -> 提取 -> 写入 index/metadata
+    /// Detect the highest-score person, mask facial pixels, then extract the
+    /// clothing/hair appearance embedding and write it to index/metadata.
     IngestResult Ingest(const cv::Mat& image, int64_t imageId);
 
     std::vector<PipelineMatch> Query(const cv::Mat& image, int topK);
+
+    /// Role retrieval only uses the face-masked clothing/hair index. Results
+    /// without an ingest-time role label are ignored and duplicate references
+    /// for the same role are collapsed to their best score.
+    std::vector<PipelineMatch> QueryRoles(const cv::Mat& image, int topK);
 
 private:
     IPoseDetector* poseDetector_;

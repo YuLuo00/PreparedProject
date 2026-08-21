@@ -1,0 +1,8 @@
+"QueryFile","Expected","Status","Candidates","CorrectInTop20","IncorrectInTop20","FirstCorrectRank"
+"chichi_query_005.jpg","chichi","ok","20","13","7","2"
+"chichi_query_008.jpg","chichi","ok","20","9","11","2"
+"chichi_query_015.jpg","chichi","ok","20","12","8","4"
+"rioko_query_019.jpg","rioko","unreadable_avif","0","0","0",""
+"rioko_query_028.jpg","rioko","unreadable_avif","0","0","0",""
+"rioko_query_043.jpg","rioko","ok","20","8","12","3"
+"rioko_query_047.jpg","rioko","ok","20","12","8","2"

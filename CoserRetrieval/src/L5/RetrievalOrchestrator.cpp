@@ -13,8 +13,9 @@ RetrievalOrchestrator::RetrievalOrchestrator(FaceRecognitionPipeline* facePipeli
       store_(store),
       fusion_(fusion) {}
 
-IngestResult RetrievalOrchestrator::IngestImage(const cv::Mat& image, int64_t imageId) {
-    IngestResult faceResult = facePipeline_->Ingest(image, imageId);
+IngestResult RetrievalOrchestrator::IngestImage(const cv::Mat& image, int64_t imageId, bool includeFace) {
+    IngestResult faceResult{true, ""};
+    if (includeFace) faceResult = facePipeline_->Ingest(image, imageId);
     IngestResult clothingResult = clothingPipeline_->Ingest(image, imageId);
     IngestResult exactResult = imageMatchPipeline_->Ingest(image, imageId);
 
@@ -49,6 +50,14 @@ QueryResponse RetrievalOrchestrator::Query(const QueryRequest& request) {
     }
     if (request.mode == QueryMode::ClothingOnly || request.mode == QueryMode::AllLinked) {
         response.clothingMatches = clothingPipeline_->Query(request.image, request.topK);
+    }
+
+    // Role mode deliberately does not invoke ArcFace or exact-image matching.
+    // It only searches face-masked clothing/hair appearance embeddings.
+    if (request.mode == QueryMode::RoleOnly) {
+        response.roleMatches = clothingPipeline_->QueryRoles(request.image, request.topK);
+        response.fused = response.roleMatches;
+        return response;
     }
 
     response.fused = fusion_->Fuse(response.exactMatches, response.faceMatches, response.clothingMatches);

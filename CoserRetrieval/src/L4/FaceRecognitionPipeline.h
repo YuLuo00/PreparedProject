@@ -13,6 +13,8 @@ struct PipelineMatch {
     int64_t image_id = 0;
     int64_t person_id = 0;
     std::string display_name;
+    int64_t role_id = 0;
+    std::string role_name;
     float score = 0.0f;
 };
 

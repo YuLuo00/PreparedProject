@@ -14,6 +14,7 @@ enum class QueryMode {
     ExactOnly,
     FaceOnly,
     ClothingOnly,
+    RoleOnly,
     AllLinked
 };
 
@@ -27,6 +28,7 @@ struct QueryResponse {
     std::vector<PipelineMatch> exactMatches;
     std::vector<PipelineMatch> faceMatches;
     std::vector<PipelineMatch> clothingMatches;
+    std::vector<PipelineMatch> roleMatches;
     std::vector<PipelineMatch> fused;
 };
 
@@ -41,9 +43,10 @@ public:
                            MetadataStore* store,
                            ResultFusion* fusion);
 
-    /// Runs all three routes against the image, then marks the image row
-    /// committed/failed. Per-route failure reasons are joined with "; ".
-    IngestResult IngestImage(const cv::Mat& image, int64_t imageId);
+    /// Runs clothing/exact and optionally face routes against the image, then
+    /// marks the image row committed/failed. Role-only ingest can skip face
+    /// embeddings entirely when no person label was supplied.
+    IngestResult IngestImage(const cv::Mat& image, int64_t imageId, bool includeFace = true);
 
     QueryResponse Query(const QueryRequest& request);
 
