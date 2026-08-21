@@ -30,8 +30,10 @@
 - [x] 实现 L5 `RetrievalOrchestrator` 与 face/clothing/exact 结果融合。
 - [x] 合并 CLI 为 `coser_cli ingest|query|scan`。
 - [x] 支持目录批量查询与 top-1 CSV 报告，批量任务复用一次模型加载。
-- [x] 支持 `--role` 角色标签与 `query --mode role`；角色模式仅匹配遮蔽脸部后的服装/发型特征，不调用人脸或原图路线。
-- [x] 提供 `visualize` 诊断命令，渲染人体框、头发/服装外观区域和脸部遮蔽区域。
+- [x] 支持 `--role` 角色标签与 `query --mode role`；角色模式使用 LIP 像素级人体解析，仅匹配头发与可穿戴服饰，排除脸、皮肤、肢体和背景，不调用人脸或原图路线。
+- [x] 提供 `visualize` 诊断命令，渲染 LIP 实际判定的头发/服装区域和脸部区域。
+- [x] 下载、校验并接入 LIP ResNet-101 ONNX 人体语义分割权重。
+- [x] 对 clothing/role 路线增加“无衣服”判定：仅头发或少量误分割像素不会生成服装向量，防止黑色掩码造成假高相似度。
 - [x] 准备 face、CLIP、YOLO Pose、DINOv2 本地 ONNX 模型。
 - [x] 编写固定样本回归测试脚本和 7 张测试图片。
 - [ ] 将 CoserRetrieval 的三路检索与融合接入 `ImageSearch.dll`。

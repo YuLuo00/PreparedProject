@@ -3,6 +3,7 @@
 #include "../L2/MetadataStore.h"
 #include "../L3/IPoseDetector.h"
 #include "../L3/IEmbeddingExtractor.h"
+#include "../L3/HumanParsingSegmenter.h"
 #include "FaceRecognitionPipeline.h"  // reuse PipelineMatch / IngestResult
 #include <opencv2/core.hpp>
 
@@ -13,7 +14,8 @@ public:
     ClothingRecognitionPipeline(IPoseDetector* poseDetector,
                                  IEmbeddingExtractor* extractor,
                                  IVectorIndex* index,
-                                 MetadataStore* store);
+                                 MetadataStore* store,
+                                 HumanParsingSegmenter* parser);
 
     /// Detect the highest-score person, mask facial pixels, then extract the
     /// clothing/hair appearance embedding and write it to index/metadata.
@@ -31,6 +33,7 @@ private:
     IEmbeddingExtractor* extractor_;
     IVectorIndex* index_;
     MetadataStore* store_;
+    HumanParsingSegmenter* parser_;
 };
 
 }  // namespace coser

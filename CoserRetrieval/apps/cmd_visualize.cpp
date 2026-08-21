@@ -10,6 +10,7 @@
 
 #include "commands.h"
 #include "../src/L3/YoloPoseDetector.h"
+#include "../src/L3/HumanParsingSegmenter.h"
 
 using namespace coser;
 namespace fs = std::filesystem;
@@ -24,35 +25,6 @@ std::unordered_map<std::string, std::string> ParseArgs(int argc, char** argv) {
     return args;
 }
 
-void FaceMaskEllipse(const cv::Size& cropSize, const PersonDetection& detection,
-                     cv::Point& center, cv::Size& axes) {
-    std::vector<Keypoint> facePoints;
-    for (size_t i = 0; i < std::min<size_t>(5, detection.keypoints.size()); ++i) {
-        if (detection.keypoints[i].score >= 0.25f) facePoints.push_back(detection.keypoints[i]);
-    }
-    if (facePoints.empty()) {
-        center = cv::Point(cropSize.width / 2, static_cast<int>(cropSize.height * 0.18f));
-        axes = cv::Size(std::max(1, static_cast<int>(cropSize.width * 0.22f)),
-                        std::max(1, static_cast<int>(cropSize.height * 0.16f)));
-        return;
-    }
-
-    float minX = facePoints.front().x, maxX = minX;
-    float minY = facePoints.front().y, maxY = minY;
-    float sumX = 0.0f, sumY = 0.0f;
-    for (const auto& point : facePoints) {
-        minX = std::min(minX, point.x);
-        maxX = std::max(maxX, point.x);
-        minY = std::min(minY, point.y);
-        maxY = std::max(maxY, point.y);
-        sumX += point.x;
-        sumY += point.y;
-    }
-    float span = std::max({maxX - minX, maxY - minY, detection.box.width * 0.12f});
-    center = cv::Point(static_cast<int>(sumX / facePoints.size() - detection.box.x),
-                       static_cast<int>(sumY / facePoints.size() - detection.box.y + span * 0.12f));
-    axes = cv::Size(static_cast<int>(span * 0.72f), static_cast<int>(span * 0.85f));
-}
 }  // namespace
 
 int RunVisualize(int argc, char** argv) try {
@@ -75,6 +47,11 @@ int RunVisualize(int argc, char** argv) try {
         return 1;
     }
     YoloPoseDetector detector(modelsDir + "/pose/yolov8n-pose.onnx");
+    std::string humanParsingModel = get("human-parsing-model");
+    if (humanParsingModel.empty()) {
+        humanParsingModel = modelsDir + "/clothing/human_parsing_lip_resnet101.onnx";
+    }
+    HumanParsingSegmenter parser(humanParsingModel);
     auto detections = detector.Detect(image);
     if (detections.empty()) {
         std::cerr << "No person detected: " << imagePath << "\n";
@@ -91,18 +68,23 @@ int RunVisualize(int argc, char** argv) try {
         return 1;
     }
 
+    cv::Mat labels = parser.ParseLabels(image(person));
     cv::Mat overlay = image.clone();
-    cv::rectangle(overlay, person, cv::Scalar(0, 0, 255), cv::FILLED);
-    cv::addWeighted(overlay, 0.35, image, 0.65, 0.0, overlay);
-
-    cv::Point faceCenter;
-    cv::Size faceAxes;
-    FaceMaskEllipse(person.size(), *best, faceCenter, faceAxes);
-    faceCenter += person.tl();
-    cv::Mat faceLayer = overlay.clone();
-    cv::ellipse(faceLayer, faceCenter, faceAxes, 0.0, 0.0, 360.0, cv::Scalar(255, 255, 255), cv::FILLED);
-    cv::addWeighted(faceLayer, 0.65, overlay, 0.35, 0.0, overlay);
-    cv::rectangle(overlay, person, cv::Scalar(0, 0, 255), 2);
+    for (int y = 0; y < labels.rows; ++y) {
+        for (int x = 0; x < labels.cols; ++x) {
+            const unsigned char label = labels.at<unsigned char>(y, x);
+            cv::Vec3b& pixel = overlay.at<cv::Vec3b>(person.y + y, person.x + x);
+            if (label == 2) {  // hair
+                pixel = cv::Vec3b(0, 0, 255);
+            } else if (label == 13) {  // face
+                pixel = cv::Vec3b(255, 255, 255);
+            } else if (label == 1 || label == 3 || (label >= 5 && label <= 12) ||
+                       label == 18 || label == 19) {
+                pixel = cv::Vec3b(0, 0, 255);
+            }
+        }
+    }
+    cv::addWeighted(overlay, 0.45, image, 0.55, 0.0, overlay);
 
     fs::path output(outputPath);
     if (output.has_parent_path()) fs::create_directories(output.parent_path());

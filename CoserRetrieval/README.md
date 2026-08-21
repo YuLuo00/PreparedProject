@@ -127,8 +127,14 @@ MD5 只用于完全相同文件的去重；经过裁剪、重编码或加水印�
 - `face`：仅按人脸身份查询。
 - `clothing`：仅按服装/角色外观查询。
 - `exact`：仅匹配相同原图或轻微裁剪、重编码后的转发图。
-- `role`：仅按已标注角色的服装与发型外观查询，不运行人脸或原图匹配。人体关键点会定位并遮蔽
-  脸部像素，保留头发和服装区域；未在入库时传入 `--role` 的图片不会出现在此模式的结果中。
+- `role`：仅按已标注角色的服装与发型外观查询，不运行人脸或原图匹配。LIP 人体解析会逐像素
+  保留头发、帽子、服装、手套、围巾、袜子和鞋，排除脸、皮肤、四肢与背景；未在入库时传入
+  `--role` 的图片不会出现在此模式的结果中。
+
+角色/服装路线会先检查 LIP 的**可穿戴服饰**像素，头发不计入。少于 `max(512 像素, 人体框面积的 1%)`
+时，图片判定为 `no clothing detected`：仍可写入原图匹配和人脸特征，但不会写入 clothing 向量，也不会
+参与 `clothing` 或 `role` 查询。这能排除脚部、皮肤局部、裸体或无服装主体图片，避免黑色掩码产生
+虚假的 `1.0` 相似度。
 
 查询结果会输出候选人物、路线、分数和对应的入库参考图片路径；没有候选时输出 `No matches`。
 
@@ -155,8 +161,9 @@ MD5 只用于完全相同文件的去重；经过裁剪、重编码或加水印�
 
 ### 6. 服装/发型区域可视化
 
-使用 `visualize` 生成当前 clothing/role 路线的实际输入区域示意图：红色半透明是 YOLO Pose 的完整
-人体框，白色半透明椭圆是按关键点遮蔽、不会送入 DINOv2 的脸部区域。
+使用 `visualize` 生成当前 clothing/role 路线的实际语义区域示意图：红色半透明为 LIP 人体解析判定的
+头发及可穿戴服饰，白色半透明为模型判定的脸部。其余像素（背景、皮肤、手脚和肢体）不参与 DINOv2
+特征提取。
 
 ```powershell
 .\bin\coser_cli.exe visualize `
@@ -165,8 +172,33 @@ MD5 只用于完全相同文件的去重；经过裁剪、重编码或加水印�
   --output .\visualizations\example_mask.png
 ```
 
-**注意**：当前是人体框裁剪加脸部遮蔽，不是服装语义分割。红色区域也包含框内背景、手部和身体，
-头发位于红色区域中。这是当前服装/发型相似度受姿势、背景和裁剪影响的直接原因。
+角色路线依赖 `models/clothing/human_parsing_lip_resnet101.onnx`。可通过 `--human-parsing-model <path>`
+覆盖其位置。该模型的输入特征与旧版“人体框减脸部椭圆”不兼容；升级后必须使用新的数据库和 clothing
+索引重新执行 `ingest`，不能混用旧索引。模型权重尚待补齐时，所有会加载 clothing 路线的命令会明确失败，
+不会回退到含背景或人脸的旧遮罩。
+
+### 人体解析模型下载与替换
+
+当前代码默认兼容 Ailia 发布的 LIP ResNet-101 模型：
+`https://storage.googleapis.com/ailia-models/human_part_segmentation/resnet-lip.onnx`。下载后命名为
+`human_parsing_lip_resnet101.onnx` 并覆盖 `models/clothing/` 下的同名文件。该 FP32 模型约 250 MB。
+
+推荐优先使用较小的 SCHP LIP-20 INT8 静态 ONNX（约 66 MB）：
+`https://huggingface.co/pirocheto/schp-lip-20/resolve/main/onnx/schp-lip-20-int8-static.onnx?download=true`。
+它与 LIP 使用相同的 20 个语义类别，但输出结构不同；在切换前需先完成对应的 ONNX 输入/输出适配，不能
+仅靠改文件名替换。下载后可使用自定义路径运行：
+
+```powershell
+.\bin\coser_cli.exe ingest ... `
+  --human-parsing-model .\models\clothing\schp-lip-20-int8-static.onnx
+```
+
+替换任何人体解析模型时必须满足以下步骤：
+
+1. 确认类别中能区分 `hair`、`face` 和主要服装类别；仅有人像前景/背景的二分类模型不可替代。
+2. 在 `HumanParsingSegmenter` 中适配模型的输入尺寸、BGR/RGB 顺序、归一化、输出 tensor 和类别 ID。
+3. 用 `visualize` 审核红色区域是否只覆盖头发/服饰、白色是否只覆盖脸部。
+4. 使用新的 SQLite 数据库和 clothing Faiss 索引对全部图片重新 `ingest`；旧索引必须废弃，不能混用。
 
 ### 7. 批量扫描可疑插画/CG
 

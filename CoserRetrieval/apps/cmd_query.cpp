@@ -18,6 +18,7 @@
 #include "../src/L3/AdaFaceExtractor.h"
 #include "../src/L3/IEmbeddingExtractor.h"
 #include "../src/L3/YoloPoseDetector.h"
+#include "../src/L3/HumanParsingSegmenter.h"
 #include "../src/L3/DinoV2Extractor.h"
 #include "../src/L3/PHasher.h"
 #include "../src/L3/OrbCropMatcher.h"
@@ -190,8 +191,11 @@ int RunQuery(int argc, char** argv) try {
     }
 
     YoloPoseDetector poseDetector(modelsDir + "/pose/yolov8n-pose.onnx");
+    HumanParsingSegmenter humanParser(get("human-parsing-model",
+        modelsDir + "/clothing/human_parsing_lip_resnet101.onnx"));
     DinoV2Extractor dinoExtractor(modelsDir + "/clothing/dinov2_vits14.onnx");
-    ClothingRecognitionPipeline clothingPipeline(&poseDetector, &dinoExtractor, &clothingIndex, &store);
+    ClothingRecognitionPipeline clothingPipeline(&poseDetector, &dinoExtractor, &clothingIndex, &store,
+                                                 &humanParser);
 
     std::unique_ptr<FaissFlatIpIndex> faceIndex;
     std::unique_ptr<ScrfdFaceDetector> faceDetector;

@@ -19,6 +19,7 @@ set(CORE_SOURCES
     src/L3/PHasher.cpp
     src/L3/OrbCropMatcher.cpp
     src/L3/YoloPoseDetector.cpp
+    src/L3/HumanParsingSegmenter.cpp
     src/L3/DinoV2Extractor.cpp
     src/L4/FaceRecognitionPipeline.cpp
     src/L4/ImageMatchPipeline.cpp
@@ -45,6 +46,7 @@ set(CORE_HEADERS
     src/L3/OrbCropMatcher.h
     src/L3/IPoseDetector.h
     src/L3/YoloPoseDetector.h
+    src/L3/HumanParsingSegmenter.h
     src/L3/DinoV2Extractor.h
     src/L4/FaceRecognitionPipeline.h
     src/L4/ImageMatchPipeline.h

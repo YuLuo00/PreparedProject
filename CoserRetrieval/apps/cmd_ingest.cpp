@@ -19,6 +19,7 @@
 #include "../src/L3/IEmbeddingExtractor.h"
 #include "../src/L3/PhotoAuthenticityChecker.h"
 #include "../src/L3/YoloPoseDetector.h"
+#include "../src/L3/HumanParsingSegmenter.h"
 #include "../src/L3/DinoV2Extractor.h"
 #include "../src/L3/PHasher.h"
 #include "../src/L3/OrbCropMatcher.h"
@@ -126,8 +127,11 @@ int RunIngest(int argc, char** argv) try {
     phashIndex.LoadFrom(store.LoadAllPHashes());
 
     YoloPoseDetector poseDetector(modelsDir + "/pose/yolov8n-pose.onnx");
+    HumanParsingSegmenter humanParser(get("human-parsing-model",
+        modelsDir + "/clothing/human_parsing_lip_resnet101.onnx"));
     DinoV2Extractor dinoExtractor(modelsDir + "/clothing/dinov2_vits14.onnx");
-    ClothingRecognitionPipeline clothingPipeline(&poseDetector, &dinoExtractor, &clothingIndex, &store);
+    ClothingRecognitionPipeline clothingPipeline(&poseDetector, &dinoExtractor, &clothingIndex, &store,
+                                                 &humanParser);
 
     PHasher hasher;
     OrbCropMatcher orbMatcher;

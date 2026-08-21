@@ -15,45 +15,27 @@ cv::Mat CropBox(const cv::Mat& image, const cv::Rect2f& box) {
     return image(roi).clone();
 }
 
-cv::Mat CropAppearance(const cv::Mat& image, const PersonDetection& detection) {
+struct AppearanceCrop {
+    cv::Mat image;
+    bool hasApparel = false;
+};
+
+AppearanceCrop CropAppearance(const cv::Mat& image, const PersonDetection& detection,
+                              HumanParsingSegmenter* parser) {
     cv::Mat crop = CropBox(image, detection.box);
-    if (crop.empty()) return crop;
+    if (crop.empty()) return {};
 
-    // COCO keypoints 0..4 are nose, eyes and ears. Mask the face itself but
-    // retain the surrounding/top hair, so role matching has no facial identity
-    // signal while still retaining hairstyle and clothing appearance.
-    std::vector<Keypoint> facePoints;
-    for (size_t i = 0; i < std::min<size_t>(5, detection.keypoints.size()); ++i) {
-        if (detection.keypoints[i].score >= 0.25f) facePoints.push_back(detection.keypoints[i]);
-    }
+    cv::Mat apparelMask = parser->ExtractApparelMask(crop);
+    // A few isolated misclassified pixels are not clothing. Require both a
+    // minimum absolute area and 1% of the detected person crop.
+    const int apparelPixels = apparelMask.empty() ? 0 : cv::countNonZero(apparelMask);
+    const int minimumPixels = std::max(512, static_cast<int>(crop.total() * 0.01));
+    if (apparelPixels < minimumPixels) return {cv::Mat{}, false};
 
-    cv::Point center;
-    cv::Size axes;
-    if (facePoints.empty()) {
-        // A head-only or distant pose can lack reliable facial keypoints. Use
-        // a conservative top-center mask rather than leaking facial pixels.
-        center = cv::Point(crop.cols / 2, static_cast<int>(crop.rows * 0.18f));
-        axes = cv::Size(std::max(1, static_cast<int>(crop.cols * 0.22f)),
-                        std::max(1, static_cast<int>(crop.rows * 0.16f)));
-    } else {
-        float minX = facePoints.front().x, maxX = minX;
-        float minY = facePoints.front().y, maxY = minY;
-        float sumX = 0.0f, sumY = 0.0f;
-        for (const auto& point : facePoints) {
-            minX = std::min(minX, point.x);
-            maxX = std::max(maxX, point.x);
-            minY = std::min(minY, point.y);
-            maxY = std::max(maxY, point.y);
-            sumX += point.x;
-            sumY += point.y;
-        }
-        float span = std::max({maxX - minX, maxY - minY, detection.box.width * 0.12f});
-        center = cv::Point(static_cast<int>(sumX / facePoints.size() - detection.box.x),
-                           static_cast<int>(sumY / facePoints.size() - detection.box.y + span * 0.12f));
-        axes = cv::Size(static_cast<int>(span * 0.72f), static_cast<int>(span * 0.85f));
-    }
-    cv::ellipse(crop, center, axes, 0.0, 0.0, 360.0, cv::Scalar::all(0), cv::FILLED);
-    return crop;
+    cv::Mat appearanceMask = parser->ExtractAppearanceMask(crop);
+    cv::Mat appearance(crop.size(), crop.type(), cv::Scalar::all(0));
+    crop.copyTo(appearance, appearanceMask);
+    return {appearance, true};
 }
 
 std::vector<float> FlattenKeypoints(const std::vector<Keypoint>& keypoints) {
@@ -71,8 +53,9 @@ std::vector<float> FlattenKeypoints(const std::vector<Keypoint>& keypoints) {
 ClothingRecognitionPipeline::ClothingRecognitionPipeline(IPoseDetector* poseDetector,
                                                            IEmbeddingExtractor* extractor,
                                                            IVectorIndex* index,
-                                                           MetadataStore* store)
-    : poseDetector_(poseDetector), extractor_(extractor), index_(index), store_(store) {}
+                                                           MetadataStore* store,
+                                                           HumanParsingSegmenter* parser)
+    : poseDetector_(poseDetector), extractor_(extractor), index_(index), store_(store), parser_(parser) {}
 
 IngestResult ClothingRecognitionPipeline::Ingest(const cv::Mat& image, int64_t imageId) {
     auto dets = poseDetector_->Detect(image);
@@ -81,10 +64,10 @@ IngestResult ClothingRecognitionPipeline::Ingest(const cv::Mat& image, int64_t i
     auto best = std::max_element(dets.begin(), dets.end(),
         [](const PersonDetection& a, const PersonDetection& b) { return a.score < b.score; });
 
-    cv::Mat crop = CropAppearance(image, *best);
-    if (crop.empty()) return {false, "no person detected"};
+    AppearanceCrop crop = CropAppearance(image, *best, parser_);
+    if (!crop.hasApparel) return {false, "no clothing detected"};
 
-    std::vector<float> emb = extractor_->Extract(crop);
+    std::vector<float> emb = extractor_->Extract(crop.image);
 
     ClothingEmbeddingRef ref;
     ref.image_id = imageId;
@@ -110,10 +93,10 @@ std::vector<PipelineMatch> ClothingRecognitionPipeline::Query(const cv::Mat& ima
     auto best = std::max_element(dets.begin(), dets.end(),
         [](const PersonDetection& a, const PersonDetection& b) { return a.score < b.score; });
 
-    cv::Mat crop = CropAppearance(image, *best);
-    if (crop.empty()) return results;
+    AppearanceCrop crop = CropAppearance(image, *best, parser_);
+    if (!crop.hasApparel) return results;
 
-    std::vector<float> emb = extractor_->Extract(crop);
+    std::vector<float> emb = extractor_->Extract(crop.image);
 
     std::vector<int64_t> ids;
     std::vector<float> scores;
@@ -140,10 +123,10 @@ std::vector<PipelineMatch> ClothingRecognitionPipeline::QueryRoles(const cv::Mat
 
     auto best = std::max_element(dets.begin(), dets.end(),
         [](const PersonDetection& a, const PersonDetection& b) { return a.score < b.score; });
-    cv::Mat crop = CropAppearance(image, *best);
-    if (crop.empty()) return results;
+    AppearanceCrop crop = CropAppearance(image, *best, parser_);
+    if (!crop.hasApparel) return results;
 
-    std::vector<float> emb = extractor_->Extract(crop);
+    std::vector<float> emb = extractor_->Extract(crop.image);
     std::vector<int64_t> ids;
     std::vector<float> scores;
     // Fetch extra reference images so several photos of one role do not crowd
