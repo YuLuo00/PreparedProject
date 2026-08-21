@@ -1,7 +1,7 @@
 if(MINGW)
-    set(TBB_DIR "${ProjectRootDir}/ThirdParty/tbb/installed/x64-mingw-dynamic/lib/cmake/TBB")
+    set(TBB_DIR "${ProjectRootDir}/ThirdParty/install/tbb/installed/x64-mingw-dynamic/lib/cmake/TBB")
 else()
-    set(TBB_DIR "${ProjectRootDir}/ThirdParty/tbb/installed/x64-windows/share/tbb//")
+    set(TBB_DIR "${ProjectRootDir}/ThirdParty/install/tbb/installed/x64-windows/share/tbb")
 endif()
 message("TBB_DIR == ${TBB_DIR}")
 

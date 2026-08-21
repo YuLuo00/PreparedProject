@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <filesystem>
 #include <iostream>
@@ -6,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <tbb/parallel_pipeline.h>
 #include <opencv2/imgcodecs.hpp>
 
 #include "commands.h"
@@ -185,66 +187,112 @@ int RunIngest(int argc, char** argv) try {
         }
     }
 
+    struct BatchItem {
+        fs::path path;
+        std::string pathString;
+        std::string md5;
+        std::string error;
+        cv::Mat image;
+        int64_t imageId = 0;
+        IngestResult result{false, ""};
+        enum class State { Ready, Skipped, Failed, PendingInference, Complete } state = State::Ready;
+    };
+
+    std::atomic<size_t> nextPath{0};
     int succeeded = 0;
     int skipped = 0;
     int failed = 0;
-    for (const auto& path : imagePaths) {
-        std::string pathString = path.string();
-        std::string hashError;
-        auto md5 = ComputeFileMd5(path, &hashError);
-        if (!md5) {
-            std::cerr << "Failed to calculate MD5: " << hashError << " in " << pathString << "\n";
-            ++failed;
-            continue;
-        }
-        auto duplicate = store.FindImageByMd5(*md5);
-        if (duplicate) {
-            std::cout << "Duplicate skipped: image_id=" << duplicate->image_id
-                      << " existing_path=" << duplicate->file_path
-                      << " path=" << pathString << "\n";
-            ++skipped;
-            continue;
-        }
+    std::mutex outputMutex;
 
-        cv::Mat image = cv::imread(pathString);
-        if (image.empty()) {
-            std::cerr << "Failed to read image: " << pathString << "\n";
-            ++failed;
-            continue;
-        }
-
-        ImageRow row;
-        row.person_id = personId;
-        row.role_id = roleId;
-        row.file_path = pathString;
-        row.md5 = *md5;
-        row.width = image.cols;
-        row.height = image.rows;
-        row.ingest_status = "pending";
-        int64_t imageId = store.InsertImage(row);
-        if (imageId < 0) {
-            std::cerr << "Failed to insert image: " << store.GetLastError() << " in " << pathString << "\n";
-            ++failed;
-            continue;
-        }
-
-        IngestResult result = orchestrator.IngestImage(image, imageId, includeFace);
-        if (!result.ok) {
-            std::cerr << "Ingest failed: " << result.reason << " in " << pathString << "\n";
-            ++failed;
-            continue;
-        }
-        if (!result.reason.empty()) {
-            std::cerr << "Ingest committed with partial route failures: " << result.reason
-                      << " in " << pathString << "\n";
-        }
-
-        std::cout << "Ingested";
-        if (personId > 0) std::cout << " person_id=" << personId;
-        if (roleId > 0) std::cout << " role_id=" << roleId << " role=\"" << roleName << "\"";
-        std::cout << " image_id=" << imageId << " md5=" << *md5 << " path=" << pathString << "\n";
-        ++succeeded;
-    }
+    // Seven in-flight tokens bound memory and ONNX CPU contention. A completed
+    // token immediately frees a slot for the next source image.
+    tbb::parallel_pipeline(7,
+        tbb::make_filter<void, BatchItem>(tbb::filter_mode::serial_in_order,
+            [&](tbb::flow_control& control) {
+                const size_t index = nextPath.fetch_add(1);
+                if (index >= imagePaths.size()) {
+                    control.stop();
+                    return BatchItem{};
+                }
+                BatchItem item;
+                item.path = imagePaths[index];
+                item.pathString = item.path.string();
+                return item;
+            }) &
+        tbb::make_filter<BatchItem, BatchItem>(tbb::filter_mode::parallel,
+            [&](BatchItem item) {
+                std::string hashError;
+                auto md5 = ComputeFileMd5(item.path, &hashError);
+                if (!md5) {
+                    item.error = "Failed to calculate MD5: " + hashError;
+                    item.state = BatchItem::State::Failed;
+                    return item;
+                }
+                item.md5 = *md5;
+                item.image = cv::imread(item.pathString);
+                if (item.image.empty()) {
+                    item.error = "Failed to read image";
+                    item.state = BatchItem::State::Failed;
+                }
+                return item;
+            }) &
+        tbb::make_filter<BatchItem, BatchItem>(tbb::filter_mode::serial_in_order,
+            [&](BatchItem item) {
+                if (item.state == BatchItem::State::Failed) return item;
+                auto duplicate = store.FindImageByMd5(item.md5);
+                if (duplicate) {
+                    item.error = "Duplicate skipped: image_id=" + std::to_string(duplicate->image_id) +
+                        " existing_path=" + duplicate->file_path;
+                    item.state = BatchItem::State::Skipped;
+                    return item;
+                }
+                ImageRow row;
+                row.person_id = personId;
+                row.role_id = roleId;
+                row.file_path = item.pathString;
+                row.md5 = item.md5;
+                row.width = item.image.cols;
+                row.height = item.image.rows;
+                row.ingest_status = "pending";
+                item.imageId = store.InsertImage(row);
+                if (item.imageId < 0) {
+                    item.error = "Failed to insert image: " + store.GetLastError();
+                    item.state = BatchItem::State::Failed;
+                } else {
+                    item.state = BatchItem::State::PendingInference;
+                }
+                return item;
+            }) &
+        tbb::make_filter<BatchItem, BatchItem>(tbb::filter_mode::parallel,
+            [&](BatchItem item) {
+                if (item.state != BatchItem::State::PendingInference) return item;
+                item.result = orchestrator.IngestImage(item.image, item.imageId, includeFace);
+                item.state = item.result.ok ? BatchItem::State::Complete : BatchItem::State::Failed;
+                if (!item.result.ok) item.error = "Ingest failed: " + item.result.reason;
+                return item;
+            }) &
+        tbb::make_filter<BatchItem, void>(tbb::filter_mode::serial_in_order,
+            [&](BatchItem item) {
+                std::lock_guard<std::mutex> lock(outputMutex);
+                if (item.state == BatchItem::State::Skipped) {
+                    std::cout << item.error << " path=" << item.pathString << "\n";
+                    ++skipped;
+                } else if (item.state == BatchItem::State::Failed) {
+                    std::cerr << item.error << " in " << item.pathString << "\n";
+                    ++failed;
+                } else {
+                    if (!item.result.reason.empty()) {
+                        std::cerr << "Ingest committed with partial route failures: " << item.result.reason
+                                  << " in " << item.pathString << "\n";
+                    }
+                    std::cout << "Ingested";
+                    if (personId > 0) std::cout << " person_id=" << personId;
+                    if (roleId > 0) std::cout << " role_id=" << roleId << " role=\"" << roleName << "\"";
+                    std::cout << " image_id=" << item.imageId << " md5=" << item.md5
+                              << " path=" << item.pathString << "\n";
+                    ++succeeded;
+                }
+            }));
 
     if (faceIndex && !faceIndex->Save(faceIndexPath)) {
         std::cerr << "Failed to save face index: " << faceIndexPath << "\n";

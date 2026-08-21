@@ -30,6 +30,7 @@
 - [x] 实现 L5 `RetrievalOrchestrator` 与 face/clothing/exact 结果融合。
 - [x] 合并 CLI 为 `coser_cli ingest|query|scan`。
 - [x] 支持目录批量查询与 top-1 CSV 报告，批量任务复用一次模型加载。
+- [x] 接入 vcpkg oneTBB，并将批量 `ingest` 改为 7 个在途 token 的 TBB pipeline：预处理/模型解析并行，SQLite 建档和结果汇总串行。
 - [x] 支持 `--role` 角色标签与 `query --mode role`；角色模式使用 LIP 像素级人体解析，仅匹配头发与可穿戴服饰，排除脸、皮肤、肢体和背景，不调用人脸或原图路线。
 - [x] 提供 `visualize` 诊断命令，渲染 LIP 实际判定的头发/服装区域和脸部区域。
 - [x] 下载、校验并接入 LIP ResNet-101 ONNX 人体语义分割权重。

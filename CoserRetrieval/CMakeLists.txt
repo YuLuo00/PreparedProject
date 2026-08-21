@@ -80,6 +80,7 @@ include(${ProjectRootDir}/ThirdParty/cmake/Add3rd_nlohmann_json.cmake)
 include(${ProjectRootDir}/ThirdParty/cmake/Add3rd_faiss.cmake)
 include(${ProjectRootDir}/ThirdParty/cmake/Add3rd_opencv4.cmake)
 include(${ProjectRootDir}/ThirdParty/cmake/Add3rd_onnxruntime.cmake)
+include(${ProjectRootDir}/ThirdParty/cmake/Add3rd_tbb.cmake)
 
 set(PROJECT_NAME CoserRetrieval)
 
@@ -102,10 +103,18 @@ target_link_libraries(coser_cli PRIVATE
     opencv_world
     unofficial::sqlite3::sqlite3
     faiss
+    TBB::tbb
     onnxruntime::onnxruntime
     onnxruntime::providers_shared
     bcrypt
 )
+
+# Development runs execute directly from ${ProjectRootDir}/bin rather than
+# through cmake --install, so copy the selected oneTBB runtime after linking.
+add_custom_command(TARGET coser_cli POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:TBB::tbb>
+        $<TARGET_FILE_DIR:coser_cli>)
 
 # ─── 安装 ─────────────────────────────────────────────────────────────────────
 install(TARGETS coser_cli

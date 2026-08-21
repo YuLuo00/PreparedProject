@@ -76,6 +76,8 @@ AdaFace IR-18 为 `67/79 = 84.81%`。因此 ArcFace 保持默认，AdaFace 仅�
 
 将 `--image` 换为 `--dir` 可递归导入目录下的 `jpg`、`jpeg`、`png`、`bmp`、`webp` 图片。
 模型和索引在整批任务中只加载一次，索引在全部处理完成后保存一次，适合大批量入库。
+批量入库使用 oneTBB `parallel_pipeline`，最多同时保留 7 个图片任务：MD5 与解码并行，重复检查与基础
+元数据建档串行，三条模型路线并行，结果汇总串行；任一任务完成后立即补入下一张。
 
 ```powershell
 .\bin\coser_cli.exe ingest `

@@ -181,6 +181,7 @@ int64_t MetadataStore::InsertRole(const std::string& displayName) {
 }
 
 int64_t MetadataStore::InsertImage(const ImageRow& row) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     const char* sql = R"(
         INSERT INTO images(person_id, role_id, file_path, md5, width, height, format, ingest_status)
         VALUES(?,?,?,?,?,?,?,?)
@@ -208,6 +209,7 @@ int64_t MetadataStore::InsertImage(const ImageRow& row) {
 }
 
 std::optional<ImageMd5Row> MetadataStore::FindImageByMd5(const std::string& md5) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     const char* sql = "SELECT image_id, file_path FROM images WHERE md5=? LIMIT 1";
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -228,6 +230,7 @@ std::optional<ImageMd5Row> MetadataStore::FindImageByMd5(const std::string& md5)
 }
 
 bool MetadataStore::UpdateImageStatus(int64_t imageId, const std::string& status, const std::string& failReason) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     const char* sql = "UPDATE images SET ingest_status=?, fail_reason=? WHERE image_id=?";
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -243,6 +246,7 @@ bool MetadataStore::UpdateImageStatus(int64_t imageId, const std::string& status
 }
 
 int64_t MetadataStore::InsertFaceEmbeddingRef(const FaceEmbeddingRef& ref) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     const char* sql = R"(
         INSERT INTO face_embeddings(image_id, bbox_x, bbox_y, bbox_w, bbox_h, det_score)
         VALUES(?,?,?,?,?,?)
@@ -296,6 +300,7 @@ std::optional<FaceMatchRow> MetadataStore::ResolveFaceEmbedding(int64_t embeddin
 }
 
 int64_t MetadataStore::InsertClothingEmbeddingRef(const ClothingEmbeddingRef& ref) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     const char* sql = R"(
         INSERT INTO clothing_embeddings(image_id, bbox_x, bbox_y, bbox_w, bbox_h, pose_keypoints)
         VALUES(?,?,?,?,?,?)
@@ -358,6 +363,7 @@ std::optional<ClothingMatchRow> MetadataStore::ResolveClothingEmbedding(int64_t 
 }
 
 bool MetadataStore::UpdateImagePHash(int64_t imageId, int64_t phash) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     const char* sql = "UPDATE images SET phash=? WHERE image_id=?";
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {

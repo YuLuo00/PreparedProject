@@ -3,6 +3,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <mutex>
 #include <sqlite3.h>
 
 namespace coser {
@@ -97,6 +98,7 @@ public:
 private:
     sqlite3* db_ = nullptr;
     std::string lastError_;
+    mutable std::recursive_mutex mutex_;
 
     bool Execute(const std::string& sql);
     bool CreateTables();
