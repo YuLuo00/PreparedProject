@@ -12,6 +12,8 @@ __pycache__/
 /build
 /.cache
 /CoserRetrieval/build/
+/CoserRetrieval.UI/bin/
+/CoserRetrieval.UI/obj/
 /build_root/
 /cache/
 /faiss_index/
