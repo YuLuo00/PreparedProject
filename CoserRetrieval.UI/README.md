@@ -1,12 +1,20 @@
 # CoserRetrieval.UI
 
-Windows WPF prototype for the active CoserRetrieval system. It starts a real
-`coser_cli ingest` regression run after the window loads and visualizes the
-seven files in `CoserRetrieval/testdata/regression/`:
+Windows WPF launcher for the active CoserRetrieval system. It exposes the
+common `coser_cli ingest/query` arguments as a form and starts the selected
+command as a child process. The list visualizes each supported image below the
+selected input path:
 
 - complete ingest rows are green;
 - face/clothing partial route failures are marked on their corresponding stage;
 - a process or ingest failure marks every stage red.
+
+The form exposes command, input path, database, face/clothing indices, models
+directory, person, role, query mode, and top-k. `Advanced CLI arguments` is
+passed through after these fields and accepts quoted values, covering optional
+arguments such as `--face-model adaface`, `--file-prefix`, `--report`,
+`--human-parsing-model`, and `--clip-model`. The `Run Regression` button fills
+the form with a disposable regression database and starts the fixed 7-image set.
 
 The window is resizable and contains a two-direction scrollable task list. A
 row shows a truncated file name with its full path in a tooltip, a source image

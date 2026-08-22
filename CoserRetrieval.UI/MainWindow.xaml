@@ -1,7 +1,7 @@
 <Window x:Class="CoserRetrieval.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Coser Retrieval Tasks" Width="1180" Height="760"
+        Title="Coser Retrieval Tasks" Width="1180" Height="860"
         MinWidth="760" MinHeight="460" Background="#171B20">
     <Window.Resources>
         <Style x:Key="StageCard" TargetType="Border">
@@ -32,6 +32,8 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="12"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="12"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -44,12 +46,42 @@
                 <TextBlock Text="Background Tasks" Foreground="#F2F5F7" FontSize="21" FontWeight="SemiBold"/>
                 <TextBlock Text="{Binding NativeStatus}" Foreground="#A7B0BA" FontSize="12" Margin="0,5,0,0"/>
             </StackPanel>
-            <Border Grid.Column="1" Background="#23313A" BorderBrush="#3E6577" BorderThickness="1" CornerRadius="4" Padding="10,6" VerticalAlignment="Center">
-                <TextBlock Text="TEST MODE" Foreground="#77D7FF" FontSize="11" FontWeight="SemiBold"/>
-            </Border>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="Run Regression" Click="RunRegression_Click" Padding="12,6" Margin="0,0,8,0"/>
+                <Button x:Name="StartButton" Content="Start Task" Click="StartTask_Click" Padding="12,6"/>
+            </StackPanel>
         </Grid>
 
-        <Border Grid.Row="2" Background="#1E242B" BorderBrush="#343D47" BorderThickness="1" CornerRadius="5">
+        <Border Grid.Row="2" Background="#1E242B" BorderBrush="#343D47" BorderThickness="1" CornerRadius="5" Padding="12">
+            <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/><ColumnDefinition Width="96"/><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/><ColumnDefinition Width="96"/></Grid.ColumnDefinitions>
+                <TextBlock Text="Command" Foreground="#AAB5BF" VerticalAlignment="Center"/>
+                <ComboBox x:Name="CommandBox" Grid.Column="1" SelectedIndex="0"><ComboBoxItem Content="ingest"/><ComboBoxItem Content="query"/></ComboBox>
+                <TextBlock Grid.Column="2" Text="Input" Foreground="#AAB5BF" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                <TextBox x:Name="InputPathBox" Grid.Column="3" Grid.ColumnSpan="2" Text="CoserRetrieval\testdata\regression"/>
+                <Button Grid.Column="5" Content="Browse" Click="BrowseInput_Click" Margin="8,0,0,0"/>
+
+                <TextBlock Grid.Row="2" Text="Database" Foreground="#AAB5BF" VerticalAlignment="Center"/>
+                <TextBox x:Name="DbPathBox" Grid.Row="2" Grid.Column="1" Text="CoserRetrieval\data\ui_task.db"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Face Index" Foreground="#AAB5BF" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                <TextBox x:Name="FaceIndexBox" Grid.Row="2" Grid.Column="3" Text="CoserRetrieval\data\ui_task_face.index"/>
+                <TextBlock Grid.Row="2" Grid.Column="4" Text="Clothing Index" Foreground="#AAB5BF" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                <TextBox x:Name="ClothingIndexBox" Grid.Row="2" Grid.Column="5" Text="CoserRetrieval\data\ui_task_clothing.index" Margin="8,0,0,0"/>
+
+                <TextBlock Grid.Row="4" Text="Person / Role" Foreground="#AAB5BF" VerticalAlignment="Center"/>
+                <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal"><TextBox x:Name="PersonBox" Width="130" Text="ui_task"/><TextBox x:Name="RoleBox" Width="130" Margin="8,0,0,0" ToolTip="Optional role"/></StackPanel>
+                <TextBlock Grid.Row="4" Grid.Column="2" Text="Models" Foreground="#AAB5BF" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                <TextBox x:Name="ModelsPathBox" Grid.Row="4" Grid.Column="3" Text="CoserRetrieval\models"/>
+                <TextBlock Grid.Row="4" Grid.Column="4" Text="Mode / TopK" Foreground="#AAB5BF" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                <StackPanel Grid.Row="4" Grid.Column="5" Orientation="Horizontal" Margin="8,0,0,0"><ComboBox x:Name="QueryModeBox" Width="88" SelectedIndex="0"><ComboBoxItem Content="all"/><ComboBoxItem Content="face"/><ComboBoxItem Content="clothing"/><ComboBoxItem Content="role"/><ComboBoxItem Content="exact"/></ComboBox><TextBox x:Name="TopKBox" Width="38" Text="5" Margin="8,0,0,0"/></StackPanel>
+
+                <TextBlock Grid.Row="6" Text="Advanced" Foreground="#AAB5BF" VerticalAlignment="Center"/>
+                <TextBox x:Name="AdvancedArgsBox" Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="5" ToolTip="Extra CLI arguments. Quote values that contain spaces."/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="4" Background="#1E242B" BorderBrush="#343D47" BorderThickness="1" CornerRadius="5">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="12">
                 <ItemsControl ItemsSource="{Binding Tasks}" MinWidth="1030">
                     <ItemsControl.ItemTemplate>

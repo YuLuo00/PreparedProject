@@ -5,7 +5,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -23,7 +25,7 @@ public partial class MainWindow : Window
         NativeStatus = ReadNativeStatus();
         CreateTestTasks();
         DataContext = this;
-        Loaded += async (_, _) => await RunRegressionIngestAsync();
+        Loaded += (_, _) => NativeStatus = ReadNativeStatus(Path.Combine(FindRegressionDirectory(), "rioko_ref.jpg"));
     }
 
     private static string ReadNativeStatus(string? samplePath = null)
@@ -46,7 +48,7 @@ public partial class MainWindow : Window
             Tasks.Add(new TaskRow(path, DemoOutcome.Success));
     }
 
-    private async System.Threading.Tasks.Task RunRegressionIngestAsync()
+    private async void RunRegression_Click(object sender, RoutedEventArgs e)
     {
         string root = FindProjectRoot();
         string data = Path.Combine(root, "CoserRetrieval", "data");
@@ -57,15 +59,76 @@ public partial class MainWindow : Window
             if (File.Exists(file)) File.Delete(file);
         }
 
-        int exitCode = await RunCliAsync(root, new[] {
-            "ingest", "--db", Path.Combine(data, "ui_regression.db"),
-            "--index", Path.Combine(data, "ui_regression_face.index"),
-            "--clothing-index", Path.Combine(data, "ui_regression_clothing.index"),
-            "--models-dir", Path.Combine(root, "CoserRetrieval", "models"),
-            "--person", "ui_regression", "--task-id", "wpf_regression",
-            "--dir", FindRegressionDirectory() });
+        CommandBox.SelectedIndex = 0;
+        InputPathBox.Text = FindRegressionDirectory();
+        DbPathBox.Text = Path.Combine(data, "ui_regression.db");
+        FaceIndexBox.Text = Path.Combine(data, "ui_regression_face.index");
+        ClothingIndexBox.Text = Path.Combine(data, "ui_regression_clothing.index");
+        PersonBox.Text = "ui_regression";
+        RoleBox.Text = "";
+        await StartConfiguredTaskAsync();
+    }
 
-        foreach (TaskRow task in Tasks) task.FinishIfPending(exitCode == 0);
+    private async void StartTask_Click(object sender, RoutedEventArgs e) => await StartConfiguredTaskAsync();
+
+    private void BrowseInput_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Select image directory" };
+        if (dialog.ShowDialog() == true) InputPathBox.Text = dialog.FolderName;
+    }
+
+    private async System.Threading.Tasks.Task StartConfiguredTaskAsync()
+    {
+        string root = FindProjectRoot();
+        string input = ResolvePath(root, InputPathBox.Text);
+        if (!Directory.Exists(input) && !File.Exists(input))
+        {
+            MessageBox.Show("Input path does not exist.", "Coser Retrieval", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        string command = ((ComboBoxItem)CommandBox.SelectedItem).Content.ToString()!;
+        PopulateTasks(input);
+        var args = new System.Collections.Generic.List<string> {
+            command, "--db", ResolvePath(root, DbPathBox.Text),
+            "--index", ResolvePath(root, FaceIndexBox.Text),
+            "--clothing-index", ResolvePath(root, ClothingIndexBox.Text),
+            "--models-dir", ResolvePath(root, ModelsPathBox.Text),
+            "--task-id", "wpf_task"
+        };
+        if (Directory.Exists(input)) { args.Add("--dir"); args.Add(input); }
+        else { args.Add("--image"); args.Add(input); }
+        if (command == "ingest")
+        {
+            if (!string.IsNullOrWhiteSpace(PersonBox.Text)) { args.Add("--person"); args.Add(PersonBox.Text); }
+            if (!string.IsNullOrWhiteSpace(RoleBox.Text)) { args.Add("--role"); args.Add(RoleBox.Text); }
+        }
+        else
+        {
+            args.Add("--mode"); args.Add(((ComboBoxItem)QueryModeBox.SelectedItem).Content.ToString()!);
+            args.Add("--topk"); args.Add(TopKBox.Text);
+        }
+        args.AddRange(ParseAdditionalArguments(AdvancedArgsBox.Text));
+        StartButton.IsEnabled = false;
+        try
+        {
+            int exitCode = await RunCliAsync(root, args.ToArray());
+            foreach (TaskRow task in Tasks) task.FinishIfPending(exitCode == 0);
+        }
+        finally { StartButton.IsEnabled = true; }
+    }
+
+    private void PopulateTasks(string input)
+    {
+        Tasks.Clear();
+        if (Directory.Exists(input))
+        {
+            foreach (string path in Directory.EnumerateFiles(input, "*.*", SearchOption.AllDirectories))
+            {
+                string extension = Path.GetExtension(path).ToLowerInvariant();
+                if (extension is ".jpg" or ".jpeg" or ".png" or ".bmp" or ".webp") Tasks.Add(new TaskRow(path, DemoOutcome.Success));
+            }
+        }
+        else Tasks.Add(new TaskRow(input, DemoOutcome.Success));
     }
 
     private async System.Threading.Tasks.Task<int> RunCliAsync(string root, string[] arguments)
@@ -107,6 +170,15 @@ public partial class MainWindow : Window
     private static string FindRegressionDirectory()
     {
         return Path.Combine(FindProjectRoot(), "CoserRetrieval", "testdata", "regression");
+    }
+
+    private static string ResolvePath(string root, string value) =>
+        Path.IsPathRooted(value) ? value : Path.GetFullPath(Path.Combine(root, value));
+
+    private static System.Collections.Generic.IEnumerable<string> ParseAdditionalArguments(string value)
+    {
+        foreach (Match match in Regex.Matches(value, "\\\"([^\\\"]*)\\\"|(\\S+)"))
+            yield return match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
     }
 
     private static string FindProjectRoot()
