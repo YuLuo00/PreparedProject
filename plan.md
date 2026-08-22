@@ -65,6 +65,9 @@
 
 ## 5. 产品交付
 
+- [x] 新建 `CoserRetrieval.UI` WPF 原型：可伸缩、双向滚动的后台任务进度列表，展示缩略图、路径 Tooltip 与各处理节点状态。
+- [x] 新建 `coser_bridge.dll` C ABI 桥接并由 WPF P/Invoke 真实调用 C++ `FileHasher` 的 MD5 计算。
+- [ ] 将 WPF 假任务通知替换为经 `coser_bridge.dll` 暴露的真实 `TaskProgressHub` 订阅和 ingest/query 创建接口。
 - [ ] 确定最终交付形态：DLL + HTTP 服务、常驻服务或桌面/Web 前端。
 - [ ] 若继续使用 AnythingLLM，编写稳定的 API 使用说明、鉴权和部署配置。
 - [ ] 提供一键启动、模型检查、数据初始化和日志收集脚本。

@@ -86,6 +86,11 @@ include(${ProjectRootDir}/ThirdParty/cmake/Add3rd_tbb.cmake)
 
 set(PROJECT_NAME CoserRetrieval)
 
+add_library(coser_bridge SHARED bridge/CoserBridge.cpp)
+target_compile_features(coser_bridge PRIVATE cxx_std_17)
+target_compile_definitions(coser_bridge PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+target_link_libraries(coser_bridge PRIVATE CoserRetrievalCore bcrypt)
+
 # ─── CLI 可执行程序（单一 coser_cli，子命令 ingest/query/scan 分发） ──────────
 add_executable(coser_cli
     apps/coser_cli.cpp
