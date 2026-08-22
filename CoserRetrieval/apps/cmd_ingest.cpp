@@ -73,13 +73,21 @@ int RunIngest(int argc, char** argv) try {
     std::string dirPath = get("dir");
     std::string filePrefix = get("file-prefix");
     std::string taskId = get("task-id", "ingest");
+    std::string skipDuplicatesValue = get("skip-duplicates", "true");
+    std::transform(skipDuplicatesValue.begin(), skipDuplicatesValue.end(), skipDuplicatesValue.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (skipDuplicatesValue != "true" && skipDuplicatesValue != "false") {
+        std::cerr << "--skip-duplicates must be true or false\n";
+        return 1;
+    }
+    const bool skipDuplicates = skipDuplicatesValue == "true";
 
     bool includeFace = !personName.empty();
     if (faceModel != "arcface" && faceModel != "adaface") {
         std::cerr << "Unsupported --face-model: " << faceModel << " (use arcface or adaface)\n";
         return 1;
     }
-    if (dbPath.empty() || (includeFace && faceIndexPath.empty()) || modelsDir.empty() || (imagePath.empty() == dirPath.empty()) ||
+    if (dbPath.empty() || ((includeFace || !skipDuplicates) && faceIndexPath.empty()) || modelsDir.empty() || (imagePath.empty() == dirPath.empty()) ||
         (personName.empty() && roleName.empty())) {
         std::cerr << "Usage: coser_cli ingest --db <path> [--index <path>] --models-dir <dir> "
                      "(--image <path> | --dir <directory>) "
@@ -89,6 +97,7 @@ int RunIngest(int argc, char** argv) try {
                      "  --dir recursively imports supported image files with one shared person/role label.\n"
                      "  --file-prefix filters directory imports by filename prefix.\n"
                      "  --index is required only when --person is supplied.\n"
+                     "  --skip-duplicates true|false skips matching MD5 files (default: true); false replaces the old record.\n"
                      "  --face-model arcface|adaface selects the face embedding model (default: arcface).\n"
                      "  <models-dir> must contain face/, pose/, clothing/, clip/ subdirectories.\n";
         return 1;
@@ -146,12 +155,14 @@ int RunIngest(int argc, char** argv) try {
     std::unique_ptr<IEmbeddingExtractor> faceExtractor;
     std::unique_ptr<PhotoAuthenticityChecker> authChecker;
     std::unique_ptr<FaceRecognitionPipeline> facePipeline;
-    if (includeFace) {
+    if (includeFace || !skipDuplicates) {
         faceIndex = std::make_unique<FaissFlatIpIndex>(512);
         if (!faceIndex->Load(faceIndexPath)) {
             std::cerr << "Failed to load/create face index: " << faceIndexPath << "\n";
             return 1;
         }
+    }
+    if (includeFace) {
         faceDetector = std::make_unique<ScrfdFaceDetector>(modelsDir + "/face/det_10g.onnx");
         std::string faceModelPath = get("face-model-path", faceModel == "adaface"
             ? modelsDir + "/face/adaface_ir18_webface4m.onnx"
@@ -196,6 +207,7 @@ int RunIngest(int argc, char** argv) try {
         std::string error;
         cv::Mat image;
         int64_t imageId = 0;
+        int64_t replacedImageId = 0;
         IngestResult result{false, ""};
         enum class State { Ready, Skipped, Failed, PendingInference, Complete } state = State::Ready;
     };
@@ -204,6 +216,7 @@ int RunIngest(int argc, char** argv) try {
     int succeeded = 0;
     int skipped = 0;
     int failed = 0;
+    std::unordered_set<int64_t> batchImageIds;
     std::mutex outputMutex;
     auto reportProgress = [&](TaskStatus status, const std::string& path = "",
                               const std::string& message = "") {
@@ -250,10 +263,23 @@ int RunIngest(int argc, char** argv) try {
                 if (item.state == BatchItem::State::Failed) return item;
                 auto duplicate = store.FindImageByMd5(item.md5);
                 if (duplicate) {
-                    item.error = "Duplicate skipped: image_id=" + std::to_string(duplicate->image_id) +
-                        " existing_path=" + duplicate->file_path;
-                    item.state = BatchItem::State::Skipped;
-                    return item;
+                    if (skipDuplicates || batchImageIds.count(duplicate->image_id) != 0) {
+                        item.error = "Duplicate skipped: image_id=" + std::to_string(duplicate->image_id) +
+                            " existing_path=" + duplicate->file_path;
+                        item.state = BatchItem::State::Skipped;
+                        return item;
+                    }
+                    RemovedImageEmbeddings removed;
+                    if (!store.DeleteImageAndEmbeddings(duplicate->image_id, removed)) {
+                        item.error = "Failed to replace duplicate image_id=" + std::to_string(duplicate->image_id) +
+                            ": " + store.GetLastError();
+                        item.state = BatchItem::State::Failed;
+                        return item;
+                    }
+                    for (int64_t embeddingId : removed.face_embedding_ids) faceIndex->Remove(embeddingId);
+                    for (int64_t embeddingId : removed.clothing_embedding_ids) clothingIndex.Remove(embeddingId);
+                    phashIndex.Remove(duplicate->image_id);
+                    item.replacedImageId = duplicate->image_id;
                 }
                 ImageRow row;
                 row.person_id = personId;
@@ -268,6 +294,7 @@ int RunIngest(int argc, char** argv) try {
                     item.error = "Failed to insert image: " + store.GetLastError();
                     item.state = BatchItem::State::Failed;
                 } else {
+                    batchImageIds.insert(item.imageId);
                     item.state = BatchItem::State::PendingInference;
                 }
                 return item;
@@ -295,6 +322,7 @@ int RunIngest(int argc, char** argv) try {
                                   << " in " << item.pathString << "\n";
                     }
                     std::cout << "Ingested";
+                    if (item.replacedImageId > 0) std::cout << " replaced_image_id=" << item.replacedImageId;
                     if (personId > 0) std::cout << " person_id=" << personId;
                     if (roleId > 0) std::cout << " role_id=" << roleId << " role=\"" << roleName << "\"";
                     std::cout << " image_id=" << item.imageId << " md5=" << item.md5

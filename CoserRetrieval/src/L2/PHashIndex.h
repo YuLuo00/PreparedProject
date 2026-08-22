@@ -16,6 +16,7 @@ struct PHashHit {
 class PHashIndex {
 public:
     void Add(int64_t imageId, uint64_t hash);
+    void Remove(int64_t imageId);
     void LoadFrom(const std::vector<std::pair<int64_t, int64_t>>& imageIdHashPairs);
     std::vector<PHashHit> Search(uint64_t queryHash, int maxHammingDist) const;
 

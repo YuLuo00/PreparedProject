@@ -9,6 +9,12 @@ void PHashIndex::Add(int64_t imageId, uint64_t hash) {
     entries_.emplace_back(imageId, hash);
 }
 
+void PHashIndex::Remove(int64_t imageId) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    entries_.erase(std::remove_if(entries_.begin(), entries_.end(),
+        [imageId](const auto& entry) { return entry.first == imageId; }), entries_.end());
+}
+
 void PHashIndex::LoadFrom(const std::vector<std::pair<int64_t, int64_t>>& imageIdHashPairs) {
     std::lock_guard<std::mutex> lock(mutex_);
     entries_.clear();

@@ -229,6 +229,59 @@ std::optional<ImageMd5Row> MetadataStore::FindImageByMd5(const std::string& md5)
     return row;
 }
 
+bool MetadataStore::DeleteImageAndEmbeddings(int64_t imageId, RemovedImageEmbeddings& removed) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    RemovedImageEmbeddings pending;
+    auto loadIds = [&](const char* sql, std::vector<int64_t>& ids) {
+        sqlite3_stmt* stmt = nullptr;
+        if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+            lastError_ = sqlite3_errmsg(db_);
+            return false;
+        }
+        sqlite3_bind_int64(stmt, 1, imageId);
+        while (sqlite3_step(stmt) == SQLITE_ROW) ids.push_back(sqlite3_column_int64(stmt, 0));
+        const bool ok = sqlite3_errcode(db_) == SQLITE_OK || sqlite3_errcode(db_) == SQLITE_DONE;
+        if (!ok) lastError_ = sqlite3_errmsg(db_);
+        sqlite3_finalize(stmt);
+        return ok;
+    };
+    if (!loadIds("SELECT embedding_id FROM face_embeddings WHERE image_id=?", pending.face_embedding_ids) ||
+        !loadIds("SELECT embedding_id FROM clothing_embeddings WHERE image_id=?", pending.clothing_embedding_ids)) {
+        return false;
+    }
+
+    if (!Execute("BEGIN IMMEDIATE;")) return false;
+    auto deleteRows = [&](const char* sql) {
+        sqlite3_stmt* stmt = nullptr;
+        if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+            lastError_ = sqlite3_errmsg(db_);
+            return false;
+        }
+        sqlite3_bind_int64(stmt, 1, imageId);
+        const int rc = sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+        if (rc != SQLITE_DONE) {
+            lastError_ = sqlite3_errmsg(db_);
+            return false;
+        }
+        return true;
+    };
+
+    const bool deleted = deleteRows("DELETE FROM face_embeddings WHERE image_id=?") &&
+                         deleteRows("DELETE FROM clothing_embeddings WHERE image_id=?") &&
+                         deleteRows("DELETE FROM images WHERE image_id=?");
+    if (!deleted) {
+        Execute("ROLLBACK;");
+        return false;
+    }
+    if (!Execute("COMMIT;")) {
+        Execute("ROLLBACK;");
+        return false;
+    }
+    removed = std::move(pending);
+    return true;
+}
+
 bool MetadataStore::UpdateImageStatus(int64_t imageId, const std::string& status, const std::string& failReason) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     const char* sql = "UPDATE images SET ingest_status=?, fail_reason=? WHERE image_id=?";

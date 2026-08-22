@@ -27,6 +27,7 @@
 - [x] 实现服装/角色识别路径：YOLOv8 Pose 人体检测、DINOv2 特征和 Faiss 检索。
 - [x] 实现原图匹配路径：pHash 粗筛和 ORB 精确确认。
 - [x] 为入库文件记录 MD5，并在模型推理前跳过字节内容完全重复的文件。
+- [x] 入库支持 `--skip-duplicates true|false`；WPF 可选择跳过重复 MD5，或删除旧元数据、Faiss 向量与 pHash 后重新入库。
 - [x] 实现 L5 `RetrievalOrchestrator` 与 face/clothing/exact 结果融合。
 - [x] 合并 CLI 为 `coser_cli ingest|query|scan`。
 - [x] 支持目录批量查询与 top-1 CSV 报告，批量任务复用一次模型加载。

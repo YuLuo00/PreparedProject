@@ -15,6 +15,9 @@ passed through after these fields and accepts quoted values, covering optional
 arguments such as `--face-model adaface`, `--file-prefix`, `--report`,
 `--human-parsing-model`, and `--clip-model`. The `Run Regression` button fills
 the form with a disposable regression database and starts the fixed 7-image set.
+For ingest, `Skip duplicate content` is enabled by default and maps to
+`--skip-duplicates true`. Clear it to remove an existing matching-MD5 record and
+its index entries before re-ingesting the file (`--skip-duplicates false`).
 
 The window is resizable and contains a two-direction scrollable task list. A
 row shows a truncated file name with its full path in a tooltip, a source image

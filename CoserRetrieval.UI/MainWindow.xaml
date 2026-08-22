@@ -61,7 +61,7 @@
 
         <Border Grid.Row="2" Background="#1E242B" BorderBrush="#343D47" BorderThickness="1" CornerRadius="5" Padding="12">
             <Grid>
-                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/><ColumnDefinition Width="96"/><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/><ColumnDefinition Width="96"/></Grid.ColumnDefinitions>
                 <TextBlock Text="Command" Foreground="#AAB5BF" VerticalAlignment="Center"/>
                 <ComboBox x:Name="CommandBox" Grid.Column="1" SelectedIndex="0"><ComboBoxItem Content="ingest"/><ComboBoxItem Content="query"/></ComboBox>
@@ -87,6 +87,10 @@
                 <TextBox x:Name="TaskIdBox" Grid.Row="6" Grid.Column="1" Text="wpf_task"/>
                 <TextBlock Grid.Row="6" Grid.Column="2" Text="Advanced" Foreground="#AAB5BF" VerticalAlignment="Center" Margin="16,0,0,0"/>
                 <TextBox x:Name="AdvancedArgsBox" Grid.Row="6" Grid.Column="3" Grid.ColumnSpan="3" ToolTip="Extra CLI arguments. Quote values that contain spaces." Margin="0,0,0,0"/>
+
+                <TextBlock Grid.Row="8" Text="Duplicates" Foreground="#AAB5BF" VerticalAlignment="Center"/>
+                <CheckBox x:Name="SkipDuplicatesBox" Grid.Row="8" Grid.Column="1" Content="Skip duplicate content" IsChecked="True"
+                          ToolTip="When unchecked, the matching MD5 record and its index entries are removed before this file is ingested again." VerticalAlignment="Center"/>
             </Grid>
         </Border>
 

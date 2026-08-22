@@ -114,9 +114,14 @@ AdaFace IR-18 为 `67/79 = 84.81%`。因此 ArcFace 保持默认，AdaFace 仅�
 
 ### MD5 重复保护
 
-每个待入库文件都会计算内容 MD5，并保存到 SQLite 的 `images.md5`。再次导入字节内容
+每个待入库文件都会计算内容 MD5，并保存到 SQLite 的 `images.md5`。默认情况下，再次导入字节内容
 完全相同的文件时，系统会在加载图片和运行模型前输出 `Duplicate skipped`，引用已有 `image_id`，
-并在批量汇总中计入 `skipped`，不会重复写入向量或索引。
+并在批量汇总中计入 `skipped`，不会重复写入向量或索引。可传入 `--skip-duplicates false`（WPF 的
+`Skip duplicate content` 取消勾选）替换旧记录：旧 SQLite 行、face/clothing Faiss 向量和 pHash 条目
+会一起删除，再创建新的 `image_id` 并重新推理。该模式需要提供 `--index`，即使本次只录入 role。
+
+同一批量任务中若有多个文件具有相同 MD5，后续文件仍会跳过，避免前一个文件正在并行推理时被删除；
+跨任务重新导入时才会执行上述替换。
 
 MD5 只用于完全相同文件的去重；经过裁剪、重编码或加水印后的文件 MD5 会变化，仍由 `query --mode exact`
 中的 pHash + ORB 判断是否属于同一原图。已有的旧数据库没有 MD5 值，需重新入库后才能受到该规则保护。

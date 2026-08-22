@@ -108,6 +108,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             if (!string.IsNullOrWhiteSpace(PersonBox.Text)) { args.Add("--person"); args.Add(PersonBox.Text); }
             if (!string.IsNullOrWhiteSpace(RoleBox.Text)) { args.Add("--role"); args.Add(RoleBox.Text); }
+            args.Add("--skip-duplicates");
+            args.Add(SkipDuplicatesBox.IsChecked == true ? "true" : "false");
         }
         else
         {
@@ -302,6 +304,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 case "--dir":
                 case "--image": InputPathBox.Text = value; break;
                 case "--task-id": TaskIdBox.Text = value; break;
+                case "--skip-duplicates":
+                    SkipDuplicatesBox.IsChecked = !string.Equals(value, "false", StringComparison.OrdinalIgnoreCase);
+                    break;
                 case "--mode": SelectComboItem(QueryModeBox, value); break;
                 case "--topk": TopKBox.Text = value; break;
                 default:

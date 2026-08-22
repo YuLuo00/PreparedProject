@@ -68,6 +68,11 @@ struct ImageMd5Row {
     std::string file_path;
 };
 
+struct RemovedImageEmbeddings {
+    std::vector<int64_t> face_embedding_ids;
+    std::vector<int64_t> clothing_embedding_ids;
+};
+
 class MetadataStore {
 public:
     MetadataStore();
@@ -80,6 +85,7 @@ public:
     int64_t InsertRole(const std::string& displayName);
     int64_t InsertImage(const ImageRow& row);
     std::optional<ImageMd5Row> FindImageByMd5(const std::string& md5);
+    bool DeleteImageAndEmbeddings(int64_t imageId, RemovedImageEmbeddings& removed);
     bool UpdateImageStatus(int64_t imageId, const std::string& status, const std::string& failReason = "");
 
     int64_t InsertFaceEmbeddingRef(const FaceEmbeddingRef& ref);
