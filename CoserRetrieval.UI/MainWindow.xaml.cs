@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -13,9 +14,6 @@ namespace CoserRetrieval.UI;
 
 public partial class MainWindow : Window
 {
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private int _tick;
-
     public ObservableCollection<TaskRow> Tasks { get; } = new();
     public string NativeStatus { get; private set; }
 
@@ -25,8 +23,7 @@ public partial class MainWindow : Window
         NativeStatus = ReadNativeStatus();
         CreateTestTasks();
         DataContext = this;
-        _timer.Tick += (_, _) => AdvanceTestNotifications();
-        _timer.Start();
+        Loaded += async (_, _) => await RunRegressionIngestAsync();
     }
 
     private static string ReadNativeStatus(string? samplePath = null)
@@ -45,25 +42,79 @@ public partial class MainWindow : Window
     {
         string images = FindRegressionDirectory();
         NativeStatus = ReadNativeStatus(Path.Combine(images, "rioko_ref.jpg"));
-        Tasks.Add(new TaskRow(Path.Combine(images, "rioko_ref.jpg"), DemoOutcome.Success));
-        Tasks.Add(new TaskRow(Path.Combine(images, "chichi_query.jpg"), DemoOutcome.MiddleFailure));
-        Tasks.Add(new TaskRow(Path.Combine(images, "illustration_reject.jpg"), DemoOutcome.TotalFailure));
+        foreach (string path in Directory.EnumerateFiles(images, "*.*"))
+            Tasks.Add(new TaskRow(path, DemoOutcome.Success));
     }
 
-    private void AdvanceTestNotifications()
+    private async System.Threading.Tasks.Task RunRegressionIngestAsync()
     {
-        _tick++;
-        foreach (TaskRow task in Tasks) task.Advance(_tick);
-        if (_tick >= 7) _timer.Stop();
+        string root = FindProjectRoot();
+        string data = Path.Combine(root, "CoserRetrieval", "data");
+        Directory.CreateDirectory(data);
+        foreach (string suffix in new[] { ".db", "_face.index", "_clothing.index" })
+        {
+            string file = Path.Combine(data, "ui_regression" + suffix);
+            if (File.Exists(file)) File.Delete(file);
+        }
+
+        int exitCode = await RunCliAsync(root, new[] {
+            "ingest", "--db", Path.Combine(data, "ui_regression.db"),
+            "--index", Path.Combine(data, "ui_regression_face.index"),
+            "--clothing-index", Path.Combine(data, "ui_regression_clothing.index"),
+            "--models-dir", Path.Combine(root, "CoserRetrieval", "models"),
+            "--person", "ui_regression", "--task-id", "wpf_regression",
+            "--dir", FindRegressionDirectory() });
+
+        foreach (TaskRow task in Tasks) task.FinishIfPending(exitCode == 0);
+    }
+
+    private async System.Threading.Tasks.Task<int> RunCliAsync(string root, string[] arguments)
+    {
+        var start = new ProcessStartInfo(Path.Combine(root, "bin", "coser_cli.exe")) {
+            WorkingDirectory = root,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+        };
+        foreach (string argument in arguments) start.ArgumentList.Add(argument);
+        using Process process = Process.Start(start) ?? throw new InvalidOperationException("Failed to start coser_cli");
+        process.OutputDataReceived += (_, e) => { if (e.Data is not null) Dispatcher.Invoke(() => HandleCliLine(e.Data)); };
+        process.ErrorDataReceived += (_, e) => { if (e.Data is not null) Dispatcher.Invoke(() => HandleCliLine(e.Data)); };
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        await process.WaitForExitAsync();
+        return process.ExitCode;
+    }
+
+    private void HandleCliLine(string line)
+    {
+        int pathIndex = line.LastIndexOf("path=", StringComparison.Ordinal);
+        string? path = pathIndex >= 0 ? line[(pathIndex + 5)..].Trim() : null;
+        if (path is null)
+        {
+            int inIndex = line.LastIndexOf(" in ", StringComparison.Ordinal);
+            if (inIndex >= 0) path = line[(inIndex + 4)..].Trim();
+        }
+        if (path is null) return;
+        TaskRow? task = Tasks.FirstOrDefault(item => string.Equals(item.FileName, Path.GetFileName(path), StringComparison.OrdinalIgnoreCase));
+        if (task is null) return;
+        if (line.StartsWith("Ingested", StringComparison.Ordinal)) task.CompleteAll();
+        else if (line.Contains("partial route failures", StringComparison.OrdinalIgnoreCase)) task.MarkPartial(line);
+        else if (line.Contains("failed", StringComparison.OrdinalIgnoreCase)) task.FailAll();
     }
 
     private static string FindRegressionDirectory()
     {
+        return Path.Combine(FindProjectRoot(), "CoserRetrieval", "testdata", "regression");
+    }
+
+    private static string FindProjectRoot()
+    {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            string candidate = Path.Combine(directory.FullName, "CoserRetrieval", "testdata", "regression");
-            if (Directory.Exists(candidate)) return candidate;
+            if (Directory.Exists(Path.Combine(directory.FullName, "CoserRetrieval"))) return directory.FullName;
             directory = directory.Parent;
         }
         return AppContext.BaseDirectory;
@@ -134,6 +185,36 @@ public sealed class TaskRow : Bindable
         }
     }
 
+    public void CompleteAll()
+    {
+        foreach (StageRow stage in Stages) stage.Complete();
+        Summary = "COMPLETED";
+        SummaryBrush = new SolidColorBrush(Color.FromRgb(91, 207, 135));
+    }
+
+    public void MarkPartial(string detail)
+    {
+        if (detail.Contains("face:", StringComparison.OrdinalIgnoreCase)) Stages[2].Fail();
+        if (detail.Contains("clothing:", StringComparison.OrdinalIgnoreCase)) Stages[3].Fail();
+        Summary = "COMPLETED WITH WARNINGS";
+        SummaryBrush = new SolidColorBrush(Color.FromRgb(238, 184, 80));
+    }
+
+    public void FailAll()
+    {
+        foreach (StageRow stage in Stages) stage.Fail();
+        Summary = "FAILED";
+        SummaryBrush = new SolidColorBrush(Color.FromRgb(239, 104, 104));
+    }
+
+    public void FinishIfPending(bool succeeded)
+    {
+        if (Summary == "QUEUED" || Summary == "RUNNING")
+        {
+            if (succeeded) CompleteAll(); else FailAll();
+        }
+    }
+
     private void Start(int index)
     {
         if (_outcome == DemoOutcome.TotalFailure && index > 0) return;
@@ -160,7 +241,7 @@ public sealed class StageRow : Bindable
     public bool IsRunning { get => _isRunning; private set => Set(ref _isRunning, value); }
 
     public void Start() { StateText = "RUN"; IsRunning = true; Foreground = new SolidColorBrush(Color.FromRgb(85, 199, 247)); }
-    public void Complete() { StateText = "DONE"; IsRunning = false; Background = new SolidColorBrush(Color.FromRgb(30, 67, 51)); BorderBrush = new SolidColorBrush(Color.FromRgb(69, 143, 98)); Foreground = new SolidColorBrush(Color.FromRgb(105, 223, 145)); }
+    public void Complete() { if (StateText == "FAIL") return; StateText = "DONE"; IsRunning = false; Background = new SolidColorBrush(Color.FromRgb(30, 67, 51)); BorderBrush = new SolidColorBrush(Color.FromRgb(69, 143, 98)); Foreground = new SolidColorBrush(Color.FromRgb(105, 223, 145)); }
     public void Fail() { StateText = "FAIL"; IsRunning = false; Background = new SolidColorBrush(Color.FromRgb(74, 39, 43)); BorderBrush = new SolidColorBrush(Color.FromRgb(164, 72, 79)); Foreground = new SolidColorBrush(Color.FromRgb(245, 114, 114)); }
     public void Cancel() { StateText = "STOP"; IsRunning = false; }
 }

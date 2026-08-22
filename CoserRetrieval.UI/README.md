@@ -1,12 +1,12 @@
 # CoserRetrieval.UI
 
-Windows WPF prototype for the active CoserRetrieval system. It currently runs
-independently of real ingest/query jobs and visualizes three simulated task
-outcomes once per second:
+Windows WPF prototype for the active CoserRetrieval system. It starts a real
+`coser_cli ingest` regression run after the window loads and visualizes the
+seven files in `CoserRetrieval/testdata/regression/`:
 
-- successful completion;
-- failure at the semantic-segmentation stage;
-- failure at the first stage and cancellation of all remaining stages.
+- complete ingest rows are green;
+- face/clothing partial route failures are marked on their corresponding stage;
+- a process or ingest failure marks every stage red.
 
 The window is resizable and contains a two-direction scrollable task list. A
 row shows a truncated file name with its full path in a tooltip, a source image
@@ -30,6 +30,7 @@ dotnet run --project .\CoserRetrieval.UI\CoserRetrieval.UI.csproj
 ```
 
 The bridge is copied from `bin/coser_bridge.dll` into the WPF output directory
-at build time. Future work will expose task creation and `TaskProgressHub`
-subscription through this bridge, replacing the demo timer with real backend
-notifications.
+at build time. The current UI starts the CLI as a child process and maps its
+stdout/stderr to list rows. Future work will expose task creation and
+`TaskProgressHub` subscription through this bridge, replacing output parsing
+with direct progress events.
