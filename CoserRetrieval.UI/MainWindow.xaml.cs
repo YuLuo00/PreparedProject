@@ -14,18 +14,26 @@ using System.Windows.Threading;
 
 namespace CoserRetrieval.UI;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Window, INotifyPropertyChanged
 {
     public ObservableCollection<TaskRow> Tasks { get; } = new();
+    public ObservableCollection<TaskRow> FinishedTasks { get; } = new();
     public string NativeStatus { get; private set; }
+    public string ActiveTabTitle => $"Running / Waiting ({Tasks.Count})";
+    public string FinishedTabTitle => $"Finished ({FinishedTasks.Count})";
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     public MainWindow()
     {
         InitializeComponent();
         NativeStatus = ReadNativeStatus();
-        CreateTestTasks();
+        bool hasStartupCommand = ApplyStartupArguments(Environment.GetCommandLineArgs()[1..]);
+        if (hasStartupCommand && (Directory.Exists(ResolvePath(FindProjectRoot(), InputPathBox.Text)) || File.Exists(ResolvePath(FindProjectRoot(), InputPathBox.Text))))
+            PopulateTasks(ResolvePath(FindProjectRoot(), InputPathBox.Text));
+        else
+            CreateTestTasks();
         DataContext = this;
-        Loaded += (_, _) => NativeStatus = ReadNativeStatus(Path.Combine(FindRegressionDirectory(), "rioko_ref.jpg"));
     }
 
     private static string ReadNativeStatus(string? samplePath = null)
@@ -44,8 +52,7 @@ public partial class MainWindow : Window
     {
         string images = FindRegressionDirectory();
         NativeStatus = ReadNativeStatus(Path.Combine(images, "rioko_ref.jpg"));
-        foreach (string path in Directory.EnumerateFiles(images, "*.*"))
-            Tasks.Add(new TaskRow(path, DemoOutcome.Success));
+        PopulateTasks(images);
     }
 
     private async void RunRegression_Click(object sender, RoutedEventArgs e)
@@ -87,13 +94,13 @@ public partial class MainWindow : Window
             return;
         }
         string command = ((ComboBoxItem)CommandBox.SelectedItem).Content.ToString()!;
-        PopulateTasks(input);
+        PopulateTasks(input, activate: true);
         var args = new System.Collections.Generic.List<string> {
             command, "--db", ResolvePath(root, DbPathBox.Text),
             "--index", ResolvePath(root, FaceIndexBox.Text),
             "--clothing-index", ResolvePath(root, ClothingIndexBox.Text),
             "--models-dir", ResolvePath(root, ModelsPathBox.Text),
-            "--task-id", "wpf_task"
+            "--task-id", TaskIdBox.Text
         };
         if (Directory.Exists(input)) { args.Add("--dir"); args.Add(input); }
         else { args.Add("--image"); args.Add(input); }
@@ -112,23 +119,33 @@ public partial class MainWindow : Window
         try
         {
             int exitCode = await RunCliAsync(root, args.ToArray());
-            foreach (TaskRow task in Tasks) task.FinishIfPending(exitCode == 0);
+            foreach (TaskRow task in Tasks.ToArray())
+            {
+                task.FinishIfPending(exitCode == 0);
+                MoveToFinished(task);
+            }
         }
         finally { StartButton.IsEnabled = true; }
     }
 
-    private void PopulateTasks(string input)
+    private void PopulateTasks(string input, bool activate = false)
     {
         Tasks.Clear();
+        FinishedTasks.Clear();
+        int sequence = 0;
         if (Directory.Exists(input))
         {
-            foreach (string path in Directory.EnumerateFiles(input, "*.*", SearchOption.AllDirectories))
+            foreach (string path in Directory.EnumerateFiles(input, "*.*", SearchOption.AllDirectories)
+                         .OrderBy(path => path, StringComparer.Ordinal))
             {
                 string extension = Path.GetExtension(path).ToLowerInvariant();
-                if (extension is ".jpg" or ".jpeg" or ".png" or ".bmp" or ".webp") Tasks.Add(new TaskRow(path, DemoOutcome.Success));
+                if (extension is ".jpg" or ".jpeg" or ".png" or ".bmp" or ".webp")
+                    Tasks.Add(new TaskRow(path, DemoOutcome.Success, sequence++));
             }
         }
-        else Tasks.Add(new TaskRow(input, DemoOutcome.Success));
+        else Tasks.Add(new TaskRow(input, DemoOutcome.Success, sequence));
+        if (activate) StartQueuedTasks();
+        ApplyOrder();
     }
 
     private async System.Threading.Tasks.Task<int> RunCliAsync(string root, string[] arguments)
@@ -152,6 +169,19 @@ public partial class MainWindow : Window
 
     private void HandleCliLine(string line)
     {
+        if (line.StartsWith("=== Query: ", StringComparison.Ordinal))
+        {
+            string queryPath = line[11..].Trim();
+            if (queryPath.EndsWith(" ===", StringComparison.Ordinal)) queryPath = queryPath[..^4].TrimEnd();
+            TaskRow? queryTask = FindTask(queryPath);
+            if (queryTask is not null)
+            {
+                queryTask.CompleteAll();
+                MoveToFinished(queryTask);
+            }
+            return;
+        }
+
         int pathIndex = line.LastIndexOf("path=", StringComparison.Ordinal);
         string? path = pathIndex >= 0 ? line[(pathIndex + 5)..].Trim() : null;
         if (path is null)
@@ -160,11 +190,80 @@ public partial class MainWindow : Window
             if (inIndex >= 0) path = line[(inIndex + 4)..].Trim();
         }
         if (path is null) return;
-        TaskRow? task = Tasks.FirstOrDefault(item => string.Equals(item.FileName, Path.GetFileName(path), StringComparison.OrdinalIgnoreCase));
+        TaskRow? task = FindTask(path);
         if (task is null) return;
-        if (line.StartsWith("Ingested", StringComparison.Ordinal)) task.CompleteAll();
+        if (line.StartsWith("Ingested", StringComparison.Ordinal))
+        {
+            task.CompleteAll();
+            MoveToFinished(task);
+        }
+        else if (line.StartsWith("Duplicate skipped:", StringComparison.OrdinalIgnoreCase))
+        {
+            task.SkipAll();
+            MoveToFinished(task);
+        }
         else if (line.Contains("partial route failures", StringComparison.OrdinalIgnoreCase)) task.MarkPartial(line);
-        else if (line.Contains("failed", StringComparison.OrdinalIgnoreCase)) task.FailAll();
+        else if (line.Contains("failed", StringComparison.OrdinalIgnoreCase))
+        {
+            task.FailAll();
+            MoveToFinished(task);
+        }
+    }
+
+    private TaskRow? FindTask(string path)
+    {
+        string fullPath;
+        try { fullPath = Path.GetFullPath(path); }
+        catch { fullPath = path; }
+        return Tasks.FirstOrDefault(item => string.Equals(item.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
+            ?? FinishedTasks.FirstOrDefault(item => string.Equals(item.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
+            ?? Tasks.FirstOrDefault(item => string.Equals(item.FileName, Path.GetFileName(path), StringComparison.OrdinalIgnoreCase))
+            ?? FinishedTasks.FirstOrDefault(item => string.Equals(item.FileName, Path.GetFileName(path), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void StartQueuedTasks()
+    {
+        const int maxInFlight = 7;
+        int started = Tasks.Count(task => task.HasStarted);
+        foreach (TaskRow task in Tasks.Where(task => !task.HasStarted).Take(Math.Max(0, maxInFlight - started)))
+            task.BeginTask();
+        ApplyOrder();
+    }
+
+    private void MoveToFinished(TaskRow task)
+    {
+        if (!Tasks.Remove(task)) return;
+        FinishedTasks.Add(task);
+        StartQueuedTasks();
+        RaiseTabTitles();
+    }
+
+    private void OrderMode_SelectionChanged(object sender, SelectionChangedEventArgs e) => ApplyOrder();
+
+    private void ApplyOrder()
+    {
+        IEnumerable<TaskRow> ordered = OrderModeBox?.SelectedIndex == 0
+            ? Tasks.OrderByDescending(task => task.IsTaskRunning).ThenBy(task => task.Sequence)
+            : Tasks.OrderBy(task => task.Sequence);
+        TaskRow[] rows = ordered.ToArray();
+        if (!Tasks.SequenceEqual(rows))
+        {
+            Tasks.Clear();
+            foreach (TaskRow row in rows) Tasks.Add(row);
+        }
+        RaiseTabTitles();
+        if (OrderModeBox?.SelectedIndex == 2)
+        {
+            TaskRow? running = Tasks.FirstOrDefault(task => task.IsTaskRunning);
+            if (running is not null)
+                Dispatcher.BeginInvoke(() => ActiveScrollViewer.ScrollToVerticalOffset(Math.Max(0, Tasks.IndexOf(running) * 194)));
+        }
+    }
+
+    private void RaiseTabTitles()
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ActiveTabTitle)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FinishedTabTitle)));
     }
 
     private static string FindRegressionDirectory()
@@ -180,6 +279,55 @@ public partial class MainWindow : Window
         foreach (Match match in Regex.Matches(value, "\\\"([^\\\"]*)\\\"|(\\S+)"))
             yield return match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
     }
+
+    private bool ApplyStartupArguments(string[] arguments)
+    {
+        if (arguments.Length == 0 || (arguments[0] != "ingest" && arguments[0] != "query")) return false;
+        CommandBox.SelectedIndex = arguments[0] == "ingest" ? 0 : 1;
+        var advanced = new System.Collections.Generic.List<string>();
+        for (int i = 1; i < arguments.Length; ++i)
+        {
+            string key = arguments[i];
+            if (!key.StartsWith("--", StringComparison.Ordinal)) { advanced.Add(key); continue; }
+            string value = i + 1 < arguments.Length && !arguments[i + 1].StartsWith("--", StringComparison.Ordinal)
+                ? arguments[++i] : "";
+            switch (key)
+            {
+                case "--db": DbPathBox.Text = value; break;
+                case "--index": FaceIndexBox.Text = value; break;
+                case "--clothing-index": ClothingIndexBox.Text = value; break;
+                case "--models-dir": ModelsPathBox.Text = value; break;
+                case "--person": PersonBox.Text = value; break;
+                case "--role": RoleBox.Text = value; break;
+                case "--dir":
+                case "--image": InputPathBox.Text = value; break;
+                case "--task-id": TaskIdBox.Text = value; break;
+                case "--mode": SelectComboItem(QueryModeBox, value); break;
+                case "--topk": TopKBox.Text = value; break;
+                default:
+                    advanced.Add(key);
+                    if (!string.IsNullOrEmpty(value)) advanced.Add(QuoteArgument(value));
+                    break;
+            }
+        }
+        AdvancedArgsBox.Text = string.Join(" ", advanced);
+        return true;
+    }
+
+    private static void SelectComboItem(ComboBox comboBox, string value)
+    {
+        foreach (ComboBoxItem item in comboBox.Items)
+        {
+            if (string.Equals(item.Content?.ToString(), value, StringComparison.OrdinalIgnoreCase))
+            {
+                comboBox.SelectedItem = item;
+                return;
+            }
+        }
+    }
+
+    private static string QuoteArgument(string value) =>
+        value.Any(char.IsWhiteSpace) ? $"\"{value.Replace("\"", "\\\"")}\"" : value;
 
     private static string FindProjectRoot()
     {
@@ -215,13 +363,15 @@ public sealed class TaskRow : Bindable
     private readonly int _failureStage;
     private string _summary = "QUEUED";
     private Brush _summaryBrush = Brushes.Gray;
+    private bool _hasStarted;
 
-    public TaskRow(string fullPath, DemoOutcome outcome)
+    public TaskRow(string fullPath, DemoOutcome outcome, int sequence = 0)
     {
         FullPath = fullPath;
         FileName = Path.GetFileName(fullPath);
         _outcome = outcome;
         _failureStage = outcome == DemoOutcome.MiddleFailure ? 3 : outcome == DemoOutcome.TotalFailure ? 0 : -1;
+        Sequence = sequence;
         Thumbnail = File.Exists(fullPath) ? new BitmapImage(new Uri(fullPath)) : null;
         foreach (string name in new[] { "Hash", "Decode", "Face", "Segment", "Embedding", "Index" })
             Stages.Add(new StageRow(name));
@@ -230,6 +380,9 @@ public sealed class TaskRow : Bindable
     public string FullPath { get; }
     public string FileName { get; }
     public BitmapImage? Thumbnail { get; }
+    public int Sequence { get; }
+    public bool HasStarted { get => _hasStarted; private set => Set(ref _hasStarted, value); }
+    public bool IsTaskRunning => Summary == "RUNNING";
     public ObservableCollection<StageRow> Stages { get; } = new();
     public string Summary { get => _summary; private set => Set(ref _summary, value); }
     public Brush SummaryBrush { get => _summaryBrush; private set => Set(ref _summaryBrush, value); }
@@ -260,8 +413,11 @@ public sealed class TaskRow : Bindable
     public void CompleteAll()
     {
         foreach (StageRow stage in Stages) stage.Complete();
-        Summary = "COMPLETED";
-        SummaryBrush = new SolidColorBrush(Color.FromRgb(91, 207, 135));
+        bool hasWarnings = Stages.Any(stage => stage.StateText == "FAIL");
+        Summary = hasWarnings ? "COMPLETED WITH WARNINGS" : "COMPLETED";
+        SummaryBrush = hasWarnings
+            ? new SolidColorBrush(Color.FromRgb(238, 184, 80))
+            : new SolidColorBrush(Color.FromRgb(91, 207, 135));
     }
 
     public void MarkPartial(string detail)
@@ -279,6 +435,13 @@ public sealed class TaskRow : Bindable
         SummaryBrush = new SolidColorBrush(Color.FromRgb(239, 104, 104));
     }
 
+    public void SkipAll()
+    {
+        foreach (StageRow stage in Stages) stage.Cancel();
+        Summary = "SKIPPED (DUPLICATE)";
+        SummaryBrush = new SolidColorBrush(Color.FromRgb(166, 176, 186));
+    }
+
     public void FinishIfPending(bool succeeded)
     {
         if (Summary == "QUEUED" || Summary == "RUNNING")
@@ -287,12 +450,20 @@ public sealed class TaskRow : Bindable
         }
     }
 
+    public void BeginTask()
+    {
+        if (HasStarted) return;
+        HasStarted = true;
+        Start(0);
+    }
+
     private void Start(int index)
     {
         if (_outcome == DemoOutcome.TotalFailure && index > 0) return;
         Stages[index].Start();
         Summary = "RUNNING";
         SummaryBrush = new SolidColorBrush(Color.FromRgb(85, 199, 247));
+        OnPropertyChanged(nameof(IsTaskRunning));
     }
 }
 
@@ -327,4 +498,6 @@ public abstract class Bindable : INotifyPropertyChanged
         field = value;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
     }
+    protected void OnPropertyChanged([CallerMemberName] string? property = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
 }

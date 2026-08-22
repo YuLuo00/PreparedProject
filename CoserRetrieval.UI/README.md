@@ -22,6 +22,27 @@ thumbnail, and the stages `Hash`, `Decode`, `Face`, `Segment`, `Embedding`, and
 `Index`. Green is complete, blue with a marquee bar is running, gray is pending,
 and red is failed.
 
+## Task Views And Order
+
+The task area has two live-count tabs. `Running / Waiting` contains only the
+current CLI batch; each row is moved to `Finished` as soon as its CLI result is
+received. The finished view retains completed, duplicate-skipped, warning, and
+failed rows for inspection.
+
+The order menu controls the active view:
+
+- `Running first` moves active rows above waiting rows while preserving file
+  order within each group.
+- `UI order priority` retains the file order. Directory inputs are sorted with
+  ordinal lexical order before display, matching the CLI's TBB enqueue order;
+  the first seven rows are the maximum in-flight tasks.
+- `Priority + follow` uses the same enqueue order and scrolls to the next row
+  that becomes active.
+
+The UI currently obtains per-file updates from CLI output. It handles stdout
+and stderr arriving in either order, so a late partial-route warning is still
+applied after a row has moved to `Finished`.
+
 ## Native Bridge Test
 
 `coser_bridge.dll` is a small C ABI wrapper around `CoserRetrievalCore`. The

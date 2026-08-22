@@ -47,6 +47,13 @@
                 <TextBlock Text="{Binding NativeStatus}" Foreground="#A7B0BA" FontSize="12" Margin="0,5,0,0"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <ComboBox x:Name="OrderModeBox" Width="168" SelectedIndex="0"
+                          SelectionChanged="OrderMode_SelectionChanged" Margin="0,0,8,0"
+                          ToolTip="Controls the active task list order">
+                    <ComboBoxItem Content="Running first"/>
+                    <ComboBoxItem Content="UI order priority"/>
+                    <ComboBoxItem Content="Priority + follow"/>
+                </ComboBox>
                 <Button Content="Run Regression" Click="RunRegression_Click" Padding="12,6" Margin="0,0,8,0"/>
                 <Button x:Name="StartButton" Content="Start Task" Click="StartTask_Click" Padding="12,6"/>
             </StackPanel>
@@ -54,7 +61,7 @@
 
         <Border Grid.Row="2" Background="#1E242B" BorderBrush="#343D47" BorderThickness="1" CornerRadius="5" Padding="12">
             <Grid>
-                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/><ColumnDefinition Width="96"/><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/><ColumnDefinition Width="96"/></Grid.ColumnDefinitions>
                 <TextBlock Text="Command" Foreground="#AAB5BF" VerticalAlignment="Center"/>
                 <ComboBox x:Name="CommandBox" Grid.Column="1" SelectedIndex="0"><ComboBoxItem Content="ingest"/><ComboBoxItem Content="query"/></ComboBox>
@@ -76,13 +83,16 @@
                 <TextBlock Grid.Row="4" Grid.Column="4" Text="Mode / TopK" Foreground="#AAB5BF" VerticalAlignment="Center" Margin="16,0,0,0"/>
                 <StackPanel Grid.Row="4" Grid.Column="5" Orientation="Horizontal" Margin="8,0,0,0"><ComboBox x:Name="QueryModeBox" Width="88" SelectedIndex="0"><ComboBoxItem Content="all"/><ComboBoxItem Content="face"/><ComboBoxItem Content="clothing"/><ComboBoxItem Content="role"/><ComboBoxItem Content="exact"/></ComboBox><TextBox x:Name="TopKBox" Width="38" Text="5" Margin="8,0,0,0"/></StackPanel>
 
-                <TextBlock Grid.Row="6" Text="Advanced" Foreground="#AAB5BF" VerticalAlignment="Center"/>
-                <TextBox x:Name="AdvancedArgsBox" Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="5" ToolTip="Extra CLI arguments. Quote values that contain spaces."/>
+                <TextBlock Grid.Row="6" Text="Task ID" Foreground="#AAB5BF" VerticalAlignment="Center"/>
+                <TextBox x:Name="TaskIdBox" Grid.Row="6" Grid.Column="1" Text="wpf_task"/>
+                <TextBlock Grid.Row="6" Grid.Column="2" Text="Advanced" Foreground="#AAB5BF" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                <TextBox x:Name="AdvancedArgsBox" Grid.Row="6" Grid.Column="3" Grid.ColumnSpan="3" ToolTip="Extra CLI arguments. Quote values that contain spaces." Margin="0,0,0,0"/>
             </Grid>
         </Border>
 
-        <Border Grid.Row="4" Background="#1E242B" BorderBrush="#343D47" BorderThickness="1" CornerRadius="5">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="12">
+        <TabControl Grid.Row="4" Background="#1E242B" BorderBrush="#343D47" BorderThickness="1" Padding="6">
+            <TabItem Header="{Binding ActiveTabTitle}">
+            <ScrollViewer x:Name="ActiveScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="12">
                 <ItemsControl ItemsSource="{Binding Tasks}" MinWidth="1030">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -132,6 +142,19 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
-        </Border>
+            </TabItem>
+            <TabItem Header="{Binding FinishedTabTitle}">
+                <ListBox ItemsSource="{Binding FinishedTasks}" Background="#1E242B" BorderThickness="0" Padding="12">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding FileName}" ToolTip="{Binding FullPath}" Foreground="#DCE4EB" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Summary}" Foreground="{Binding SummaryBrush}" FontWeight="SemiBold" Margin="12,0,0,0"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </TabItem>
+        </TabControl>
     </Grid>
 </Window>
