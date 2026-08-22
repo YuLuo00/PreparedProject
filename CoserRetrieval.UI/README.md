@@ -27,7 +27,8 @@ and red is failed.
 The task area has two live-count tabs. `Running / Waiting` contains only the
 current CLI batch; each row is moved to `Finished` as soon as its CLI result is
 received. The finished view retains completed, duplicate-skipped, warning, and
-failed rows for inspection.
+failed rows for inspection, using the same thumbnail and per-stage detail row
+as the active view.
 
 The order menu controls the active view:
 

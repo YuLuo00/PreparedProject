@@ -144,16 +144,56 @@
             </ScrollViewer>
             </TabItem>
             <TabItem Header="{Binding FinishedTabTitle}">
-                <ListBox ItemsSource="{Binding FinishedTasks}" Background="#1E242B" BorderThickness="0" Padding="12">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="0,0,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Text="{Binding FileName}" ToolTip="{Binding FullPath}" Foreground="#DCE4EB" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Summary}" Foreground="{Binding SummaryBrush}" FontWeight="SemiBold" Margin="12,0,0,0"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="12">
+                    <ItemsControl ItemsSource="{Binding FinishedTasks}" MinWidth="1030">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Height="182" Margin="0,0,0,12" Padding="12" Background="#222930" BorderBrush="#39434E" BorderThickness="1" CornerRadius="4">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="28"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid Grid.Row="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding FileName}" ToolTip="{Binding FullPath}" Foreground="#DCE4EB" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Summary}" Foreground="{Binding SummaryBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                                        </Grid>
+                                        <Grid Grid.Row="1" Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="158"/>
+                                                <ColumnDefinition Width="20"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Background="#111519" BorderBrush="#3B4651" BorderThickness="1" CornerRadius="3">
+                                                <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                                            </Border>
+                                            <ItemsControl Grid.Column="2" ItemsSource="{Binding Stages}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Style="{StaticResource StageCard}" Background="{Binding Background}" BorderBrush="{Binding BorderBrush}">
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding Name}" Foreground="#AAB5BF" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Text="{Binding StateText}" Foreground="{Binding Foreground}" FontSize="13" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                                                                <ProgressBar Style="{StaticResource StageProgress}"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
     </Grid>

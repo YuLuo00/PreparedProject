@@ -68,7 +68,7 @@
 - [x] 新建 `CoserRetrieval.UI` WPF 原型：可伸缩、双向滚动的后台任务进度列表，展示缩略图、路径 Tooltip 与各处理节点状态，并可实际启动回归集 `coser_cli ingest` 测试。
 - [x] WPF UI 提供 `ingest/query` 启动表单和高级 CLI 参数透传，可从 UI 触发与命令行等价的批量任务。
 - [x] 新建 `coser_bridge.dll` C ABI 桥接并由 WPF P/Invoke 真实调用 C++ `FileHasher` 的 MD5 计算。
-- [x] WPF 任务视图分为带实时计数的 `Running / Waiting` 与 `Finished` 页签；完成、重复跳过和失败文件会即时归档。提供运行中置顶、按 UI/CLI 入队顺序显示，以及自动跟随当前任务三种排序模式。
+- [x] WPF 任务视图分为带实时计数的 `Running / Waiting` 与 `Finished` 页签；完成、重复跳过和失败文件会即时归档，两个页签使用相同的缩略图与处理节点详情行。提供运行中置顶、按 UI/CLI 入队顺序显示，以及自动跟随当前任务三种排序模式。
 - [ ] 将 WPF 假任务通知替换为经 `coser_bridge.dll` 暴露的真实 `TaskProgressHub` 订阅和 ingest/query 创建接口。
 - [ ] 确定最终交付形态：DLL + HTTP 服务、常驻服务或桌面/Web 前端。
 - [ ] 若继续使用 AnythingLLM，编写稳定的 API 使用说明、鉴权和部署配置。
