@@ -16,13 +16,38 @@
 `CoserRetrieval/models/` 下的模型文件完整；尤其 DINOv2 必须同时存在
 `dinov2_vits14.onnx` 和 `dinov2_vits14.onnx.data`。
 
-### 1. 构建
+### 0. 新机器 Clone、配置与构建
+
+新机器需要 Windows x64、Git、Git LFS、CMake 3.20+、Visual Studio 2022（或 Build Tools，安装
+`Desktop development with C++`、MSVC x64/x86 和 Windows SDK）。使用 WPF 时还需要 .NET 8 SDK。
+完整 clone、模型、第三方预编译库和 Debug 构建产物约需 3.5 GiB；请至少预留 6 GiB 磁盘空间。
 
 ```powershell
-cmake --build .\CoserRetrieval\build --config Debug --target coser_cli
+git lfs install
+git clone --branch AI_image_lib https://github.com/YuLuo00/PreparedProject.git
+Set-Location .\PreparedProject
+git lfs pull
+
+cmake -S .\CoserRetrieval -B .\CoserRetrieval\build -G "Visual Studio 17 2022" -A x64
+cmake --build .\CoserRetrieval\build --config Debug --target coser_cli coser_bridge
+cmake --install .\CoserRetrieval\build --config Debug --prefix .
+
+dotnet build .\CoserRetrieval.UI\CoserRetrieval.UI.csproj
 ```
 
-生成的程序为 `bin/coser_cli.exe`。当前 Release 配置存在已知的 faiss 崩溃问题，日常使用和验证请先使用 Debug。
+`git lfs pull` 完成后可用 `git lfs status` 检查模型和 OpenCV 运行时是否均显示 `*`，不能是 LFS 指针。
+`cmake --install` 不是可选步骤：它将 SQLite、Faiss、OpenCV、ONNX Runtime、TBB 和 OpenBLAS 的 DLL
+安装到根目录 `bin/`，否则 `bin/coser_cli.exe` 无法在新机器上启动。当前 Release 配置存在已知的
+faiss 崩溃问题，日常使用和验证请使用 Debug。
+
+### 1. 已配置环境的增量构建
+
+```powershell
+cmake --build .\CoserRetrieval\build --config Debug --target coser_cli coser_bridge
+cmake --install .\CoserRetrieval\build --config Debug --prefix .
+```
+
+生成的 CLI 为 `bin/coser_cli.exe`，bridge 为 `bin/coser_bridge.dll`。
 
 ### 人脸模型选择
 

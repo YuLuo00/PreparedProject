@@ -48,6 +48,7 @@
 
 - [x] 为 CLI 主入口增加异常捕获，避免 ONNX/LFS 文件异常直接终止进程。
 - [x] 记录 Git LFS 模型文件恢复方法。
+- [x] 在干净 Git LFS clone 中验证 CMake 配置、Debug CLI/bridge 构建、`cmake --install` 运行时 DLL 安装、真实单图入库和 WPF bridge 启动；README 记录新机依赖与完整命令。
 - [x] 记录端到端评估结果与 CLIP 过滤器的已知误判风险。
 - [ ] 在 Windows 下提供可直接运行的回归测试（PowerShell 或 CTest）；当前脚本依赖 Bash。
 - [ ] 实际执行并固化回归测试结果；当前新增脚本与样本尚未在本环境跑通。

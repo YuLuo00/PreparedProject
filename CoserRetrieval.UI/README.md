@@ -55,11 +55,16 @@ using the existing C++ `FileHasher`. The subtitle displays the native bridge
 state and MD5 prefix. This validates real WPF-to-C++ linking without coupling
 the UI to C++ class ABI.
 
-Build native code first, then build/run the WPF project:
+For a fresh clone, first complete `CoserRetrieval/README.md` section
+`0. 新机器 Clone、配置与构建`; it installs Git LFS assets and native runtime
+DLLs. For an already configured checkout, build/install native code before the
+WPF project:
 
 ```powershell
-cmake --build .\CoserRetrieval\build --config Debug --target coser_bridge
-dotnet run --project .\CoserRetrieval.UI\CoserRetrieval.UI.csproj
+cmake --build .\CoserRetrieval\build --config Debug --target coser_cli coser_bridge
+cmake --install .\CoserRetrieval\build --config Debug --prefix .
+dotnet build .\CoserRetrieval.UI\CoserRetrieval.UI.csproj
+.\CoserRetrieval.UI\bin\Debug\net8.0-windows\CoserRetrieval.UI.exe
 ```
 
 The bridge is copied from `bin/coser_bridge.dll` into the WPF output directory
